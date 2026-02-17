@@ -3,6 +3,14 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* Matcher.ge brand — aligned with logo (#a5c044) */
+  --matcher: #a5c044;
+  --matcher-dark: #7d9a2e;
+  --matcher-teal: #2d9d8f;
+  --matcher-amber: #e6a817;
+  --matcher-coral: #e07a5f;
+  --matcher-mint: #eef4e4;
+  --matcher-pale: #f5f9ef;
 }
 
 @theme inline {
@@ -10,6 +18,13 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-matcher: var(--matcher);
+  --color-matcher-dark: var(--matcher-dark);
+  --color-matcher-teal: var(--matcher-teal);
+  --color-matcher-amber: var(--matcher-amber);
+  --color-matcher-coral: var(--matcher-coral);
+  --color-matcher-mint: var(--matcher-mint);
+  --color-matcher-pale: var(--matcher-pale);
 }
 
 @media (prefers-color-scheme: dark) {
