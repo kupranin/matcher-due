@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { loadEmployerProfile, saveEmployerProfile } from "@/lib/employerProfileStorage";
 
 const INDUSTRIES = [
@@ -10,6 +11,7 @@ const INDUSTRIES = [
 const EMPLOYEE_COUNTS = ["1–10", "11–50", "51–200", "201–500", "500+"];
 
 export default function EmployerCabinetProfilePage() {
+  const t = useTranslations("employerProfile");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("");
   const [bio, setBio] = useState("");
@@ -45,41 +47,41 @@ export default function EmployerCabinetProfilePage() {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Company profile</h1>
-      <p className="mt-1 text-gray-600">Add details so candidates can learn about you. Visible after a match.</p>
+      <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{t("title")}</h1>
+      <p className="mt-1 text-gray-600">{t("subtitle")}</p>
 
       <div className="mt-8 space-y-6">
         <section className="rounded-3xl border bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">Company logo</h2>
-          <p className="mt-1 text-sm text-gray-500">A recognizable logo helps build trust.</p>
+          <h2 className="text-lg font-semibold text-gray-900">{t("companyLogo")}</h2>
+          <p className="mt-1 text-sm text-gray-500">{t("logoHint")}</p>
           <div className="mt-4 flex items-center gap-6">
             <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-gray-100">
-              {logoUrl ? <img src={logoUrl} alt="Logo" className="h-full w-full object-cover" /> : <span className="text-4xl text-gray-400">🏢</span>}
+              {logoUrl ? <img src={logoUrl} alt="Logo" className="h-full w-full object-contain" /> : <span className="text-4xl text-gray-400">🏢</span>}
             </div>
             <div>
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
               <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                {logoUrl ? "Change logo" : "Add logo"}
+                {logoUrl ? t("changeLogo") : t("addLogo")}
               </button>
-              {logoUrl && <button type="button" onClick={() => setLogoUrl(null)} className="ml-2 text-sm text-gray-500 hover:text-red-600">Remove</button>}
+              {logoUrl && <button type="button" onClick={() => setLogoUrl(null)} className="ml-2 text-sm text-gray-500 hover:text-red-600">{t("remove")}</button>}
             </div>
           </div>
         </section>
 
         <section className="rounded-3xl border bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">Basic info</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t("basicInfo")}</h2>
           <div className="mt-4 space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-900">Company name</label>
-              <input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="e.g. Coffee Lab Ltd" className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
+              <label className="text-sm font-medium text-gray-900">{t("companyName")}</label>
+              <input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder={t("companyNamePlaceholder")} className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-900">About the company</label>
-              <textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="What you do, your culture, why candidates should join..." rows={4} maxLength={500} className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
+              <label className="text-sm font-medium text-gray-900">{t("aboutCompany")}</label>
+              <textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder={t("aboutPlaceholder")} rows={4} maxLength={500} className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
               <p className="mt-1 text-xs text-gray-500">{bio.length}/500</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-900">Industry</label>
+              <label className="text-sm font-medium text-gray-900">{t("industry")}</label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {INDUSTRIES.map((i) => (
                   <button key={i} type="button" onClick={() => setIndustry(i)} className={`rounded-full border px-3 py-1.5 text-xs ${industry === i ? "border-matcher bg-matcher-mint" : "border-gray-200 hover:bg-gray-50"}`}>{i}</button>
@@ -87,10 +89,10 @@ export default function EmployerCabinetProfilePage() {
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-900">Company size</label>
+              <label className="text-sm font-medium text-gray-900">{t("companySize")}</label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {EMPLOYEE_COUNTS.map((c) => (
-                  <button key={c} type="button" onClick={() => setEmployeeCount(c)} className={`rounded-full border px-3 py-1.5 text-xs ${employeeCount === c ? "border-matcher bg-matcher-mint" : "border-gray-200 hover:bg-gray-50"}`}>{c} employees</button>
+                  <button key={c} type="button" onClick={() => setEmployeeCount(c)} className={`rounded-full border px-3 py-1.5 text-xs ${employeeCount === c ? "border-matcher bg-matcher-mint" : "border-gray-200 hover:bg-gray-50"}`}>{c} {t("employees")}</button>
                 ))}
               </div>
             </div>
@@ -98,45 +100,45 @@ export default function EmployerCabinetProfilePage() {
         </section>
 
         <section className="rounded-3xl border bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">Location</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t("location")}</h2>
           <div className="mt-4 space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-900">City</label>
-              <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Tbilisi, Batumi" className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
+              <label className="text-sm font-medium text-gray-900">{t("city")}</label>
+              <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder={t("cityPlaceholder")} className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-900">Address (optional)</label>
-              <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street, building, office" className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
+              <label className="text-sm font-medium text-gray-900">{t("addressOptional")}</label>
+              <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t("addressPlaceholder")} className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
             </div>
           </div>
         </section>
 
         <section className="rounded-3xl border bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">Links</h2>
-          <p className="mt-1 text-sm text-gray-500">Website and social profiles.</p>
+          <h2 className="text-lg font-semibold text-gray-900">{t("links")}</h2>
+          <p className="mt-1 text-sm text-gray-500">{t("linksHint")}</p>
           <div className="mt-4 space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-900">Website</label>
-              <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://company.ge" className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
+              <label className="text-sm font-medium text-gray-900">{t("website")}</label>
+              <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder={t("websitePlaceholder")} className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-900">LinkedIn (optional)</label>
-              <input type="url" value={linkedIn} onChange={(e) => setLinkedIn(e.target.value)} placeholder="https://linkedin.com/company/..." className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
+              <label className="text-sm font-medium text-gray-900">{t("linkedInOptional")}</label>
+              <input type="url" value={linkedIn} onChange={(e) => setLinkedIn(e.target.value)} placeholder={t("linkedInPlaceholder")} className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
             </div>
           </div>
         </section>
 
         <section className="rounded-3xl border bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">Contact</h2>
-          <p className="mt-1 text-sm text-gray-500">Shared only after mutual match.</p>
+          <h2 className="text-lg font-semibold text-gray-900">{t("contact")}</h2>
+          <p className="mt-1 text-sm text-gray-500">{t("contactHint")}</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-gray-900">Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contact@company.ge" className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
+              <label className="text-sm font-medium text-gray-900">{t("email")}</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("emailPlaceholder")} className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-900">Phone</label>
-              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+995 5xx xx xx xx" className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
+              <label className="text-sm font-medium text-gray-900">{t("phone")}</label>
+              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("phonePlaceholder")} className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
             </div>
           </div>
         </section>
@@ -160,12 +162,12 @@ export default function EmployerCabinetProfilePage() {
             });
             const btn = document.activeElement as HTMLButtonElement;
             const orig = btn?.textContent;
-            if (btn) btn.textContent = "Saved!";
-            setTimeout(() => { if (btn) btn.textContent = orig ?? "Save profile"; }, 1500);
+            if (btn) btn.textContent = t("saved");
+            setTimeout(() => { if (btn) btn.textContent = orig ?? t("saveProfile"); }, 1500);
           }}
           className="rounded-2xl bg-matcher px-6 py-3 text-sm font-semibold text-white hover:bg-matcher-dark"
         >
-          Save profile
+          {t("saveProfile")}
         </button>
       </div>
     </div>

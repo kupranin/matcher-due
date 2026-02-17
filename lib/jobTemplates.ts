@@ -159,6 +159,12 @@ export const AVG_SALARY_BY_SLUG: Record<string, number> = {
   "teaching-assistant": 950,
 };
 
+/** Get English skill names for a role slug (for storage & matching). */
+export function getSkillsForRoleSlug(slug: string): string[] {
+  const role = FALLBACK_TEMPLATES.en.find((r) => r.slug === slug);
+  return role ? role.skills.map((s) => s.skillName) : [];
+}
+
 export async function fetchJobTemplates(locale: "en" | "ka" = "en"): Promise<JobTemplateRole[]> {
   try {
     const res = await fetch(`/api/job-templates?locale=${locale}`);

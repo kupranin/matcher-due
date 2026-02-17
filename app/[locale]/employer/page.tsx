@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import Logo from "@/components/Logo";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function EmployerPage() {
   const t = useTranslations("employer");
@@ -15,7 +14,6 @@ export default function EmployerPage() {
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <Logo height={80} />
           <div className="flex items-center gap-4">
-            <LanguageSwitcher />
             <Link href="/" className="text-sm text-gray-600 hover:text-gray-900">
               {tCommon("backToHome")}
             </Link>
@@ -23,15 +21,15 @@ export default function EmployerPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 py-16">
-        <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
+      <main className="mx-auto max-w-2xl px-4 py-10 sm:py-14 md:py-16">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
           {t("title")}
         </h1>
         <p className="mt-2 text-gray-600">
           {t("subtitle")}
         </p>
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 sm:mt-10">
           <Link
             href="/employer/register"
             className="group rounded-3xl border-2 border-matcher bg-matcher-pale/50 p-6 text-left transition hover:border-matcher hover:bg-matcher-mint"

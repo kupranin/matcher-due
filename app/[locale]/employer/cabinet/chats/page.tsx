@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import { getMutualMatches, type MutualMatch } from "@/lib/matchStorage";
 import MatchChatWindow from "@/components/MatchChatWindow";
 
 export default function EmployerChatsPage() {
+  const t = useTranslations("chats");
   const [matches, setMatches] = useState<MutualMatch[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<MutualMatch | null>(null);
 
@@ -18,12 +20,12 @@ export default function EmployerChatsPage() {
       <div className="mx-auto max-w-md px-4 py-16">
         <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-12 text-center">
           <p className="text-5xl">💬</p>
-          <h2 className="mt-4 text-xl font-bold text-gray-900">No matches yet</h2>
+          <h2 className="mt-4 text-xl font-bold text-gray-900">{t("noMatchesYet")}</h2>
           <p className="mt-2 text-gray-600">
-            When you and a candidate both like each other, you&apos;ll be able to chat here to schedule interviews and next steps.
+            {t("noMatchesHintEmployer")}
           </p>
           <p className="mt-4 text-sm text-gray-500">
-            Keep swiping on candidates — your next hire could be right here!
+            {t("keepSwipingHintEmployer")}
           </p>
         </div>
       </div>
@@ -47,9 +49,9 @@ export default function EmployerChatsPage() {
 
   return (
     <div className="mx-auto max-w-md px-4 py-8">
-      <h1 className="text-2xl font-bold tracking-tight text-gray-900">Your matches</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-gray-900">{t("yourMatches")}</h1>
       <p className="mt-1 text-gray-600">
-        Chat with candidates to schedule interviews and next steps.
+        {t("chatHintEmployer")}
       </p>
 
       <div className="mt-6 space-y-3">
@@ -69,7 +71,7 @@ export default function EmployerChatsPage() {
               <p className="font-semibold text-gray-900">{match.candidateName}</p>
               <p className="text-sm text-gray-600">{match.vacancyTitle} · {match.company}</p>
             </div>
-            <span className="text-matcher">Chat →</span>
+            <span className="text-matcher">{t("chat")}</span>
           </motion.button>
         ))}
       </div>

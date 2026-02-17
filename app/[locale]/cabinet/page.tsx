@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence, animate } from "framer-motion";
 import { getVacanciesWithMatch } from "@/lib/matchMockData";
@@ -23,6 +24,7 @@ function SwipeCard({
   vacancy: Vacancy;
   onSwipe: (dir: "left" | "right") => void;
 }) {
+  const t = useTranslations("cabinet");
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-12, 12]);
   const likeOpacity = useTransform(x, [0, 100, 200], [0, 0.5, 1]);
@@ -61,7 +63,7 @@ function SwipeCard({
           className="pointer-events-none absolute inset-0 flex items-center justify-end pr-8"
         >
           <div className="rounded-2xl border-4 border-matcher bg-matcher/90 px-6 py-3 shadow-xl -rotate-12">
-            <span className="text-3xl font-black uppercase tracking-wider text-white">Like!</span>
+            <span className="text-3xl font-black uppercase tracking-wider text-white">{t("like")}</span>
           </div>
         </motion.div>
         <motion.div
@@ -69,13 +71,13 @@ function SwipeCard({
           className="pointer-events-none absolute inset-0 flex items-center justify-start pl-8"
         >
           <div className="rounded-2xl border-4 border-rose-400 bg-rose-500/90 px-6 py-3 shadow-xl rotate-12">
-            <span className="text-3xl font-black uppercase tracking-wider text-white">Nope</span>
+            <span className="text-3xl font-black uppercase tracking-wider text-white">{t("nope")}</span>
           </div>
         </motion.div>
 
         {/* Match badge */}
         <div className="absolute left-4 top-4 rounded-full bg-gradient-to-r from-matcher to-matcher-teal px-4 py-1.5 text-sm font-bold text-white shadow-lg">
-          {vacancy.match}% match
+          {t("matchPercent", { percent: vacancy.match })}
         </div>
 
         {/* Info overlay at bottom */}
@@ -89,13 +91,14 @@ function SwipeCard({
           <p className="mt-2 text-base font-bold text-matcher">{vacancy.salary}</p>
         </div>
 
-        <p className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs font-medium text-white/70">Swipe right ♥ · left ✕</p>
+        <p className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs font-medium text-white/70">{t("swipeInstruction")}</p>
       </div>
     </motion.div>
   );
 }
 
 export default function CabinetPage() {
+  const t = useTranslations("cabinet");
   const router = useRouter();
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
 
@@ -147,14 +150,14 @@ export default function CabinetPage() {
   }
 
   return (
-    <div className="relative mx-auto max-w-md px-4 py-8">
+    <div className="relative mx-auto max-w-md px-4 py-5 sm:py-6 md:py-8">
       {/* Fun gradient background */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-matcher-pale via-matcher-mint/50 to-matcher-amber/30" />
 
-      <h1 className="text-3xl font-bold tracking-tight text-gray-900">Your matches</h1>
-      <p className="mt-2 text-gray-600">Swipe right to like, left to pass. Find your dream job! 🚀</p>
+      <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{t("yourMatches")}</h1>
+      <p className="mt-2 text-gray-600">{t("swipeHint")}</p>
 
-      <div className="relative mx-auto mt-8 aspect-[3/4] max-h-[520px]">
+      <div className="relative mx-auto mt-6 aspect-[3/4] max-h-[380px] sm:mt-8 sm:max-h-[440px] md:max-h-[520px]">
         {current ? (
           <AnimatePresence mode="wait">
             <motion.div
@@ -178,11 +181,11 @@ export default function CabinetPage() {
             className="flex h-full flex-col items-center justify-center rounded-3xl bg-gradient-to-br from-matcher-mint via-matcher-pale to-matcher-teal/20 p-8 text-center shadow-inner"
           >
             <span className="text-6xl">🎉</span>
-            <p className="mt-4 text-xl font-bold text-gray-800">You&apos;re all caught up!</p>
+            <p className="mt-4 text-xl font-bold text-gray-800">{t("allCaughtUp")}</p>
             <p className="mt-2 text-base text-gray-600">
-              <span className="font-semibold text-matcher-dark">{liked.length}</span> liked · <span className="font-semibold text-gray-600">{passed.length}</span> passed
+              {t("likedPassed", { liked: liked.length, passed: passed.length })}
             </p>
-            <p className="mt-6 text-sm text-gray-500">Check back later for new vacancies.</p>
+            <p className="mt-6 text-sm text-gray-500">{t("checkBackLater")}</p>
           </motion.div>
         )}
       </div>
@@ -192,14 +195,14 @@ export default function CabinetPage() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-8 flex justify-center gap-8"
+          className="mt-6 flex justify-center gap-6 sm:mt-8 sm:gap-8"
         >
           <motion.button
             type="button"
             onClick={() => handleSwipe("left")}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-lg shadow-rose-300/50 transition-shadow hover:shadow-xl hover:shadow-rose-400/50"
+            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-lg shadow-rose-300/50 transition-shadow hover:shadow-xl hover:shadow-rose-400/50"
           >
             <span className="text-2xl font-bold">✕</span>
           </motion.button>
@@ -208,7 +211,7 @@ export default function CabinetPage() {
             onClick={() => handleSwipe("right")}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-matcher to-matcher-teal text-white shadow-lg shadow-matcher/40 transition-shadow hover:shadow-xl hover:shadow-matcher/50"
+            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-matcher to-matcher-teal text-white shadow-lg shadow-matcher/40 transition-shadow hover:shadow-xl hover:shadow-matcher/50"
           >
             <span className="text-2xl">♥</span>
           </motion.button>

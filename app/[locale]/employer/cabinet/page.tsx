@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence, animate } from "framer-motion";
 import {
@@ -27,6 +28,7 @@ function SwipeCard({
   candidate: Candidate;
   onSwipe: (dir: "left" | "right") => void;
 }) {
+  const t = useTranslations("cabinet");
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-15, 15]);
 
@@ -49,7 +51,7 @@ function SwipeCard({
       <div className="flex h-full w-full flex-col justify-between rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
         <div className="flex items-start justify-between">
           <span className="rounded-full bg-matcher-mint px-3 py-1 text-sm font-semibold text-matcher-dark">
-            {candidate.match}% match
+            {t("matchPercent", { percent: candidate.match })}
           </span>
         </div>
 
@@ -71,13 +73,15 @@ function SwipeCard({
           <p className="text-sm text-gray-600">{candidate.skills}</p>
         </div>
 
-        <p className="text-xs text-gray-400">Swipe right to like · left to pass</p>
+        <p className="text-xs text-gray-400">{t("swipeInstruction")}</p>
       </div>
     </motion.div>
   );
 }
 
 export default function EmployerCabinetPage() {
+  const t = useTranslations("employerCabinetPage");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
   const [newMatch, setNewMatch] = useState<MutualMatch | null>(null);
@@ -160,18 +164,18 @@ export default function EmployerCabinetPage() {
       <div className="mx-auto max-w-md px-4 py-16">
         <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-12 text-center">
           <p className="text-4xl">📋</p>
-          <h2 className="mt-4 text-xl font-bold text-gray-900">No vacancies yet</h2>
+          <h2 className="mt-4 text-xl font-bold text-gray-900">{t("noVacanciesYet")}</h2>
           <p className="mt-2 text-gray-600">
-            Post your first vacancy and choose a package to see relevant candidates and start matching.
+            {t("noVacanciesHint")}
           </p>
           <Link
             href="/employer/post?from=cabinet"
             className="mt-6 inline-block rounded-xl bg-matcher px-6 py-3 font-semibold text-white hover:bg-matcher-dark"
           >
-            Post your first vacancy
+            {t("postFirstVacancy")}
           </Link>
           <p className="mt-4 text-xs text-gray-500">
-            You&apos;ll fill in the vacancy details, then choose a package (1–10 vacancies or unlimited) and complete payment.
+            {t("packageHint")}
           </p>
         </div>
       </div>
@@ -182,9 +186,9 @@ export default function EmployerCabinetPage() {
   if (!selectedVacancy) {
     return (
       <div className="mx-auto max-w-md px-4 py-8">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Choose a vacancy</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">{t("chooseVacancy")}</h1>
         <p className="mt-1 text-gray-600">
-          Select which vacancy you want to see candidates for.
+          {t("chooseVacancyHint")}
         </p>
 
         <div className="mt-8 space-y-3">
@@ -206,7 +210,7 @@ export default function EmployerCabinetPage() {
 
         <p className="mt-8 text-center text-sm text-gray-500">
           <Link href="/employer/post?from=cabinet" className="font-medium text-matcher-dark hover:text-matcher">
-            + Add another vacancy
+            {t("addAnotherVacancy")}
           </Link>
         </p>
       </div>
@@ -220,9 +224,9 @@ export default function EmployerCabinetPage() {
     <div className="mx-auto max-w-md px-4 py-8">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Candidates</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">{t("candidates")}</h1>
           <p className="mt-1 text-sm text-gray-600">
-            for <span className="font-bold text-matcher-dark">{selectedVacancy.title}</span>
+            {t("candidatesFor")} <span className="font-bold text-matcher-dark">{selectedVacancy.title}</span>
           </p>
         </div>
         <button
@@ -230,7 +234,7 @@ export default function EmployerCabinetPage() {
           onClick={handleChangeVacancy}
           className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
         >
-          Change vacancy
+          {t("changeVacancy")}
         </button>
       </div>
 
@@ -249,17 +253,17 @@ export default function EmployerCabinetPage() {
           </AnimatePresence>
         ) : (
           <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 text-center">
-            <p className="text-lg font-medium text-gray-600">You&apos;re all caught up!</p>
+            <p className="text-lg font-medium text-gray-600">{t("allCaughtUp")}</p>
             <p className="mt-2 text-sm text-gray-500">
-              {liked.length} liked · {passed.length} passed
+              {t("likedPassed", { liked: liked.length, passed: passed.length })}
             </p>
-            <p className="mt-4 text-xs text-gray-400">No more candidates for this vacancy right now.</p>
+            <p className="mt-4 text-xs text-gray-400">{t("noMoreCandidates")}</p>
             <button
               type="button"
               onClick={handleChangeVacancy}
               className="mt-6 rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              View another vacancy
+              {t("viewAnotherVacancy")}
             </button>
           </div>
         )}

@@ -230,7 +230,7 @@ export default function MatchChatWindow({
       </AnimatePresence>
 
       {/* Messages */}
-      <div className="flex h-80 flex-col overflow-y-auto p-4">
+      <div className="flex min-h-[200px] max-h-[50vh] flex-col overflow-y-auto p-4 sm:max-h-[280px] md:h-80 md:max-h-[320px]">
         {messages.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
             <p className="text-sm text-gray-500">Schedule your next steps with {otherName}</p>

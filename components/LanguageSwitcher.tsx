@@ -17,7 +17,7 @@ export default function LanguageSwitcher() {
     <button
       type="button"
       onClick={switchLocale}
-      className="rounded-full border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:border-matcher hover:bg-matcher-pale/50 hover:text-matcher-dark"
+      className="min-w-[3.25rem] rounded-full border border-gray-200 px-3 py-1.5 text-center text-sm font-medium text-gray-600 transition-colors hover:border-matcher hover:bg-matcher-pale/50 hover:text-matcher-dark"
       title={locale === "en" ? "ქართულად" : "In English"}
     >
       {locale === "en" ? "KA" : "EN"}

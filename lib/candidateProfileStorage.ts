@@ -4,6 +4,7 @@
  */
 
 import type { CandidateProfile } from "./matchCalculation";
+import type { EducationLevel } from "./matchCalculation";
 import { GEORGIAN_CITIES } from "./georgianLocations";
 import { MOCK_CANDIDATE_PROFILE } from "./matchMockData";
 
@@ -64,6 +65,7 @@ export function buildProfileFromUserFlow(params: {
   skills: { name: string; level?: SkillLevel }[];
   locationCityId: string | null;
   salary: string;
+  education?: EducationLevel;
 }): CandidateProfile {
   const {
     experience,
@@ -72,6 +74,7 @@ export function buildProfileFromUserFlow(params: {
     skills,
     locationCityId,
     salary,
+    education,
   } = params;
 
   const city = locationCityId ? GEORGIAN_CITIES.find((c) => c.id === locationCityId) : null;
@@ -84,7 +87,7 @@ export function buildProfileFromUserFlow(params: {
     salaryMin,
     willingToRelocate: true, // MVP default
     experienceMonths,
-    educationLevel: "High School", // MVP default
+    educationLevel: education ?? "High School",
     skills: mapSkills(skills),
     workTypes: workTypeToArray(workType),
   };

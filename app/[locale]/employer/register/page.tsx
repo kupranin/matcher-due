@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import Logo from "@/components/Logo";
 
@@ -14,6 +15,8 @@ function isValidPhone(phone: string) {
 }
 
 export default function EmployerRegisterPage() {
+  const t = useTranslations("employerRegister");
+  const tCommon = useTranslations("common");
   const [companyName, setCompanyName] = useState("");
   const [companyId, setCompanyId] = useState("");
   const [email, setEmail] = useState("");
@@ -65,7 +68,7 @@ export default function EmployerRegisterPage() {
             href="/employer"
             className="text-sm text-gray-600 hover:text-gray-900"
           >
-            ← Back
+            {tCommon("back")}
           </Link>
         </div>
       </header>
@@ -73,20 +76,20 @@ export default function EmployerRegisterPage() {
       <main className="mx-auto max-w-md px-4 py-16">
         <div className="rounded-3xl border bg-white p-8 shadow-sm">
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-            Register your company
+            {t("title")}
           </h1>
           <p className="mt-2 text-gray-600">
-            Create an account to post and manage vacancies. You&apos;ll use this to log in.
+            {t("subtitle")}
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <div>
-              <label className="text-sm font-medium text-gray-900">Company name</label>
+              <label className="text-sm font-medium text-gray-900">{t("companyName")}</label>
               <input
                 type="text"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                placeholder="e.g. Coffee Lab Ltd"
+                placeholder={t("companyNamePlaceholder")}
                 className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30 ${
                   companyName.length > 0 && companyName.trim().length < 2
                     ? "border-red-300"
@@ -94,18 +97,18 @@ export default function EmployerRegisterPage() {
                 }`}
               />
               {companyName.length > 0 && companyName.trim().length < 2 && (
-                <p className="mt-2 text-xs text-red-600">Enter at least 2 characters.</p>
+                <p className="mt-2 text-xs text-red-600">{t("minTwoChars")}</p>
               )}
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-900">Company ID</label>
+              <label className="text-sm font-medium text-gray-900">{t("companyId")}</label>
               <input
                 type="text"
                 inputMode="numeric"
                 value={companyId}
                 onChange={(e) => setCompanyId(e.target.value.replace(/[^\d]/g, ""))}
-                placeholder="e.g. 123456789 (identification / tax number)"
+                placeholder={t("companyIdPlaceholder")}
                 className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30 ${
                   companyId.length > 0 && companyId.trim().length < 2
                     ? "border-red-300"
@@ -113,28 +116,28 @@ export default function EmployerRegisterPage() {
                 }`}
               />
               {companyId.length > 0 && companyId.trim().length < 2 && (
-                <p className="mt-2 text-xs text-red-600">Enter your company identification number.</p>
+                <p className="mt-2 text-xs text-red-600">{t("enterCompanyId")}</p>
               )}
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-900">Contact email</label>
+              <label className="text-sm font-medium text-gray-900">{t("contactEmail")}</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="contact@company.ge"
+                placeholder={t("contactEmailPlaceholder")}
                 className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30 ${
                   email.length > 0 && !isValidEmail(email) ? "border-red-300" : "border-gray-200"
                 }`}
               />
               {email.length > 0 && !isValidEmail(email) && (
-                <p className="mt-2 text-xs text-red-600">Please enter a valid email.</p>
+                <p className="mt-2 text-xs text-red-600">{t("validEmail")}</p>
               )}
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-900">Contact phone</label>
+              <label className="text-sm font-medium text-gray-900">{t("contactPhone")}</label>
               <input
                 type="tel"
                 value={phone}
@@ -145,23 +148,23 @@ export default function EmployerRegisterPage() {
                 }`}
               />
               {phone.length > 0 && !isValidPhone(phone) && (
-                <p className="mt-2 text-xs text-red-600">Please enter a valid phone number.</p>
+                <p className="mt-2 text-xs text-red-600">{t("validPhone")}</p>
               )}
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-900">Password</label>
+              <label className="text-sm font-medium text-gray-900">{t("password")}</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 8 characters (for login)"
+                placeholder={t("passwordPlaceholder")}
                 className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30 ${
                   password.length > 0 && password.length < 8 ? "border-red-300" : "border-gray-200"
                 }`}
               />
               {password.length > 0 && password.length < 8 && (
-                <p className="mt-2 text-xs text-red-600">Password must be at least 8 characters.</p>
+                <p className="mt-2 text-xs text-red-600">{t("passwordMin")}</p>
               )}
             </div>
 
@@ -171,14 +174,14 @@ export default function EmployerRegisterPage() {
                 onClick={() => fakeSendOtp("phone")}
                 className="rounded-2xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
-                Verify by SMS (MVP)
+                {t("verifySms")}
               </button>
               <button
                 type="button"
                 onClick={() => fakeSendOtp("email")}
                 className="rounded-2xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
-                Verify by Email (MVP)
+                {t("verifyEmail")}
               </button>
             </div>
 
@@ -191,14 +194,14 @@ export default function EmployerRegisterPage() {
                   : "bg-gray-200 text-gray-500 cursor-not-allowed"
               }`}
             >
-              Register company
+              {t("submit")}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-gray-500">
-            Already registered?{" "}
+            {t("alreadyRegistered")}{" "}
             <Link href="/login" className="font-medium text-matcher-dark hover:text-matcher">
-              Log in
+              {t("logIn")}
             </Link>
           </p>
         </div>
@@ -210,10 +213,10 @@ export default function EmployerRegisterPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold">
-                  Verify your {otpSentTo === "phone" ? "phone" : "email"}
+                  {otpSentTo === "phone" ? t("verifyPhone") : t("verifyEmailTitle")}
                 </h2>
                 <p className="mt-1 text-sm text-gray-600">
-                  Enter the code we sent to your {otpSentTo === "phone" ? "number" : "email"}.
+                  {t("enterCodeSent", { target: otpSentTo === "phone" ? t("phone") : t("email") })}
                 </p>
               </div>
               <button
@@ -226,14 +229,14 @@ export default function EmployerRegisterPage() {
             </div>
 
             <div className="mt-5">
-              <label className="text-sm font-medium text-gray-900">Verification code</label>
+              <label className="text-sm font-medium text-gray-900">{t("verificationCode")}</label>
               <input
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
-                placeholder="e.g., 1234"
+                placeholder={t("codePlaceholder")}
                 className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
               />
-              <p className="mt-2 text-xs text-gray-500">MVP: any 4+ digits will pass.</p>
+              <p className="mt-2 text-xs text-gray-500">{t("mvpHint")}</p>
             </div>
 
             <div className="mt-6 flex items-center justify-between">
@@ -241,13 +244,13 @@ export default function EmployerRegisterPage() {
                 onClick={() => setOtp("")}
                 className="rounded-2xl px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100"
               >
-                Resend code
+                {t("resendCode")}
               </button>
               <button
                 onClick={fakeVerifyOtp}
                 className="rounded-2xl bg-matcher px-5 py-3 text-sm font-semibold text-white hover:bg-matcher-dark"
               >
-                Verify
+                {t("verify")}
               </button>
             </div>
           </div>

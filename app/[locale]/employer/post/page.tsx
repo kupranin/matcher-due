@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { GEORGIAN_CITIES } from "@/lib/georgianLocations";
 import Logo from "@/components/Logo";
-import { fetchJobTemplates, type JobTemplateRole } from "@/lib/jobTemplates";
+import { fetchJobTemplates, getSkillsForRoleSlug, type JobTemplateRole } from "@/lib/jobTemplates";
+import { ALL_SKILLS } from "@/lib/allSkills";
 
 const PACKAGES = [
   { id: "1", vacancies: 1, price: 40, label: "1 vacancy" },
@@ -39,6 +40,9 @@ type Step = "vacancy" | "package" | "payment" | "success";
 
 export default function EmployerPostPage() {
   const locale = useLocale();
+  const t = useTranslations("employerPost");
+  const tCommon = useTranslations("common");
+  const tSkillNames = useTranslations("skillNames");
   const searchParams = useSearchParams();
   const router = useRouter();
   const fromRegistration = searchParams.get("registered") === "1";
@@ -76,6 +80,7 @@ export default function EmployerPostPage() {
     [locationCityId]
   );
   const [experienceRequired, setExperienceRequired] = useState<"yes" | "no">("no");
+  const [requiredEducationLevel, setRequiredEducationLevel] = useState<"None" | "High School" | "Bachelor" | "Master" | "PhD">("High School");
   const [requiredExperienceMonths, setRequiredExperienceMonths] = useState(6);
   const [salaryMin, setSalaryMin] = useState("");
   const [salaryMax, setSalaryMax] = useState("");
@@ -97,22 +102,51 @@ export default function EmployerPostPage() {
 
   const suggestedSkills = useMemo(() => {
     if (selectedRole) {
-      const names = selectedRole.skills.map((s) => s.skillName);
+      const names = getSkillsForRoleSlug(selectedRole.slug);
       return names.length > 0 ? names : FALLBACK_SKILLS;
     }
     return FALLBACK_SKILLS;
   }, [selectedRole]);
 
+  const skillLabel = (s: string) => (ALL_SKILLS.includes(s) ? (tSkillNames(s) as string) : s);
+
+  const [skillSearch, setSkillSearch] = useState("");
+  const [showAddSkillInput, setShowAddSkillInput] = useState(false);
+  const filteredSkillsForSearch = useMemo(() => {
+    const q = skillSearch.trim().toLowerCase();
+    if (q.length < 2) return [];
+    const inRequired = new Set(requiredSkills.map((s) => s.name));
+    const inGood = new Set(goodToHaveSkills.map((s) => s.name));
+    return ALL_SKILLS.filter((s) => {
+      if (inRequired.has(s) || inGood.has(s)) return false;
+      const canAdd = addingAsRequired ? requiredSkills.length < 5 : goodToHaveSkills.length < 5;
+      if (!canAdd) return false;
+      return s.toLowerCase().includes(q);
+    }).slice(0, 12);
+  }, [skillSearch, requiredSkills, goodToHaveSkills, addingAsRequired]);
+
   function addSkill(s: string) {
-    const inRequired = requiredSkills.some((x) => x.name === s);
-    const inGood = goodToHaveSkills.some((x) => x.name === s);
+    const name = s.trim();
+    if (!name || name.length < 2) return;
+    const displayName = name.replace(/\b\w/g, (c) => c.toUpperCase());
+    const inRequired = requiredSkills.some((x) => x.name.toLowerCase() === displayName.toLowerCase());
+    const inGood = goodToHaveSkills.some((x) => x.name.toLowerCase() === displayName.toLowerCase());
     if (inRequired || inGood) return;
-    const skill: VacancySkill = { name: s, level: "Intermediate" };
+    const skill: VacancySkill = { name: displayName, level: "Intermediate" };
+    const canonical = ALL_SKILLS.find((x) => x.toLowerCase() === displayName.toLowerCase());
+    const finalName = canonical ?? displayName;
     if (addingAsRequired && requiredSkills.length < 5) {
-      setRequiredSkills((prev) => [...prev, skill]);
+      setRequiredSkills((prev) => [...prev, { ...skill, name: finalName }]);
     } else if (!addingAsRequired && goodToHaveSkills.length < 5) {
-      setGoodToHaveSkills((prev) => [...prev, skill]);
+      setGoodToHaveSkills((prev) => [...prev, { ...skill, name: finalName }]);
     }
+  }
+
+  function addCustomSkillEmployer() {
+    const raw = skillSearch.trim();
+    if (raw.length < 2) return;
+    addSkill(raw);
+    setSkillSearch("");
   }
 
   function removeSkill(name: string, isRequired: boolean) {
@@ -208,7 +242,7 @@ export default function EmployerPostPage() {
             href={fromCabinet ? "/employer/cabinet" : "/employer"}
             className="text-sm text-gray-600 hover:text-gray-900"
           >
-            ← Back
+            {tCommon("back")}
           </Link>
         </div>
       </header>
@@ -218,10 +252,10 @@ export default function EmployerPostPage() {
         {step === "package" && (
           <div className="rounded-3xl border bg-white p-8 shadow-sm">
             <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-              Choose your package
+              {t("choosePackage")}
             </h1>
             <p className="mt-2 text-gray-600">
-              Your vacancy is ready. Select a package to publish it. Valid for 1 year.
+              {t("packageReady")}
             </p>
             <div className="mt-8 grid gap-4">
               {PACKAGES.map((pkg) => (
@@ -234,7 +268,7 @@ export default function EmployerPostPage() {
                   <div>
                     <span className="font-semibold text-gray-900">{pkg.label}</span>
                     <p className="mt-0.5 text-sm text-gray-500">
-                      {pkg.vacancies === -1 ? "Post as many vacancies as you need" : `${pkg.vacancies} vacancy slots`}
+                      {pkg.vacancies === -1 ? t("postAsMany") : t("vacancySlots", { count: pkg.vacancies })}
                     </p>
                   </div>
                   <span className="text-xl font-bold text-matcher-dark">{pkg.price} GEL</span>
@@ -242,14 +276,14 @@ export default function EmployerPostPage() {
               ))}
             </div>
             <p className="mt-6 text-center text-sm text-gray-500">
-              Package expires in 1 year
+              {t("packageExpires")}
             </p>
             <button
               type="button"
               onClick={() => setStep("vacancy")}
               className="mt-6 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              ← Back to vacancy
+              {t("backToVacancy")}
             </button>
           </div>
         )}
@@ -262,24 +296,17 @@ export default function EmployerPostPage() {
                 ✓
               </div>
               <h1 className="mt-6 text-2xl font-semibold tracking-tight text-gray-900">
-                {paymentMethod === "invoice" ? "Invoice on the way" : "Payment successful"}
+                {paymentMethod === "invoice" ? t("invoiceOnTheWay") : t("paymentSuccessful")}
               </h1>
               <p className="mt-3 text-gray-600">
-                {paymentMethod === "invoice" ? (
-                  <>
-                    We will send you the invoice to your email within the next few minutes.
-                    You can complete payment by bank transfer. Your vacancy will go live once payment is confirmed.
-                  </>
-                ) : (
-                  "Your vacancy is now live. Start browsing candidates in your cabinet."
-                )}
+                {paymentMethod === "invoice" ? t("invoiceMessage") : t("vacancyLive")}
               </p>
               <button
                 type="button"
                 onClick={handleGoToCabinet}
                 className="mt-8 rounded-xl bg-matcher px-6 py-3 font-semibold text-white hover:bg-matcher-dark"
               >
-                Go to cabinet
+                {tCommon("goToCabinet")}
               </button>
             </div>
           </div>
@@ -289,10 +316,10 @@ export default function EmployerPostPage() {
         {step === "payment" && selectedPackage && (
           <div className="rounded-3xl border bg-white p-8 shadow-sm">
             <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-              Choose payment method
+              {t("choosePayment")}
             </h1>
             <p className="mt-2 text-gray-600">
-              Pay {selectedPackage.price} GEL for {selectedPackage.label}. Package valid for 1 year.
+              {t("payForPackage", { price: selectedPackage.price, label: selectedPackage.label })}
             </p>
             <div className="mt-8 space-y-3">
               <button
@@ -302,9 +329,9 @@ export default function EmployerPostPage() {
               >
                 <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-2xl">📄</span>
                 <div className="flex-1">
-                  <span className="font-semibold text-gray-900">Pay by invoice</span>
+                  <span className="font-semibold text-gray-900">{t("payByInvoice")}</span>
                   <p className="mt-0.5 text-sm text-gray-500">
-                    We&apos;ll send an invoice to your email. Pay by bank transfer.
+                    {t("invoiceDesc")}
                   </p>
                 </div>
               </button>
@@ -315,9 +342,9 @@ export default function EmployerPostPage() {
               >
                 <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-2xl">💳</span>
                 <div className="flex-1">
-                  <span className="font-semibold text-gray-900">Pay by card</span>
+                  <span className="font-semibold text-gray-900">{t("payByCard")}</span>
                   <p className="mt-0.5 text-sm text-gray-500">
-                    Secure online payment with Visa or Mastercard.
+                    {t("cardDesc")}
                   </p>
                 </div>
               </button>
@@ -327,7 +354,7 @@ export default function EmployerPostPage() {
               onClick={() => setStep("package")}
               className="mt-6 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              ← Back to packages
+              {t("backToPackages")}
             </button>
           </div>
         )}
@@ -337,32 +364,30 @@ export default function EmployerPostPage() {
         <>
         {fromRegistration && (
           <div className="mb-6 rounded-2xl border border-matcher bg-matcher-mint p-4 text-center">
-            <p className="font-semibold text-matcher-dark">You&apos;re registered!</p>
+            <p className="font-semibold text-matcher-dark">{t("youRegistered")}</p>
             <p className="mt-1 text-sm text-matcher-dark/90">
-              Add your first vacancy to start matching with candidates.
+              {t("addFirstVacancy")}
             </p>
           </div>
         )}
         <div className="rounded-3xl border bg-white p-8 shadow-sm">
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-            Post a vacancy
+            {t("postVacancy")}
           </h1>
           <p className="mt-2 text-gray-600">
-            {fromRegistration
-              ? "Fill in the job details below. Candidates swipe to match — you'll be notified of mutual matches."
-              : "No registration needed. Fill in the job details. Candidates swipe to match — you'll be notified of mutual matches."}
+            {fromRegistration ? t("fromRegistrationIntro") : t("noRegIntro")}
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <div className="relative">
-              <label className="text-sm font-medium text-gray-900">Job title</label>
+              <label className="text-sm font-medium text-gray-900">{t("jobTitle")}</label>
               <input
                 type="text"
                 value={jobTitle}
                 onChange={(e) => handleJobTitleChange(e.target.value)}
                 onFocus={() => setJobTitleFocused(true)}
                 onBlur={() => setTimeout(() => setJobTitleFocused(false), 150)}
-                placeholder="Type to see suggestions or enter your own (e.g. Barista, Chef…)"
+                placeholder={t("jobTitlePlaceholder")}
                 className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
               />
               {showJobDropdown && (
@@ -384,13 +409,13 @@ export default function EmployerPostPage() {
               )}
               {jobTitleFocused && jobTitle.trim().length >= 2 && filteredJobs.length === 0 && (
                 <div className="absolute z-10 mt-1 w-full rounded-2xl border bg-white px-4 py-3 text-sm text-gray-500">
-                  No suggestions — you can use your own job title.
+                  {t("noSuggestions")}
                 </div>
               )}
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-900">Location (city)</label>
+              <label className="text-sm font-medium text-gray-900">{t("locationCity")}</label>
               <select
                 value={locationCityId}
                 onChange={(e) => {
@@ -399,7 +424,7 @@ export default function EmployerPostPage() {
                 }}
                 className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
               >
-                <option value="">Select city</option>
+                <option value="">{t("selectCity")}</option>
                 {GEORGIAN_CITIES.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.nameEn}
@@ -411,7 +436,7 @@ export default function EmployerPostPage() {
             {selectedCity?.districts && selectedCity.districts.length > 0 && (
               <div>
                 <label className="text-sm font-medium text-gray-900">
-                  District (optional) — {selectedCity.nameEn}
+                  {t("districtOptional")} — {selectedCity.nameEn}
                 </label>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button
@@ -424,7 +449,7 @@ export default function EmployerPostPage() {
                         : "border-gray-200 hover:bg-gray-50"
                     )}
                   >
-                    Any
+                    {t("any")}
                   </button>
                   {selectedCity.districts.map((d) => (
                     <button
@@ -446,9 +471,24 @@ export default function EmployerPostPage() {
             )}
 
             <div>
-              <label className="text-sm font-medium text-gray-900">Do you require experience?</label>
+              <label className="text-sm font-medium text-gray-900">{t("educationRequired")}</label>
+              <select
+                value={requiredEducationLevel}
+                onChange={(e) => setRequiredEducationLevel(e.target.value as typeof requiredEducationLevel)}
+                className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
+              >
+                <option value="None">{t("educationNone")}</option>
+                <option value="High School">{t("educationHighSchool")}</option>
+                <option value="Bachelor">{t("educationBachelor")}</option>
+                <option value="Master">{t("educationMaster")}</option>
+                <option value="PhD">{t("educationPhd")}</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-900">{t("requireExperience")}</label>
               <p className="mt-1 text-xs text-gray-500">
-                Candidates without experience can still apply if you choose &quot;No&quot;.
+                {t("experienceHint")}
               </p>
               <div className="mt-3 flex gap-3">
                 <button
@@ -461,7 +501,7 @@ export default function EmployerPostPage() {
                       : "border-gray-200 hover:bg-gray-50"
                   )}
                 >
-                  Yes
+                  {t("yes")}
                 </button>
                 <button
                   type="button"
@@ -473,31 +513,31 @@ export default function EmployerPostPage() {
                       : "border-gray-200 hover:bg-gray-50"
                   )}
                 >
-                  No
+                  {t("no")}
                 </button>
               </div>
               {experienceRequired === "yes" && (
                 <div className="mt-3">
-                  <label className="text-sm font-medium text-gray-900">Minimum experience</label>
+                  <label className="text-sm font-medium text-gray-900">{t("minExperience")}</label>
                   <select
                     value={requiredExperienceMonths}
                     onChange={(e) => setRequiredExperienceMonths(Number(e.target.value))}
                     className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
                   >
-                    <option value={3}>3 months</option>
-                    <option value={6}>6 months</option>
-                    <option value={12}>1 year</option>
-                    <option value={24}>2 years</option>
-                    <option value={36}>3 years</option>
+                    <option value={3}>{t("months", { n: 3 })}</option>
+                    <option value={6}>{t("months", { n: 6 })}</option>
+                    <option value={12}>{t("oneYear")}</option>
+                    <option value={24}>{t("twoYears")}</option>
+                    <option value={36}>{t("threeYears")}</option>
                   </select>
                 </div>
               )}
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-900">Skills</label>
+              <label className="text-sm font-medium text-gray-900">{t("skills")}</label>
               <p className="mt-1 text-xs text-gray-500">
-                Add required skills (1–5) for matching. Good-to-have is optional. Tap a skill to add it.
+                {t("skillsHint")}
               </p>
 
               <div className="mt-3 flex gap-2 rounded-xl bg-gray-100 p-2">
@@ -511,7 +551,7 @@ export default function EmployerPostPage() {
                       : "text-gray-600 hover:text-gray-900"
                   )}
                 >
-                  Required
+                  {t("required")}
                 </button>
                 <button
                   type="button"
@@ -523,11 +563,11 @@ export default function EmployerPostPage() {
                       : "text-gray-600 hover:text-gray-900"
                   )}
                 >
-                  Good to have
+                  {t("goodToHave")}
                 </button>
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2 items-center">
                 {suggestedSkills.map((s) => {
                   const inRequired = requiredSkills.some((x) => x.name === s);
                   const inGood = goodToHaveSkills.some((x) => x.name === s);
@@ -549,24 +589,81 @@ export default function EmployerPostPage() {
                         !canAdd && !added && "opacity-50 cursor-not-allowed"
                       )}
                     >
-                      {s}
+                      {skillLabel(s)}
                     </button>
                   );
                 })}
+                {((addingAsRequired && requiredSkills.length < 5) || (!addingAsRequired && goodToHaveSkills.length < 5)) && !showAddSkillInput && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddSkillInput(true)}
+                    className="rounded-full border-2 border-dashed border-matcher-teal bg-matcher-teal/10 px-3 py-1.5 text-xs font-medium text-matcher-teal hover:bg-matcher-teal/20 hover:border-matcher-teal"
+                  >
+                    + {t("addYourSkill")}
+                  </button>
+                )}
+                {((addingAsRequired && requiredSkills.length < 5) || (!addingAsRequired && goodToHaveSkills.length < 5)) && showAddSkillInput && (
+                  <div className="relative inline-flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={skillSearch}
+                      onChange={(e) => setSkillSearch(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addCustomSkillEmployer();
+                        }
+                        if (e.key === "Escape") setShowAddSkillInput(false);
+                      }}
+                      placeholder={t("searchSkillsPlaceholder")}
+                      className="rounded-full border border-matcher bg-matcher-pale px-4 py-1.5 text-sm outline-none focus:ring-2 focus:ring-matcher/30 w-48"
+                      autoFocus
+                    />
+                    {(skillSearch.trim().length >= 2 &&
+                      (filteredSkillsForSearch.length > 0 ||
+                        (!requiredSkills.some((x) => x.name.toLowerCase() === skillSearch.trim().toLowerCase()) &&
+                          !goodToHaveSkills.some((x) => x.name.toLowerCase() === skillSearch.trim().toLowerCase())))) && (
+                      <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-2xl border border-gray-200 bg-white py-1 shadow-xl max-h-48 overflow-y-auto" onMouseDown={(e) => e.preventDefault()}>
+                        {filteredSkillsForSearch.map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => { addSkill(s); setSkillSearch(""); setShowAddSkillInput(false); }}
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-matcher-mint"
+                          >
+                            {skillLabel(s)}
+                          </button>
+                        ))}
+                        {!requiredSkills.some((x) => x.name.toLowerCase() === skillSearch.trim().toLowerCase()) &&
+                          !goodToHaveSkills.some((x) => x.name.toLowerCase() === skillSearch.trim().toLowerCase()) &&
+                          !filteredSkillsForSearch.some((s) => s.toLowerCase() === skillSearch.trim().toLowerCase()) && (
+                            <button
+                              type="button"
+                              onClick={() => { addCustomSkillEmployer(); setShowAddSkillInput(false); }}
+                              className="w-full px-4 py-2 text-left text-sm text-matcher-dark hover:bg-matcher-mint border-t border-gray-100"
+                            >
+                              {t("addCustomSkill", { skill: skillSearch.trim() })}
+                            </button>
+                          )}
+                      </div>
+                    )}
+                    <button type="button" onClick={() => { setShowAddSkillInput(false); setSkillSearch(""); }} className="text-gray-500 hover:text-gray-700">×</button>
+                  </div>
+                )}
               </div>
 
               {(requiredSkills.length > 0 || goodToHaveSkills.length > 0) && (
                 <div className="mt-4 space-y-3">
                   {requiredSkills.length > 0 && (
                     <div>
-                      <p className="mb-2 text-xs font-medium text-matcher-dark">Required ({requiredSkills.length}/5)</p>
+                      <p className="mb-2 text-xs font-medium text-matcher-dark">{t("requiredCount", { count: requiredSkills.length })}</p>
                       <div className="flex flex-wrap gap-2">
                         {requiredSkills.map((sk) => (
                           <div
                             key={sk.name}
                             className="inline-flex items-center gap-1.5 rounded-full border border-matcher bg-matcher-mint px-3 py-1.5 text-sm"
                           >
-                            <span className="font-medium text-gray-900">{sk.name}</span>
+                            <span className="font-medium text-gray-900">{skillLabel(sk.name)}</span>
                             <select
                               value={sk.level ?? "Intermediate"}
                               onChange={(e) => setSkillLevel(sk.name, e.target.value as SkillLevel, true)}
@@ -599,14 +696,14 @@ export default function EmployerPostPage() {
                   )}
                   {goodToHaveSkills.length > 0 && (
                     <div>
-                      <p className="mb-2 text-xs font-medium text-gray-600">Good to have ({goodToHaveSkills.length}/5)</p>
+                      <p className="mb-2 text-xs font-medium text-gray-600">{t("goodToHaveCount", { count: goodToHaveSkills.length })}</p>
                       <div className="flex flex-wrap gap-2">
                         {goodToHaveSkills.map((sk) => (
                           <div
                             key={sk.name}
                             className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm"
                           >
-                            <span className="font-medium text-gray-900">{sk.name}</span>
+                            <span className="font-medium text-gray-900">{skillLabel(sk.name)}</span>
                             <select
                               value={sk.level ?? "Intermediate"}
                               onChange={(e) => setSkillLevel(sk.name, e.target.value as SkillLevel, false)}
@@ -643,7 +740,7 @@ export default function EmployerPostPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-sm font-medium text-gray-900">Salary min (GEL)</label>
+                <label className="text-sm font-medium text-gray-900">{t("salaryMin")}</label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -654,7 +751,7 @@ export default function EmployerPostPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-900">Salary max (GEL)</label>
+                <label className="text-sm font-medium text-gray-900">{t("salaryMax")}</label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -667,36 +764,36 @@ export default function EmployerPostPage() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-900">Description</label>
+              <label className="text-sm font-medium text-gray-900">{t("description")}</label>
               <p className="mt-1 text-xs text-gray-500">
-                Auto-generated. Edit if needed. Two sentences max.
+                {t("descriptionHint")}
               </p>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value.slice(0, 200))}
-                placeholder="Brief description of the role..."
+                placeholder={t("descriptionPlaceholder")}
                 rows={3}
                 maxLength={200}
                 className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
               />
-              <p className="mt-1 text-xs text-gray-500">{description.length}/200 · 2 sentences max</p>
+              <p className="mt-1 text-xs text-gray-500">{t("charactersMax", { count: description.length })}</p>
             </div>
 
             {!isLoggedIn && (
             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-              <p className="text-sm font-medium text-gray-900">Your contact details</p>
+              <p className="text-sm font-medium text-gray-900">{t("contactDetails")}</p>
               <p className="mt-1 text-xs text-gray-500">
-                For notifications when you get mutual matches. No account needed.
+                {t("contactHint")}
               </p>
 
               <div className="mt-4 space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-900">Contact name</label>
+                  <label className="text-sm font-medium text-gray-900">{t("contactName")}</label>
                   <input
                     type="text"
                     value={contactName}
                     onChange={(e) => setContactName(e.target.value)}
-                    placeholder="e.g. Nino from HR"
+                    placeholder={t("contactNamePlaceholder")}
                     className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/600/30 ${
                       contactName.length > 0 && contactName.trim().length < 2
                         ? "border-red-300"
@@ -704,11 +801,11 @@ export default function EmployerPostPage() {
                     }`}
                   />
                   {contactName.length > 0 && contactName.trim().length < 2 && (
-                    <p className="mt-2 text-xs text-red-600">Enter at least 2 characters.</p>
+                    <p className="mt-2 text-xs text-red-600">{t("minTwoChars")}</p>
                   )}
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-900">Email</label>
+                  <label className="text-sm font-medium text-gray-900">{t("emailLabel")}</label>
                   <input
                     type="email"
                     value={contactEmail}
@@ -721,11 +818,11 @@ export default function EmployerPostPage() {
                     }`}
                   />
                   {contactEmail.length > 0 && !isValidEmail(contactEmail) && (
-                    <p className="mt-2 text-xs text-red-600">Please enter a valid email.</p>
+                    <p className="mt-2 text-xs text-red-600">{t("validEmail")}</p>
                   )}
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-900">Phone</label>
+                  <label className="text-sm font-medium text-gray-900">{t("phoneLabel")}</label>
                   <input
                     type="tel"
                     value={contactPhone}
@@ -738,7 +835,7 @@ export default function EmployerPostPage() {
                     }`}
                   />
                   {contactPhone.length > 0 && !isValidPhone(contactPhone) && (
-                    <p className="mt-2 text-xs text-red-600">Please enter a valid phone number.</p>
+                    <p className="mt-2 text-xs text-red-600">{t("validPhone")}</p>
                   )}
                 </div>
               </div>
@@ -754,14 +851,14 @@ export default function EmployerPostPage() {
                   : "bg-gray-200 text-gray-500 cursor-not-allowed"
               }`}
             >
-              Post vacancy
+              {t("postVacancy")}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-gray-500">
-            Want to manage multiple vacancies?{" "}
+            {t("wantManageMultiple")}{" "}
             <Link href="/employer/register" className="font-medium text-matcher-dark hover:text-matcher">
-              Register your company
+              {t("registerCompany")}
             </Link>
           </p>
         </div>

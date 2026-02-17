@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import { useTranslations, useLocale } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import Logo from "@/components/Logo";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 import {
   GEORGIAN_REGIONS,
   GEORGIAN_CITIES,
@@ -17,7 +16,9 @@ import {
   saveCandidateProfile,
   type StoredCandidateProfile,
 } from "@/lib/candidateProfileStorage";
-import { fetchJobTemplates, AVG_SALARY_BY_SLUG, type JobTemplateRole } from "@/lib/jobTemplates";
+import { fetchJobTemplates, AVG_SALARY_BY_SLUG, getSkillsForRoleSlug, type JobTemplateRole } from "@/lib/jobTemplates";
+import { ALL_SKILLS } from "@/lib/allSkills";
+import type { EducationLevel } from "@/lib/matchCalculation";
 
 const GeorgiaMap = dynamic(() => import("./GeorgiaMap"), { ssr: false });
 
@@ -103,6 +104,8 @@ function isValidPassword(password: string) {
 
 export default function UserFlow1Page() {
   const t = useTranslations("userFlow");
+  const tExtras = useTranslations("userFlowExtras");
+  const tSkillNames = useTranslations("skillNames");
   const locale = useLocale();
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7>(1);
@@ -117,7 +120,7 @@ export default function UserFlow1Page() {
     setJobRolesError(null);
     fetchJobTemplates(locale as "en" | "ka")
       .then(setJobRoles)
-      .catch((e) => setJobRolesError(e instanceof Error ? e.message : "Failed to load jobs"))
+      .catch((e) => setJobRolesError(e instanceof Error ? e.message : tExtras("failedToLoadJobs")))
       .finally(() => setJobRolesLoading(false));
   }, [locale]);
 
@@ -140,6 +143,8 @@ export default function UserFlow1Page() {
 
   // Step 4
   const [skills, setSkills] = useState<SelectedSkill[]>([]);
+  const [skillSearch, setSkillSearch] = useState("");
+  const [showAddSkillInput, setShowAddSkillInput] = useState(false);
 
   // Step 5 — location
   const [locationCityId, setLocationCityId] = useState<CityId | null>(null);
@@ -148,6 +153,7 @@ export default function UserFlow1Page() {
 
   // Step 6 — salary
   const [salary, setSalary] = useState("");
+  const [education, setEducation] = useState<EducationLevel>("High School");
 
   // Step 7 registration
   const [fullName, setFullName] = useState("");
@@ -162,12 +168,29 @@ export default function UserFlow1Page() {
 
   const suggestedSkills = useMemo(() => {
     if (!selectedRole) return [];
-    const names = selectedRole.skills.map((s) => s.skillName);
+    const names = getSkillsForRoleSlug(selectedRole.slug);
     return names.length > 0 ? names : FALLBACK_SKILLS;
   }, [selectedRole]);
 
+  const educationLabel = (level: EducationLevel) => {
+    const key = level === "None" ? "educationNone" : level === "High School" ? "educationHighSchool" : level === "Bachelor" ? "educationBachelor" : level === "Master" ? "educationMaster" : "educationPhd";
+    return t(`step7.${key}`);
+  };
+
+  const filteredSkillsForSearch = useMemo(() => {
+    const q = skillSearch.trim().toLowerCase();
+    if (q.length < 2) return [];
+    const added = new Set(skills.map((s) => s.name));
+    return ALL_SKILLS.filter((s) => {
+      if (added.has(s)) return false;
+      if (skills.length >= 5) return false;
+      const label = (tSkillNames(s) as string).toLowerCase();
+      return label.includes(q) || s.toLowerCase().includes(q);
+    }).slice(0, 12);
+  }, [skillSearch, skills, tSkillNames]);
+
   const jobLabel = (slug: string) => jobRoles.find((r) => r.slug === slug)?.title ?? slug;
-  const skillLabel = (s: string) => t(`skillNames.${s}` as any);
+  const skillLabel = (s: string) => (ALL_SKILLS.includes(s) ? (tSkillNames(s) as string) : s);
   const workTypeLabel = (key: string) => t(`workTypeLabels.${key}` as any);
   const workTypeDesc = (key: string) => t(`step3.${key}Desc` as any);
   const skillLevelLabel = (level: string) => t(`skillLevels.${level}` as any);
@@ -198,12 +221,24 @@ export default function UserFlow1Page() {
   const showCityDropdown = locationInputFocused && locationSearch.trim().length >= 2 && !locationCityId;
 
   function toggleSkill(name: string) {
+    const normalized = name.trim();
+    if (!normalized || normalized.length < 2) return;
     setSkills((prev) => {
-      const exists = prev.some((s) => s.name === name);
-      if (exists) return prev.filter((s) => s.name !== name);
+      const exists = prev.some((s) => s.name.toLowerCase() === normalized.toLowerCase());
+      if (exists) return prev.filter((s) => s.name.toLowerCase() !== normalized.toLowerCase());
       if (prev.length >= 5) return prev;
-      return [...prev, { name }];
+      const displayName = normalized.replace(/\b\w/g, (c) => c.toUpperCase());
+      return [...prev, { name: displayName }];
     });
+  }
+
+  function addCustomSkill() {
+    const raw = skillSearch.trim();
+    if (raw.length < 2 || skills.length >= 5) return;
+    if (skills.some((s) => s.name.toLowerCase() === raw.toLowerCase())) return;
+    const match = ALL_SKILLS.find((s) => s.toLowerCase() === raw.toLowerCase());
+    toggleSkill(match ?? raw);
+    setSkillSearch("");
   }
 
   function setSkillLevel(name: string, level: SkillLevel) {
@@ -285,6 +320,7 @@ export default function UserFlow1Page() {
       skills,
       locationCityId,
       salary,
+      education,
     });
     const stored: StoredCandidateProfile = {
       profile,
@@ -312,7 +348,7 @@ export default function UserFlow1Page() {
   }, [step]);
 
   const recommendedSalary = useMemo(
-    () => (job ? AVG_SALARY_BY_SLUG[job] ?? null : null),
+    () => (job ? (AVG_SALARY_BY_SLUG[job] ?? 1100) : null),
     [job]
   );
 
@@ -328,10 +364,7 @@ export default function UserFlow1Page() {
             <span className="text-lg">←</span> {t("back")}
           </button>
 
-          <div className="flex items-center gap-3">
-            <Logo height={72} />
-            <LanguageSwitcher />
-          </div>
+          <Logo height={72} />
 
           <div className="text-sm text-gray-500">
             {t("step")} <span className="text-gray-900 font-medium">{step}</span>/7
@@ -368,7 +401,7 @@ export default function UserFlow1Page() {
                 )}
 
                 {jobRolesLoading && (
-                  <p className="mt-5 text-sm text-gray-500">Loading jobs…</p>
+                  <p className="mt-5 text-sm text-gray-500">{tExtras("loadingJobs")}</p>
                 )}
 
                 <div className="mt-5">
@@ -528,7 +561,7 @@ export default function UserFlow1Page() {
 
                 <div className="mt-5">
                   <div className="text-sm font-medium text-gray-900">{t("step4.suggestedFor")} <span className="font-bold text-matcher-dark">{selectedRole ? selectedRole.title : t("step4.yourJob")}</span></div>
-                  <div className="mt-2 flex flex-wrap gap-2">
+                  <div className="mt-2 flex flex-wrap gap-2 items-center">
                     {(suggestedSkills.length ? suggestedSkills : ["Communication", "Teamwork", "Time management"]).map(
                       (s) => {
                         const active = skills.some((x) => x.name === s);
@@ -550,6 +583,59 @@ export default function UserFlow1Page() {
                           </button>
                         );
                       }
+                    )}
+                    {skills.length < 5 && !showAddSkillInput && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAddSkillInput(true)}
+                        className="rounded-full border-2 border-dashed border-matcher-teal bg-matcher-teal/10 px-3 py-1.5 text-xs font-medium text-matcher-teal hover:bg-matcher-teal/20 hover:border-matcher-teal"
+                      >
+                        + {t("step4.addYourSkill")}
+                      </button>
+                    )}
+                    {skills.length < 5 && showAddSkillInput && (
+                      <div className="relative inline-block">
+                        <input
+                          type="text"
+                          value={skillSearch}
+                          onChange={(e) => setSkillSearch(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addCustomSkill();
+                            }
+                            if (e.key === "Escape") setShowAddSkillInput(false);
+                          }}
+                          placeholder={t("step4.searchSkillsPlaceholder")}
+                          className="rounded-full border border-matcher bg-matcher-pale px-4 py-1.5 text-sm outline-none focus:ring-2 focus:ring-matcher/30 w-48"
+                          autoFocus
+                        />
+                        {(skillSearch.trim().length >= 2 && (filteredSkillsForSearch.length > 0 || !skills.some((s) => s.name.toLowerCase() === skillSearch.trim().toLowerCase()))) && (
+                          <div className="absolute z-50 left-0 mt-1 w-56 rounded-2xl border border-gray-200 bg-white py-1 shadow-xl max-h-48 overflow-y-auto" onMouseDown={(e) => e.preventDefault()}>
+                            {filteredSkillsForSearch.map((s) => (
+                              <button
+                                key={s}
+                                type="button"
+                                onClick={() => { toggleSkill(s); setSkillSearch(""); setShowAddSkillInput(false); }}
+                                className="w-full px-4 py-2 text-left text-sm hover:bg-matcher-mint"
+                              >
+                                {skillLabel(s)}
+                              </button>
+                            ))}
+                            {!skills.some((s) => s.name.toLowerCase() === skillSearch.trim().toLowerCase()) &&
+                              !filteredSkillsForSearch.some((s) => s.toLowerCase() === skillSearch.trim().toLowerCase()) && (
+                              <button
+                                type="button"
+                                onClick={() => { addCustomSkill(); setShowAddSkillInput(false); }}
+                                className="w-full px-4 py-2 text-left text-sm text-matcher-dark hover:bg-matcher-mint border-t border-gray-100"
+                              >
+                                {t("step4.addCustomSkill", { skill: skillSearch.trim() })}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        <button type="button" onClick={() => { setShowAddSkillInput(false); setSkillSearch(""); }} className="ml-1.5 text-gray-500 hover:text-gray-700">×</button>
+                      </div>
                     )}
                   </div>
                   <p className="mt-2 text-xs text-gray-500">{t("step4.tip")}</p>
@@ -824,6 +910,21 @@ export default function UserFlow1Page() {
 
                 <div className="mt-6 grid gap-4">
                   <div>
+                    <label className="text-sm font-medium text-gray-900">{t("step7.education")}</label>
+                    <select
+                      value={education}
+                      onChange={(e) => setEducation(e.target.value as EducationLevel)}
+                      className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
+                    >
+                      <option value="None">{educationLabel("None")}</option>
+                      <option value="High School">{educationLabel("High School")}</option>
+                      <option value="Bachelor">{educationLabel("Bachelor")}</option>
+                      <option value="Master">{educationLabel("Master")}</option>
+                      <option value="PhD">{educationLabel("PhD")}</option>
+                    </select>
+                  </div>
+
+                  <div>
                     <label className="text-sm font-medium text-gray-900">{t("step7.fullName")}</label>
                     <input
                       value={fullName}
@@ -890,6 +991,9 @@ export default function UserFlow1Page() {
                       <li>
                         <span className="text-gray-500">{t("step7.job")}:</span>{" "}
                         <span className="font-bold text-matcher-dark">{selectedRole ? selectedRole.title : "—"}</span>
+                      </li>
+                      <li>
+                        <span className="text-gray-500">{t("step7.education")}:</span> {educationLabel(education)}
                       </li>
                       <li>
                         <span className="text-gray-500">{t("step7.experience")}:</span>{" "}

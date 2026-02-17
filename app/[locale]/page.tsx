@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo, animate } from "framer-motion";
 import { Link } from "@/i18n/navigation";
 import Logo from "@/components/Logo";
+import Footer from "@/components/Footer";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const PARTNER_SLUGS: Record<string, string> = {
@@ -177,7 +178,7 @@ function InteractiveSwipeDemo({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="relative z-10 flex flex-col rounded-2xl border border-gray-200/80 bg-white/95 p-6 shadow-xl shadow-matcher/10 backdrop-blur-sm"
+      className="relative z-10 flex flex-col rounded-2xl border border-gray-200/80 bg-white/95 p-4 shadow-xl shadow-matcher/10 backdrop-blur-sm sm:p-5 md:p-6"
     >
       <p className="text-sm font-semibold text-gray-600">{t("assistantDemo")}</p>
       <p className="mt-1 text-xs text-gray-400">{t("assistantGreeting")}</p>
@@ -224,7 +225,7 @@ function InteractiveSwipeDemo({
         ))}
       </div>
 
-      <div className="relative mt-4 aspect-[3/4] max-h-[300px] overflow-hidden rounded-xl">
+      <div className="relative mt-3 aspect-[3/4] max-h-[240px] overflow-hidden rounded-xl sm:mt-4 sm:max-h-[280px] md:max-h-[300px]">
         {current && (
           <AnimatePresence mode="wait">
             <SwipeCard
@@ -266,26 +267,41 @@ function InteractiveSwipeDemo({
   );
 }
 
+const PARTNER_ASPECTS: Record<string, "square" | "wide"> = {
+  Gulf: "wide",       // horizontal oval
+  Nikora: "square",
+  "2 Nabiji": "square",
+  UGT: "wide",        // symbol + text
+  iTechnics: "wide",  // circle + text
+  "Kursi.ge": "square",
+};
+
 function PartnerLogo({
   name,
   domain,
   bg,
   text,
+  aspect = "square",
 }: {
   name: string;
   domain: string;
   bg: string;
   text: string;
+  aspect?: "square" | "wide";
 }) {
   const [useFallback, setUseFallback] = useState(false);
   const initials = name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase();
   const slug = PARTNER_SLUGS[name] ?? domain.replace(".ge", "");
   const localSrc = `/partners/${slug}.png`;
 
+  const containerClass = aspect === "wide"
+    ? "aspect-[7/4] w-24 sm:w-28 md:w-32"
+    : "aspect-square w-16 sm:w-[4.5rem] md:w-20";
+
   if (useFallback) {
     return (
       <div
-        className={`flex h-16 w-16 items-center justify-center rounded-2xl ${bg} ${text} text-xs font-bold shadow-md transition-all hover:scale-110 hover:shadow-lg md:h-20 md:w-20 md:text-sm`}
+        className={`flex shrink-0 items-center justify-center rounded-xl ${containerClass} ${bg} ${text} text-xs font-bold shadow-md transition-all hover:scale-105 md:text-sm`}
         title={name}
       >
         {initials}
@@ -295,15 +311,15 @@ function PartnerLogo({
 
   return (
     <div
-      className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-white p-2 shadow-md transition-all hover:scale-110 hover:shadow-lg md:h-20 md:w-20"
+      className={`group relative flex shrink-0 overflow-hidden rounded-xl bg-white p-3 shadow-md ring-1 ring-gray-100/80 transition-all duration-200 hover:scale-105 hover:shadow-lg hover:ring-matcher/20 ${containerClass}`}
       title={name}
     >
       <Image
         src={localSrc}
         alt={name}
-        width={80}
-        height={80}
-        className="object-contain"
+        fill
+        sizes={aspect === "wide" ? "(max-width: 640px) 96px, (max-width: 768px) 112px, 128px" : "(max-width: 640px) 64px, (max-width: 768px) 72px, 80px"}
+        className="object-contain object-center"
         onError={() => setUseFallback(true)}
       />
     </div>
@@ -370,10 +386,9 @@ export default function Home() {
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-matcher-pale via-matcher-mint/30 to-white" />
 
       {/* Navbar */}
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <Logo height={88} />
-
-        <div className="flex items-center gap-4">
+      <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
+        <Logo height={108} />
+        <div className="flex items-center gap-3">
           <LanguageSwitcher />
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Link
@@ -387,14 +402,14 @@ export default function Home() {
       </header>
 
       {/* Hero */}
-      <section className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-20 md:grid-cols-2">
+      <section className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-6 px-4 py-8 sm:gap-8 sm:px-6 sm:py-12 md:grid-cols-2 md:gap-10 md:py-16 lg:gap-12 lg:py-20">
         {/* Left side – hero text */}
         <div>
           <motion.h1
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-5xl font-bold tracking-tight text-gray-900"
+            className="text-balance text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl md:text-5xl"
           >
             {t("heroTitlePrefix")}
             <AnimatePresence mode="wait">
@@ -419,7 +434,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="mt-6 text-lg text-gray-600"
+            className="text-balance mt-4 text-base text-gray-600 sm:mt-5 sm:text-lg"
           >
             {t("heroSubtitle")}
           </motion.p>
@@ -428,7 +443,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="mt-8 flex gap-4"
+            className="mt-6 flex flex-wrap gap-3 sm:mt-8 sm:gap-4"
           >
             <motion.div
               whileHover={{ y: -2, boxShadow: "0 8px 20px -8px rgba(139, 195, 74, 0.5)" }}
@@ -455,7 +470,7 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="mt-8 flex gap-6 text-sm text-gray-500"
+            className="mt-5 flex flex-wrap gap-4 text-xs text-gray-500 sm:mt-6 sm:gap-6 sm:text-sm"
           >
             <p>{t("instantMatching")}</p>
             <p>{t("entryLevel")}</p>
@@ -479,7 +494,7 @@ export default function Home() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.6 }}
-        className="mx-auto max-w-6xl px-6 pb-20"
+        className="mx-auto max-w-6xl px-4 pb-8 sm:px-6 sm:pb-12 md:pb-16"
       >
         <div className="flex justify-center gap-3 md:hidden">
           {[
@@ -503,18 +518,15 @@ export default function Home() {
       </motion.section>
 
       {/* Partners / Logos strip */}
-      <section className="border-t border-matcher/20 bg-gradient-to-b from-matcher-pale/50 to-matcher-mint/30 py-16">
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="flex justify-center">
-            <Logo height={48} className="opacity-80" />
-          </div>
-          <p className="mt-4 text-center text-sm font-medium uppercase tracking-wider text-matcher-dark">
+      <section className="border-t border-matcher/15 bg-gradient-to-b from-matcher-pale/40 to-matcher-mint/20 py-12 sm:py-14 md:py-16 lg:py-20">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-matcher-dark/90">
             {t("trustedBy")}
           </p>
-          <p className="mt-1.5 text-center text-xs text-gray-600">
+          <p className="mt-1.5 text-center text-sm text-gray-500">
             {t("partnerNote")}
           </p>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-8 md:gap-12">
+          <div className="mx-auto mt-10 grid max-w-3xl grid-cols-2 items-center justify-items-center gap-6 sm:grid-cols-3 sm:gap-8 md:mt-12 md:gap-10 lg:grid-cols-6 lg:gap-8">
             {[
               { name: "Gulf", domain: "gulf.ge", bg: "bg-matcher", text: "text-white" },
               { name: "Nikora", domain: "nikora.ge", bg: "bg-matcher-teal", text: "text-white" },
@@ -523,18 +535,25 @@ export default function Home() {
               { name: "iTechnics", domain: "itechnics.ge", bg: "bg-matcher-coral", text: "text-white" },
               { name: "Kursi.ge", domain: "kursi.ge", bg: "bg-matcher", text: "text-white" },
             ].map(({ name, domain, bg, text }) => (
-              <PartnerLogo key={name} name={name} domain={domain} bg={bg} text={text} />
+              <PartnerLogo
+                key={name}
+                name={name}
+                domain={domain}
+                bg={bg}
+                text={text}
+                aspect={PARTNER_ASPECTS[name] ?? "square"}
+              />
             ))}
           </div>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <h2 className="text-center text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
+      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 md:py-20">
+        <h2 className="text-center text-xl font-bold tracking-tight text-gray-900 sm:text-2xl md:text-3xl">
           {t("testimonialsTitle")}
         </h2>
-        <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:mt-10 sm:gap-5 md:grid-cols-3 md:gap-6 md:mt-12">
           {[
             {
               ...t.raw("testimonials.nini"),
@@ -551,7 +570,7 @@ export default function Home() {
           ].map((item) => (
             <div
               key={item.name}
-              className={`rounded-2xl border border-gray-200 border-l-4 bg-white p-6 ${item.accent}`}
+              className={`rounded-2xl border border-gray-200 border-l-4 bg-white p-4 sm:p-5 md:p-6 ${item.accent}`}
             >
               <p className="text-gray-600">&ldquo;{item.quote}&rdquo;</p>
               <p className="mt-4 text-sm font-semibold text-gray-900">
@@ -564,12 +583,12 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section className="border-t border-matcher/20 bg-gradient-to-b from-matcher-mint/20 to-matcher-pale/50 py-20">
-        <div className="mx-auto max-w-6xl px-6">
-          <h2 className="text-center text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
+      <section className="border-t border-matcher/20 bg-gradient-to-b from-matcher-mint/20 to-matcher-pale/50 py-12 sm:py-16 md:py-20">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <h2 className="text-center text-xl font-bold tracking-tight text-gray-900 sm:text-2xl md:text-3xl">
             {t("howItWorksTitle")}
           </h2>
-          <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-3">
+          <div className="mt-8 grid grid-cols-1 gap-5 sm:mt-10 sm:gap-6 md:grid-cols-3 md:gap-8 md:mt-12">
             {[
               {
                 step: 1,
@@ -595,7 +614,7 @@ export default function Home() {
             ].map((item) => (
               <div
                 key={item.step}
-                className={`rounded-2xl border-2 bg-white p-6 text-center ${item.bg}`}
+                className={`rounded-2xl border-2 bg-white p-5 text-center sm:p-6 ${item.bg}`}
               >
                 <span className="text-2xl">{item.icon}</span>
                 <p className="mt-3 font-semibold text-gray-900">{item.title}</p>
@@ -607,8 +626,8 @@ export default function Home() {
       </section>
 
       {/* Metrics row */}
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12 md:py-16">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 md:gap-6">
           {[
             { value: "2 min", label: t("metrics.setup"), color: "text-matcher-dark" },
             { value: "Top 3", label: t("metrics.matches"), color: "text-matcher-teal" },
@@ -617,9 +636,9 @@ export default function Home() {
           ].map((stat) => (
             <div
               key={stat.label}
-              className="rounded-2xl border-2 border-matcher/20 bg-matcher-pale/50 p-6 text-center"
+              className="rounded-xl border-2 border-matcher/20 bg-matcher-pale/50 p-4 text-center sm:rounded-2xl sm:p-5 md:p-6"
             >
-              <p className={`text-2xl font-bold md:text-3xl ${stat.color}`}>
+              <p className={`text-xl font-bold sm:text-2xl md:text-3xl ${stat.color}`}>
                 {stat.value}
               </p>
               <p className="mt-1 text-sm text-gray-500">{stat.label}</p>
@@ -629,17 +648,17 @@ export default function Home() {
       </section>
 
       {/* Final CTA */}
-      <section className="mx-auto max-w-6xl px-6 py-20">
+      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 md:py-20">
         <div
-          className="rounded-2xl border border-matcher bg-gradient-to-br from-matcher-pale to-matcher-mint p-12 text-center md:p-16"
+          className="rounded-2xl border border-matcher bg-gradient-to-br from-matcher-pale to-matcher-mint p-8 text-center sm:p-10 md:p-12 lg:p-16"
         >
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
+          <h2 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl md:text-3xl">
             {t("readyTitle")}
           </h2>
-          <p className="mt-3 text-gray-600">
+          <p className="mt-2 text-gray-600 sm:mt-3 sm:text-base">
             {t("readySubtitle")}
           </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:mt-8 sm:gap-4">
             <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
               <Link
                 href="/userFlow/1"
@@ -659,6 +678,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </main>
   );
 }

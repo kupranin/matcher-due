@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import { getMutualMatches, type MutualMatch } from "@/lib/matchStorage";
 import MatchChatWindow from "@/components/MatchChatWindow";
 
 export default function CandidateChatsPage() {
+  const t = useTranslations("chats");
   const [matches, setMatches] = useState<MutualMatch[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<MutualMatch | null>(null);
 
@@ -15,15 +17,15 @@ export default function CandidateChatsPage() {
 
   if (matches.length === 0) {
     return (
-      <div className="mx-auto max-w-md px-4 py-16">
-        <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-12 text-center">
+      <div className="mx-auto max-w-md px-4 py-10 sm:py-14 md:py-16">
+        <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-8 text-center sm:p-10 md:p-12">
           <p className="text-5xl">💬</p>
-          <h2 className="mt-4 text-xl font-bold text-gray-900">No matches yet</h2>
+          <h2 className="mt-4 text-xl font-bold text-gray-900">{t("noMatchesYet")}</h2>
           <p className="mt-2 text-gray-600">
-            When you and an employer both like each other, you&apos;ll be able to chat here to schedule next steps.
+            {t("noMatchesHint")}
           </p>
           <p className="mt-4 text-sm text-gray-500">
-            Keep swiping on jobs you like — your match could be right around the corner!
+            {t("keepSwipingHint")}
           </p>
         </div>
       </div>
@@ -32,7 +34,7 @@ export default function CandidateChatsPage() {
 
   if (selectedMatch) {
     return (
-      <div className="mx-auto max-w-md px-4 py-8">
+      <div className="mx-auto max-w-md px-4 py-5 sm:py-6 md:py-8">
         <AnimatePresence>
           <MatchChatWindow
             key={selectedMatch.id}
@@ -46,10 +48,10 @@ export default function CandidateChatsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 py-8">
-      <h1 className="text-2xl font-bold tracking-tight text-gray-900">Your matches</h1>
+    <div className="mx-auto max-w-md px-4 py-5 sm:py-6 md:py-8">
+      <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">{t("yourMatches")}</h1>
       <p className="mt-1 text-gray-600">
-        Chat with employers to schedule interviews and next steps.
+        {t("chatHint")}
       </p>
 
       <div className="mt-6 space-y-3">
@@ -69,7 +71,7 @@ export default function CandidateChatsPage() {
               <p className="font-semibold text-gray-900">{match.company}</p>
               <p className="text-sm text-gray-600">{match.vacancyTitle}</p>
             </div>
-            <span className="text-matcher">Chat →</span>
+            <span className="text-matcher">{t("chat")}</span>
           </motion.button>
         ))}
       </div>

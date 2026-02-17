@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import Logo from "@/components/Logo";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 type UserType = "candidate" | "business" | null;
 
@@ -36,10 +35,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-white">
       <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <Logo height={80} />
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:py-4">
+          <Logo height={72} />
           <div className="flex items-center gap-4">
-            <LanguageSwitcher />
             <Link href="/" className="text-sm text-gray-600 hover:text-gray-900">
               {tCommon("backToHome")}
             </Link>
@@ -47,8 +45,8 @@ export default function LoginPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-md px-4 py-16">
-        <div className="rounded-3xl border bg-white p-8 shadow-sm">
+      <main className="mx-auto max-w-md px-4 py-8 sm:py-12 md:py-16">
+        <div className="rounded-2xl border bg-white p-5 shadow-sm sm:rounded-3xl sm:p-6 md:p-8">
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
             {t("title")}
           </h1>
