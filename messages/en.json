@@ -1,0 +1,294 @@
+{
+  "chat": {
+    "schedule": "Schedule",
+    "addToCalendar": "Add to Google Calendar",
+    "eventTitle": "Event title",
+    "eventTitlePlaceholder": "Interview with {name}",
+    "date": "Date",
+    "time": "Time",
+    "duration": "Duration",
+    "durationMinutes": "{minutes} min",
+    "location": "Location (optional)",
+    "locationPlaceholder": "Office, video call link…",
+    "openCalendar": "Opens Google Calendar in a new tab",
+    "cancel": "Cancel"
+  },
+  "common": {
+    "login": "Login",
+    "logIn": "Log in",
+    "logOut": "Log out",
+    "backToHome": "← Back to home",
+    "getMatched": "Get matched",
+    "imHiring": "I'm hiring",
+    "profile": "Profile",
+    "matches": "Matches",
+    "chats": "Chats",
+    "register": "Register"
+  },
+  "home": {
+    "heroTitlePrefix": "Get matched to your first ",
+    "heroTitleSuffix": " in minutes.",
+    "heroWordJob": "job",
+    "heroWordCandidate": "candidate",
+    "heroSubtitle": "No CV. No endless searching. Tell Matcher what you want — we instantly connect you with real entry-level jobs in Georgia.",
+    "instantMatching": "⚡ Instant matching",
+    "entryLevel": "💼 Entry-level roles",
+    "builtForGeorgia": "🇬🇪 Built for Georgia",
+    "assistantDemo": "Try it — swipe to match",
+    "assistantGreeting": "👋 Pick a category, then drag or tap to like/pass",
+    "trySwiping": "Drag the card or use buttons below",
+    "chips": {
+      "barista": "Barista in Tbilisi",
+      "parttime": "Part-time job",
+      "noexp": "No experience"
+    },
+    "match": "match",
+    "trustedBy": "Trusted by leading employers in Georgia",
+    "partnerNote": "Partner logos shown with permission.",
+    "testimonialsTitle": "People get hired faster",
+    "howItWorksTitle": "How it works",
+    "howItWorks": {
+      "step1Title": "Tell us your preferences",
+      "step1Text": "What you want, where, and when — no CV needed.",
+      "step2Title": "Get top matches instantly",
+      "step2Text": "We show your best 3 matches right away.",
+      "step3Title": "Swipe to match",
+      "step3Text": "Swipe to match with jobs. Get contacted when employers match back."
+    },
+    "metrics": {
+      "setup": "setup",
+      "matches": "matches",
+      "cvRequired": "CV required",
+      "builtForGeorgia": "Built for Georgia"
+    },
+    "readyTitle": "Ready to get matched today?",
+    "readySubtitle": "Join job seekers across Georgia — no CV, no endless scrolling.",
+    "testimonials": {
+      "nini": {
+        "quote": "I had no experience and no CV. Matcher showed me three barista roles — I got the first one in three days.",
+        "name": "Nini",
+        "city": "Tbilisi",
+        "role": "Barista"
+      },
+      "giorgi": {
+        "quote": "Finally something that doesn't ask for years of experience. Applied in one click and got a call the same week.",
+        "name": "Giorgi",
+        "city": "Batumi",
+        "role": "Retail associate"
+      },
+      "mariam": {
+        "quote": "Searched for part-time for months. Here I got matched in two minutes and hired within a week.",
+        "name": "Mariam",
+        "city": "Tbilisi",
+        "role": "Cashier"
+      }
+    },
+    "demoJobs": {
+      "barista": [
+        { "title": "Barista — Coffee Lab", "location": "Tbilisi", "match": 92 },
+        { "title": "Cashier — Carrefour", "location": "Tbilisi", "match": 87 },
+        { "title": "Receptionist — Hotel Role", "location": "Batumi", "match": 81 }
+      ],
+      "parttime": [
+        { "title": "Part-time Sales — SPAR", "location": "Tbilisi", "match": 89 },
+        { "title": "Weekend Barista — Café", "location": "Tbilisi", "match": 85 },
+        { "title": "Retail Associate — H&M", "location": "Tbilisi", "match": 82 }
+      ],
+      "noexp": [
+        { "title": "First Job — Internship", "location": "Tbilisi", "match": 94 },
+        { "title": "Trainee — Tech Startup", "location": "Tbilisi", "match": 88 },
+        { "title": "Junior Host — Restaurant", "location": "Batumi", "match": 84 }
+      ]
+    }
+  },
+  "employer": {
+    "title": "Hire candidates",
+    "subtitle": "Register your company to manage vacancies, or post a job now without an account.",
+    "registerCompany": "Register company",
+    "registerDesc": "Create an account with your company details to post and manage multiple vacancies.",
+    "registerCta": "Set up account →",
+    "postVacancy": "Post vacancy",
+    "postVacancyDesc": "Post a job right away. Candidates swipe to match — no registration required.",
+    "postCta": "Post without account →",
+    "alreadyHave": "Already have an account?",
+    "employerCabinet": "Employer cabinet"
+  },
+  "login": {
+    "title": "Log in",
+    "subtitle": "Choose your account type, then sign in with email and password.",
+    "iAm": "I am a",
+    "candidate": "Job seeker",
+    "business": "Employer",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "noAccount": "Don't have an account?",
+    "registerCompany": "Register company",
+    "candidateCabinet": "Candidate cabinet",
+    "employerCabinet": "Employer cabinet"
+  },
+  "userFlow": {
+    "back": "Back",
+    "step": "Step",
+    "step1": {
+      "title": "What job are you looking for?",
+      "subtitle": "Pick one — we'll suggest skills and matches based on it.",
+      "placeholder": "Search jobs… (e.g., Barista, Cashier)",
+      "selectToContinue": "Select to continue",
+      "showMore": "Show {count} more"
+    },
+    "step2": {
+      "title": "Do you have experience?",
+      "subtitle": "No problem either way — this just improves matching.",
+      "yes": "Yes",
+      "no": "No",
+      "experienceLabel": "What experience do you have?",
+      "experiencePlaceholder": "Example: 6 months as a cashier, summer job in a cafe, internship…",
+      "experienceHint": "Keep it short — 1–2 lines is enough for MVP."
+    },
+    "step3": {
+      "title": "What schedule do you want?",
+      "subtitle": "Choose one. You can change later.",
+      "fullTime": "Full-time",
+      "fullTimeDesc": "Standard schedule",
+      "partTime": "Part-time",
+      "partTimeDesc": "Flexible hours",
+      "temp": "Temporary",
+      "tempDesc": "Short-term jobs",
+      "remote": "Remote",
+      "remoteDesc": "Work from anywhere"
+    },
+    "step4": {
+      "title": "Pick your skills",
+      "subtitle": "Select 1–5 skills — then choose a level for each.",
+      "suggestedFor": "Suggested for",
+      "yourJob": "your job",
+      "tip": "Tip: choose your strongest skills first.",
+      "selected": "Selected",
+      "clearAll": "Clear all",
+      "selectAtLeast": "Select at least one skill above.",
+      "pickLevel": "Pick your level",
+      "remove": "Remove",
+      "selectLevelToContinue": "Select a level to continue."
+    },
+    "step5": {
+      "title": "Where do you want to work?",
+      "subtitle": "Type your city (and pick a district if in Tbilisi). Employers will see this.",
+      "georgia": "Georgia",
+      "city": "City",
+      "cityPlaceholder": "Type a few letters, e.g. Tbi, Bat, Kut…",
+      "noCitiesFound": "No cities found. Try different letters.",
+      "district": "District (optional)",
+      "any": "Any",
+      "selected": "Selected"
+    },
+    "step6": {
+      "title": "What salary do you expect?",
+      "subtitle": "Enter your desired monthly salary in GEL. We'll show the average from current vacancies.",
+      "averageFor": "Average for",
+      "averageInGeorgia": "in Georgia",
+      "basedOnCurrent": "Based on current vacancies",
+      "useThisAmount": "Use this amount",
+      "desiredSalary": "Desired salary (GEL / month)",
+      "placeholder": "e.g. 1200",
+      "validNumber": "Please enter a valid positive number."
+    },
+    "step7": {
+      "title": "Create your profile",
+      "subtitle": "One quick step — then we'll show your top matches.",
+      "fullName": "Full name",
+      "fullNamePlaceholder": "e.g., Nino Kuprashvili",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "phone": "Phone",
+      "phonePlaceholder": "+995 5xx xx xx xx",
+      "password": "Password",
+      "passwordPlaceholder": "At least 8 characters (you'll use this to log in)",
+      "validEmail": "Please enter a valid email.",
+      "validPhone": "Please enter a valid phone number.",
+      "passwordMin": "Password must be at least 8 characters.",
+      "yourAnswers": "Your answers (preview)",
+      "job": "Job",
+      "experience": "Experience",
+      "schedule": "Schedule",
+      "skills": "Skills",
+      "location": "Location",
+      "salary": "Salary",
+      "perMonth": "/ month",
+      "verifySms": "Verify by SMS (MVP)",
+      "verifyEmail": "Verify by Email (MVP)"
+    },
+    "continue": "Continue",
+    "createAccount": "Create account",
+    "whyThisWorks": "Why this flow works",
+    "noCv": "✅ No CV",
+    "minutes": "✅ 2–3 minutes",
+    "skillsMatching": "✅ Skills-based matching",
+    "swipeToMatch": "✅ Swipe to match with jobs",
+    "mvpNote": "MVP note",
+    "mvpNoteText": "Skills mapping is hardcoded for now — we'll move it into the DB next.",
+    "home": "Home",
+    "editProfile": "Edit your profile",
+    "skillLevels": {
+      "Beginner": "Beginner",
+      "Intermediate": "Intermediate",
+      "Advanced": "Advanced"
+    },
+    "jobs": {
+      "Barista": "Barista",
+      "Cashier": "Cashier",
+      "Waiter/Waitress": "Waiter/Waitress",
+      "Sales Associate": "Sales Associate",
+      "Call Center Agent": "Call Center Agent",
+      "Warehouse Worker": "Warehouse Worker",
+      "Receptionist": "Receptionist",
+      "Delivery Courier": "Delivery Courier",
+      "Kitchen Assistant": "Kitchen Assistant",
+      "Cleaner": "Cleaner",
+      "Security Guard": "Security Guard",
+      "Pharmacy Assistant": "Pharmacy Assistant",
+      "Hotel Housekeeping": "Hotel Housekeeping",
+      "Retail Merchandiser": "Retail Merchandiser",
+      "Junior Accountant": "Junior Accountant",
+      "Office Assistant": "Office Assistant"
+    },
+    "workTypeLabels": {
+      "full-time": "Full-time",
+      "part-time": "Part-time",
+      "temp": "Temporary",
+      "remote": "Remote"
+    },
+    "skillNames": {
+      "Customer service": "Customer service",
+      "Coffee preparation": "Coffee preparation",
+      "Speed & accuracy": "Speed & accuracy",
+      "Cash handling": "Cash handling",
+      "Cleanliness": "Cleanliness",
+      "Attention to detail": "Attention to detail",
+      "POS systems": "POS systems",
+      "Communication": "Communication",
+      "Time management": "Time management",
+      "Teamwork": "Teamwork",
+      "Upselling": "Upselling",
+      "Product knowledge": "Product knowledge",
+      "Problem solving": "Problem solving",
+      "Active listening": "Active listening",
+      "Typing": "Typing",
+      "Patience": "Patience",
+      "Physical stamina": "Physical stamina",
+      "Safety awareness": "Safety awareness",
+      "Organization": "Organization",
+      "Computer basics": "Computer basics",
+      "Multitasking": "Multitasking",
+      "Navigation": "Navigation",
+      "Reliability": "Reliability",
+      "Following instructions": "Following instructions",
+      "Observation": "Observation",
+      "Calm under pressure": "Calm under pressure",
+      "Excel basics": "Excel basics",
+      "Numeracy": "Numeracy",
+      "Product placement": "Product placement",
+      "Flexibility": "Flexibility"
+    }
+  }
+}
