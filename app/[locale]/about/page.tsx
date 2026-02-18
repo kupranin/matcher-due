@@ -80,16 +80,18 @@ function SwipeCard({
   );
 }
 
+const initialSections: AboutSection[] = Array.from(aboutSections);
+
 export default function AboutPage() {
   const t = useTranslations("about");
-  const [sections, setSections] = useState<AboutSection[]>(() => [...aboutSections]);
+  const [sections, setSections] = useState<AboutSection[]>(initialSections);
   const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
   const current = sections[0];
 
   function handleSwipe(dir: "left" | "right") {
     if (!current) return;
     setExitDir(dir);
-    setSections((prev) => prev.slice(1));
+    setSections((prev): AboutSection[] => prev.slice(1));
     setTimeout(() => setExitDir(null), 50);
   }
 
