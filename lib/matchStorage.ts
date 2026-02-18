@@ -23,6 +23,7 @@ export const CURRENT_CANDIDATE_ID = "1";
 const KEY_CANDIDATE_LIKES = "matcher_candidate_likes";
 const KEY_EMPLOYER_LIKES = "matcher_employer_likes";
 const KEY_MUTUAL_MATCHES = "matcher_mutual_matches";
+const KEY_CANDIDATE_PITCHES = "matcher_candidate_pitches";
 
 export type EmployerLike = { vacancyId: string; candidateId: string };
 
@@ -41,6 +42,18 @@ export function addCandidateLike(vacancyId: string): void {
   if (!likes.includes(vacancyId)) {
     likes.push(vacancyId);
     localStorage.setItem(KEY_CANDIDATE_LIKES, JSON.stringify(likes));
+  }
+}
+
+export function setCandidatePitch(vacancyId: string, pitch: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    const s = localStorage.getItem(KEY_CANDIDATE_PITCHES);
+    const map: Record<string, string> = s ? JSON.parse(s) : {};
+    map[vacancyId] = pitch;
+    localStorage.setItem(KEY_CANDIDATE_PITCHES, JSON.stringify(map));
+  } catch {
+    // ignore
   }
 }
 
@@ -71,6 +84,10 @@ export type MutualMatch = {
   vacancyTitle: string;
   company: string;
   createdAt: number;
+  /** Employer last active timestamp (for "Active 5 mins ago") */
+  employerLastActiveAt?: number;
+  /** When employer read the application (for read receipt) */
+  applicationReadAt?: number;
 };
 
 export function checkMutualMatch(
@@ -116,7 +133,14 @@ export function checkAndRecordMutualMatch(
 export function addMutualMatch(match: Omit<MutualMatch, "id" | "createdAt">): MutualMatch {
   const matches = getMutualMatches();
   const id = `match-${match.vacancyId}-${match.candidateId}-${Date.now()}`;
-  const full: MutualMatch = { ...match, id, createdAt: Date.now() };
+  const now = Date.now();
+  const full: MutualMatch = {
+    ...match,
+    id,
+    createdAt: now,
+    employerLastActiveAt: now - 5 * 60 * 1000,
+    applicationReadAt: now - 2 * 60 * 1000,
+  };
   const exists = matches.some(
     (m) => m.vacancyId === match.vacancyId && m.candidateId === match.candidateId
   );

@@ -3,13 +3,19 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { hasLocale } from "next-intl";
 import { routing } from "@/i18n/routing";
-import { Geist, Geist_Mono, Noto_Sans_Georgian } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans_Georgian, Manrope } from "next/font/google";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import "../globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+});
+
+const manrope = Manrope({
+  variable: "--font-manrope",
+  subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -40,7 +46,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <NextIntlClientProvider messages={messages}>
       <div
-        className={`${geistSans.variable} ${geistMono.variable} ${notoSansGeorgian.variable} antialiased ${
+        className={`${geistSans.variable} ${geistMono.variable} ${notoSansGeorgian.variable} ${manrope.variable} antialiased ${
           locale === "ka" ? "[font-family:var(--font-georgian),var(--font-geist-sans),system-ui,sans-serif]" : ""
         }`}
         lang={locale}

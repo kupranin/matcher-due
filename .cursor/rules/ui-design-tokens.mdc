@@ -1,0 +1,87 @@
+---
+description: Strict UI rule — use only existing design tokens for spacing, radius, and colors. Flag new values before adding.
+globs: **/*.{tsx,jsx,css}
+---
+
+# UI design tokens rule (this session)
+
+Any new UI element **must only use** the design tokens listed below. Do **not** hardcode arbitrary values (e.g. `p-[13px]`, `rounded-[11px]`, `text-[#abc]`). If a design requires a value that does not exist in the token list, **flag it to the user first** and suggest adding it to `app/globals.css` or this rule, rather than using a bracket/magic number.
+
+---
+
+## Source of truth
+
+- **Theme:** `app/globals.css` — `:root` and `@theme inline` (Tailwind v4, no tailwind.config).
+- **Reference usage:** `components/` (Footer, LanguageSwitcher, Logo, MatchChatWindow, MatchCongratulationsModal) and existing app pages.
+
+---
+
+## Colors (use only these)
+
+**Brand (from globals.css):**
+- `matcher`, `matcher-dark`, `matcher-bright`, `matcher-teal`, `matcher-amber`, `matcher-coral`, `matcher-mint`, `matcher-pale`
+- `charcoal` (dark mode / premium depth, e.g. `text-charcoal`, `bg-charcoal`)
+- Opacity variants allowed: e.g. `matcher/15`, `matcher/30`, `matcher-pale/30`, `matcher-pale/50`, `bg-matcher-dark`
+
+**Neutrals (Tailwind grays used in project):**
+- `white`, `black`
+- `gray-50`, `gray-100`, `gray-200`, `gray-300`, `gray-400`, `gray-500`, `gray-600`, `gray-700`, `gray-900`
+- Overlays: `black/40`, `black/60`, `white/15`, `white/20`
+
+**Semantic (from globals.css):**
+- `background`, `foreground`, `primary`, `muted-foreground`
+
+**Accent (used in demos only):**
+- `rose-400`, `rose-500`, `red-500` (swipe demo) — prefer matcher palette for new UI.
+
+Do **not** use raw hex in class names (e.g. `bg-[#a5c044]`). Use the token name (e.g. `bg-matcher`).
+
+---
+
+## Spacing (use only Tailwind scale)
+
+Use **only** these spacing values (Tailwind default scale; 1 = 4px):
+
+- **Padding/margin:** `0`, `0.5`, `1`, `1.5`, `2`, `2.5`, `3`, `3.5`, `4`, `5`, `6`, `8`, `10`, `12`
+- **Gap:** `1`, `2`, `3`, `4`, `6`, `10`
+- **Space-y/space-x:** `1`, `2`, `3`, `4`, `6`
+- **Widths (max-w):** `xs`, `sm`, `md`, `lg`, `2xl`, `4xl`, `6xl`
+- **Sizes (h-/w-):** `1`, `1.5`, `2`, `3`, `4`, `5`, `6`, `8`, `9`, `10`, `12`, `14`, `16`, `20`, `24`, `28`, `32`, `36`, `40`, `44`, `48`, `56`, `64`, `72`, `80`, `96` (Tailwind scale)
+
+**Allowed utility:** `font-heading` (Manrope + tight letter-spacing for headings).
+
+**Disallowed:** `p-[13px]`, `mt-[11px]`, `gap-[7px]`, `min-w-[160px]`, `max-h-[320px]`, `min-h-[100px]`, etc. If you need a value not in the scale, **flag it** and propose adding a named token (e.g. in globals.css or a comment in this file).
+
+---
+
+## Border radius (use only these)
+
+- `rounded-none` — 0
+- `rounded-sm` — 2px
+- `rounded` (DEFAULT) — 4px
+- `rounded-md` — 6px
+- `rounded-lg` — 8px
+- `rounded-xl` — 12px
+- `rounded-2xl` — 16px
+- `rounded-3xl` — 24px
+- `rounded-full` — 9999px
+- `rounded-r-full` (used for accent bars in legal pages)
+
+**Disallowed:** `rounded-[11px]`, `rounded-[10px]`, etc. If you need a new radius, **flag it**.
+
+---
+
+## Typography
+
+- **Font size:** Use Tailwind scale only: `text-xs`, `text-sm`, `text-base`, `text-lg`, `text-xl`, `text-2xl`, `text-3xl`, `text-4xl`, etc.
+- **Do not** use arbitrary font sizes like `text-[10px]` or `text-[13px]` without flagging.
+- **Tracking:** `tracking-tight`, `tracking-wider` are used; arbitrary `tracking-[0.2em]` — flag if you need a new value.
+
+---
+
+## Summary
+
+1. **Colors:** Only `matcher-*`, `gray-*`, `white`, `black`, and semantic tokens from globals.css.
+2. **Spacing:** Only Tailwind spacing scale (no `[13px]`, `[160px]`, etc.).
+3. **Radius:** Only `rounded-{sm,md,lg,xl,2xl,3xl,full}` (and `rounded-r-full`).
+4. **If the design needs a value not in this list:** Tell the user: “This design uses [X]. It’s not in our tokens. Add a token (e.g. in globals.css) or pick the closest token: [suggestion].” Do not silently add magic numbers.

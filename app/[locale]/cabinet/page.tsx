@@ -8,14 +8,35 @@ import { getVacanciesWithMatch } from "@/lib/matchMockData";
 import { getCandidateProfileForMatch, loadCandidateProfile } from "@/lib/candidateProfileStorage";
 import {
   addCandidateLike,
+  setCandidatePitch,
   getEmployerLikes,
   checkAndRecordMutualMatch,
   CANDIDATE_VACANCY_TO_EMPLOYER,
   type MutualMatch,
 } from "@/lib/matchStorage";
 import MatchCongratulationsModal from "@/components/MatchCongratulationsModal";
+import MatchProgressRing from "@/components/MatchProgressRing";
+import PitchModal from "@/components/PitchModal";
 
 type Vacancy = Awaited<ReturnType<typeof getVacanciesWithMatch>>[number];
+
+const VibeIcons = {
+  noCv: (
+    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  ),
+  flexible: (
+    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  weeklyPay: (
+    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v2a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-2a2 2 0 00-2-2H9a2 2 0 00-2 2v2a2 2 0 002 2zm0 0V7a2 2 0 012-2h2a2 2 0 012 2v0" />
+    </svg>
+  ),
+};
 
 function SwipeCard({
   vacancy,
@@ -29,6 +50,13 @@ function SwipeCard({
   const rotate = useTransform(x, [-200, 200], [-12, 12]);
   const likeOpacity = useTransform(x, [0, 100, 200], [0, 0.5, 1]);
   const nopeOpacity = useTransform(x, [-200, -100, 0], [1, 0.5, 0]);
+
+  const flexibleHours = vacancy.workType.toLowerCase().includes("part") || vacancy.workType.toLowerCase().includes("remote") || vacancy.workType.toLowerCase().includes("flex");
+  const vibes = [
+    { key: "noCv", show: true, icon: VibeIcons.noCv, label: "No CV needed" },
+    { key: "flexible", show: flexibleHours, icon: VibeIcons.flexible, label: "Flexible hours" },
+    { key: "weeklyPay", show: true, icon: VibeIcons.weeklyPay, label: "Weekly pay" },
+  ].filter((v) => v.show);
 
   function handleDragEnd(_: unknown, info: PanInfo) {
     const threshold = 80;
@@ -47,14 +75,24 @@ function SwipeCard({
       className="absolute inset-0 cursor-grab active:cursor-grabbing"
     >
       <div className="flex h-full w-full flex-col overflow-hidden rounded-3xl bg-gray-900 shadow-2xl shadow-gray-300/50 ring-2 ring-white/20">
-        {/* Image block – full width, match badge only */}
+        {/* Image block – salary pill top-right, match ring top-left */}
         <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden">
           <img
             src={vacancy.photo}
             alt=""
             className="h-full w-full object-cover"
           />
-          {/* Swipe overlays on image */}
+          {/* High-contrast salary pill – top right, Gen Z scannable */}
+          <div className="absolute right-3 top-3 rounded-full bg-matcher-bright px-3 py-1.5 text-sm font-bold tracking-tight text-charcoal shadow-lg sm:right-4 sm:top-4 sm:px-4 sm:py-2 sm:text-base">
+            {vacancy.salary}
+          </div>
+          {/* Circular match ring around employer initial – top left */}
+          <div className="absolute left-3 top-3 sm:left-4 sm:top-4">
+            <MatchProgressRing percent={vacancy.match} size={48} className="text-matcher-bright">
+              {vacancy.match}%
+            </MatchProgressRing>
+          </div>
+          {/* Swipe overlays */}
           <motion.div
             style={{ opacity: likeOpacity }}
             className="pointer-events-none absolute inset-0 flex items-center justify-end pr-8"
@@ -71,25 +109,32 @@ function SwipeCard({
               <span className="text-3xl font-black uppercase tracking-wider text-white">{t("nope")}</span>
             </div>
           </motion.div>
-          <div className="absolute left-4 top-4 rounded-full bg-matcher px-4 py-1.5 text-sm font-bold text-white shadow-lg">
-            {t("matchPercent", { percent: vacancy.match })}
-          </div>
         </div>
 
-        {/* Dark info block below image */}
+        {/* Dark info block – title, company, vibe row, location */}
         <div className="flex flex-1 flex-col justify-between p-5 text-white">
           <div>
-            <h2 className="text-2xl font-bold">{vacancy.title}</h2>
+            <h2 className="font-heading text-2xl font-bold">{vacancy.title}</h2>
             <p className="mt-0.5 text-lg font-medium text-white/90">{vacancy.company}</p>
-            <p className="mt-3 flex flex-wrap gap-2">
+            {/* Vibe row: icons for No CV, Flexible Hours, Weekly Pay */}
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              {vibes.map((v) => (
+                <span
+                  key={v.key}
+                  className="flex items-center gap-1.5 rounded-lg bg-white/15 px-2.5 py-1.5 text-xs font-medium text-white/95"
+                  title={v.label}
+                >
+                  {v.icon}
+                  <span className="sr-only">{v.label}</span>
+                </span>
+              ))}
               <span className="rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium">
                 {vacancy.location}
               </span>
               <span className="rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium">
                 {vacancy.workType}
               </span>
-            </p>
-            <p className="mt-3 text-base font-bold text-matcher">{vacancy.salary}</p>
+            </div>
           </div>
           <p className="mt-4 text-sm font-medium text-white/80">{t("swipeInstruction")}</p>
         </div>
@@ -111,37 +156,45 @@ export default function CabinetPage() {
   const [passed, setPassed] = useState<Vacancy[]>([]);
   const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
   const [newMatch, setNewMatch] = useState<MutualMatch | null>(null);
+  const [pendingLikeVacancy, setPendingLikeVacancy] = useState<Vacancy | null>(null);
   const current = vacancies[0];
+
+  function finishLike(vacancy: Vacancy, pitch: string) {
+    setLiked((prev) => [...prev, vacancy]);
+    addCandidateLike(vacancy.id);
+    if (pitch) setCandidatePitch(vacancy.id, pitch);
+    const empVacancyId = CANDIDATE_VACANCY_TO_EMPLOYER[vacancy.id];
+    if (empVacancyId) {
+      const employerLikes = getEmployerLikes();
+      const alreadyLiked = employerLikes.some(
+        (l) => l.vacancyId === empVacancyId && l.candidateId === "1"
+      );
+      if (alreadyLiked) {
+        const stored = loadCandidateProfile();
+        const candidateName = stored?.fullName || "Nino K.";
+        const match = checkAndRecordMutualMatch(
+          vacancy.id,
+          empVacancyId,
+          "1",
+          candidateName,
+          vacancy.title,
+          vacancy.company
+        );
+        if (match) setNewMatch(match);
+      }
+    }
+    setPendingLikeVacancy(null);
+  }
 
   function handleSwipe(dir: "left" | "right") {
     if (!current) return;
     setExitDir(dir);
     setVacancies((prev) => prev.slice(1));
     if (dir === "right") {
-      setLiked((prev) => [...prev, current]);
-      addCandidateLike(current.id);
-      // Check if employer already liked this candidate for this vacancy
-      const empVacancyId = CANDIDATE_VACANCY_TO_EMPLOYER[current.id];
-      if (empVacancyId) {
-        const employerLikes = getEmployerLikes();
-        const alreadyLiked = employerLikes.some(
-          (l) => l.vacancyId === empVacancyId && l.candidateId === "1"
-        );
-        if (alreadyLiked) {
-          const stored = loadCandidateProfile();
-          const candidateName = stored?.fullName || "Nino K.";
-          const match = checkAndRecordMutualMatch(
-            current.id,
-            empVacancyId,
-            "1",
-            candidateName,
-            current.title,
-            current.company
-          );
-          if (match) setNewMatch(match);
-        }
-      }
-    } else setPassed((prev) => [...prev, current]);
+      setPendingLikeVacancy(current);
+    } else {
+      setPassed((prev) => [...prev, current]);
+    }
     setTimeout(() => setExitDir(null), 50);
   }
 
@@ -155,7 +208,7 @@ export default function CabinetPage() {
       {/* Fun gradient background */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-matcher-pale via-matcher-mint/50 to-matcher-amber/30" />
 
-      <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{t("yourMatches")}</h1>
+      <h1 className="font-heading text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{t("yourMatches")}</h1>
       <p className="mt-2 text-gray-600">{t("swipeHint")}</p>
 
       <div className="relative mx-auto mt-6 aspect-[3/4] max-h-[380px] sm:mt-8 sm:max-h-[440px] md:max-h-[520px]">
@@ -217,6 +270,15 @@ export default function CabinetPage() {
             <span className="text-2xl">♥</span>
           </motion.button>
         </motion.div>
+      )}
+
+      {pendingLikeVacancy && (
+        <PitchModal
+          company={pendingLikeVacancy.company}
+          vacancyTitle={pendingLikeVacancy.title}
+          onSubmit={(pitch) => finishLike(pendingLikeVacancy, pitch)}
+          onSkip={() => finishLike(pendingLikeVacancy, "")}
+        />
       )}
 
       <MatchCongratulationsModal

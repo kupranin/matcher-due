@@ -1,23 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo, animate } from "framer-motion";
 import { Link } from "@/i18n/navigation";
 import Logo from "@/components/Logo";
 import Footer from "@/components/Footer";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-
-const PARTNER_SLUGS: Record<string, string> = {
-  Gulf: "gulf",
-  Nikora: "nikora",
-  "2 Nabiji": "2nabiji",
-  UGT: "ugt",
-  iTechnics: "itechnics",
-  "Kursi.ge": "kursi",
-  GTEX: "gtex",
-};
+import MatchProgressRing from "@/components/MatchProgressRing";
 
 function SwipeCard({
   job,
@@ -68,6 +58,14 @@ function SwipeCard({
             alt=""
             className="h-full w-full object-cover object-center"
           />
+          <div className="absolute right-3 top-3 rounded-full bg-matcher-bright px-2.5 py-1 text-xs font-bold tracking-tight text-charcoal shadow-lg sm:right-4 sm:top-4 sm:px-3 sm:py-1.5 sm:text-sm">
+            {job.salary}
+          </div>
+          <div className="absolute left-3 top-3 sm:left-4 sm:top-4">
+            <MatchProgressRing percent={job.match} size={40} className="text-matcher-bright">
+              {job.match}%
+            </MatchProgressRing>
+          </div>
           <motion.div
             style={{ opacity: likeOpacity }}
             className="pointer-events-none absolute inset-0 flex items-center justify-end pr-6"
@@ -84,27 +82,25 @@ function SwipeCard({
               <span className="text-xl font-black uppercase tracking-wider text-white sm:text-2xl">{t("demoUnlike")}</span>
             </div>
           </motion.div>
-          <div className="absolute left-3 top-3 rounded-full bg-matcher px-3 py-1 text-xs font-bold text-white shadow-lg sm:left-4 sm:top-4 sm:px-4 sm:py-1.5 sm:text-sm">
-            {job.match}% {t("match")}
-          </div>
         </div>
 
-        {/* Info block – remaining height */}
+        {/* Info block – vibe row + location, workType */}
         <div className="flex min-h-0 flex-1 flex-col justify-between overflow-hidden p-3 text-white sm:p-4">
           <div className="min-w-0">
-            <h2 className="truncate text-lg font-bold sm:text-xl">{job.title}</h2>
+            <h2 className="font-heading truncate text-lg font-bold sm:text-xl">{job.title}</h2>
             <p className="mt-0.5 truncate text-sm font-medium text-white/90 sm:text-base">{job.company}</p>
-            <p className="mt-1.5 flex flex-wrap gap-1 sm:mt-2 sm:gap-1.5">
-              <span className="rounded-md bg-white/15 px-2 py-0.5 text-xs font-medium sm:px-2.5 sm:py-1 sm:text-sm">
-                {job.location}
+            <p className="mt-1.5 flex flex-wrap items-center gap-1.5 sm:mt-2 sm:gap-2">
+              <span className="rounded-md bg-white/15 px-2 py-0.5 text-xs font-medium sm:px-2.5 sm:py-1 sm:text-sm" title="No CV needed">
+                <svg className="inline h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
               </span>
-              <span className="rounded-md bg-white/15 px-2 py-0.5 text-xs font-medium sm:px-2.5 sm:py-1 sm:text-sm">
-                {job.workType}
+              <span className="rounded-md bg-white/15 px-2 py-0.5 text-xs font-medium sm:px-2.5 sm:py-1 sm:text-sm" title="Weekly pay">
+                <svg className="inline h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v2a2 2 0 002 2h2m2 4h10a2 2 2 0 002-2v-2a2 2 0 00-2-2H9a2 2 0 00-2 2v2a2 2 0 002 2zm0 0V7a2 2 0 012-2h2a2 2 0 012 2v0" /></svg>
               </span>
+              <span className="rounded-md bg-white/15 px-2 py-0.5 text-xs font-medium sm:px-2.5 sm:py-1 sm:text-sm">{job.location}</span>
+              <span className="rounded-md bg-white/15 px-2 py-0.5 text-xs font-medium sm:px-2.5 sm:py-1 sm:text-sm">{job.workType}</span>
             </p>
-            <p className="mt-1.5 text-xs font-bold text-matcher sm:mt-2 sm:text-sm">{job.salary}</p>
           </div>
-          <p className="mt-2 shrink-0 text-[10px] font-medium text-white/80 sm:mt-3 sm:text-xs">{t("demoSwipeInstruction")}</p>
+          <p className="mt-2 shrink-0 text-xs font-medium text-white/80 sm:mt-3">{t("demoSwipeInstruction")}</p>
         </div>
       </div>
     </motion.div>
@@ -232,179 +228,6 @@ function InteractiveSwipeDemo({
   );
 }
 
-const PARTNER_ASPECTS: Record<string, "square" | "wide"> = {
-  Gulf: "wide",       // horizontal oval
-  Nikora: "square",
-  "2 Nabiji": "square",
-  UGT: "wide",        // symbol + text
-  iTechnics: "wide",  // circle + text – shown alone
-  "Kursi.ge": "square",
-  GTEX: "wide",       // G + tex
-};
-
-const PARTNER_DOMAINS: Record<string, string> = {
-  Gulf: "gulf.ge",
-  Nikora: "nikora.ge",
-  "2 Nabiji": "2nabiji.ge",
-  UGT: "ugt.ge",
-  iTechnics: "itechnics.ge",
-  "Kursi.ge": "kursi.ge",
-  GTEX: "gtex.ge",
-};
-
-function PartnerLogo({
-  name,
-  domain,
-  bg,
-  text,
-  aspect = "square",
-  compact = false,
-  size = "md",
-}: {
-  name: string;
-  domain: string;
-  bg: string;
-  text: string;
-  aspect?: "square" | "wide";
-  compact?: boolean;
-  size?: "sm" | "md" | "lg" | "full";
-}) {
-  const [useFallback, setUseFallback] = useState(false);
-  const initials = name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase();
-  const slug = PARTNER_SLUGS[name] ?? domain.replace(".ge", "");
-  const localSrc = `/partners/${slug}.png`;
-
-  const isWide = aspect === "wide";
-  const sizeClasses =
-    size === "full"
-      ? "w-full max-w-full aspect-[2/1] min-w-0 shrink-0"
-      : size === "lg"
-        ? isWide
-          ? "h-14 w-28 sm:h-16 sm:w-32 md:h-18 md:w-36"
-          : "h-14 w-14 sm:h-16 sm:w-16 md:h-18 md:w-18"
-        : size === "md"
-          ? isWide
-            ? "h-12 w-24 sm:h-14 sm:w-28"
-            : "h-12 w-12 sm:h-14 sm:w-14"
-          : compact
-            ? "h-10 w-10 sm:h-12 sm:w-12"
-            : isWide
-              ? "h-10 w-20 sm:h-12 sm:w-24"
-              : "h-10 w-10 sm:h-12 sm:w-12";
-
-  if (useFallback) {
-    return (
-      <div
-        className={`flex shrink-0 items-center justify-center rounded-lg ${sizeClasses} ${bg} ${text} text-xs font-bold`}
-        title={name}
-      >
-        {initials}
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={`relative shrink-0 overflow-hidden rounded-lg bg-gray-50 ${sizeClasses}`}
-      title={name}
-    >
-      <Image
-        src={localSrc}
-        alt={name}
-        fill
-        sizes={size === "full" ? "100vw" : "144px"}
-        className="object-contain object-center p-1"
-        onError={() => setUseFallback(true)}
-      />
-    </div>
-  );
-}
-
-const PARTNERS_ORDER = [
-  { name: "Gulf", domain: "gulf.ge", bg: "bg-matcher", text: "text-white", accent: "border-l-matcher" },
-  { name: "Nikora", domain: "nikora.ge", bg: "bg-matcher-teal", text: "text-white", accent: "border-l-matcher-teal" },
-  { name: "2 Nabiji", domain: "2nabiji.ge", bg: "bg-matcher-dark", text: "text-white", accent: "border-l-matcher-dark" },
-  { name: "UGT", domain: "ugt.ge", bg: "bg-matcher-amber", text: "text-gray-900", accent: "border-l-matcher-amber" },
-  { name: "iTechnics", domain: "itechnics.ge", bg: "bg-matcher-coral", text: "text-white", accent: "border-l-matcher-coral", alone: true },
-  { name: "Kursi.ge", domain: "kursi.ge", bg: "bg-matcher", text: "text-white", accent: "border-l-matcher" },
-  { name: "GTEX", domain: "gtex.ge", bg: "bg-gray-900", text: "text-white", accent: "border-l-gray-700" },
-] as const;
-
-type PartnerItem = (typeof PARTNERS_ORDER)[number];
-
-function PartnerSwipeCard({
-  partners,
-  onSwipe,
-  t,
-}: {
-  partners: PartnerItem[];
-  onSwipe: (dir: "left" | "right") => void;
-  t: (key: string) => string;
-}) {
-  const x = useMotionValue(0);
-  const rotate = useTransform(x, [-200, 200], [-8, 8]);
-  const nextOpacity = useTransform(x, [0, 60, 120], [0, 0.5, 1]);
-  const prevOpacity = useTransform(x, [-120, -60, 0], [1, 0.5, 0]);
-
-  function handleDragEnd(_: unknown, info: PanInfo) {
-    const threshold = 70;
-    if (info.offset.x > threshold) onSwipe("right");
-    else if (info.offset.x < -threshold) onSwipe("left");
-    else animate(x, 0, { type: "spring", stiffness: 300, damping: 30 });
-  }
-
-  const accent = partners[0]?.accent ?? "border-l-matcher";
-
-  return (
-    <motion.div
-      drag="x"
-      dragConstraints={{ left: -140, right: 140 }}
-      dragElastic={0.5}
-      onDragEnd={handleDragEnd}
-      style={{ x, rotate }}
-      className="absolute inset-0 cursor-grab active:cursor-grabbing"
-    >
-      <div className={`relative flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-2xl border border-gray-200 border-l-4 bg-white shadow-lg ${accent}`}>
-        <motion.div
-          style={{ opacity: nextOpacity }}
-          className="pointer-events-none absolute inset-0 z-10 flex items-center justify-end pr-6"
-        >
-          <div className="rounded-xl border-2 border-matcher bg-matcher/90 px-3 py-1.5 shadow-lg -rotate-12">
-            <span className="text-sm font-bold uppercase tracking-wider text-white">{t("swipeNext")}</span>
-          </div>
-        </motion.div>
-        <motion.div
-          style={{ opacity: prevOpacity }}
-          className="pointer-events-none absolute inset-0 z-10 flex items-center justify-start pl-6"
-        >
-          <div className="rounded-xl border-2 border-gray-400 bg-gray-500/90 px-3 py-1.5 shadow-lg rotate-12">
-            <span className="text-sm font-bold uppercase tracking-wider text-white">←</span>
-          </div>
-        </motion.div>
-        <div className="flex w-full flex-1 min-h-0 items-center justify-center gap-4 p-6 sm:gap-6 sm:p-8">
-          {partners.map((p) => (
-            <PartnerLogo
-              key={p.name}
-              name={p.name}
-              domain={p.domain}
-              bg={p.bg}
-              text={p.text}
-              aspect={PARTNER_ASPECTS[p.name] ?? "square"}
-              size={
-                partners.length === 1 && PARTNER_ASPECTS[p.name] === "wide"
-                  ? "full"
-                  : partners.length === 1
-                    ? "lg"
-                    : "md"
-              }
-            />
-          ))}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 export default function Home() {
   const t = useTranslations("home");
   const tCommon = useTranslations("common");
@@ -450,27 +273,6 @@ export default function Home() {
 
   const [selectedChip, setSelectedChip] = useState<string>("barista");
   const jobs = demoJobs[selectedChip as keyof typeof demoJobs] ?? demoJobs.barista;
-
-  const [partners, setPartners] = useState<(typeof PARTNERS_ORDER)[number][]>(() => [...PARTNERS_ORDER]);
-  const [partnerExitDir, setPartnerExitDir] = useState<"left" | "right" | null>(null);
-  const firstPartner = partners[0] as (typeof PARTNERS_ORDER)[number] & { alone?: boolean } | undefined;
-  const showAlone = firstPartner && "alone" in firstPartner && firstPartner.alone;
-  const currentPair = showAlone && partners.length >= 1
-    ? partners.slice(0, 1)
-    : partners.length >= 3
-      ? partners.slice(0, 3)
-      : partners.length >= 2
-        ? partners.slice(0, 2)
-        : partners.length === 1
-          ? partners.slice(0, 1)
-          : [];
-
-  function handlePartnerSwipe(dir: "left" | "right") {
-    if (currentPair.length === 0) return;
-    setPartnerExitDir(dir);
-    setPartners((prev) => prev.slice(currentPair.length));
-    setTimeout(() => setPartnerExitDir(null), 50);
-  }
 
   // Dynamic hero: alternate "job" / "candidate"
   const [heroWord, setHeroWord] = useState<"job" | "candidate">("job");
@@ -603,65 +405,44 @@ export default function Home() {
         />
       </section>
 
-      {/* Partners – swipe deck (3 logos per card; iTechnics alone) */}
+      {/* Social proof – stats instead of logos */}
       <section className="border-t border-matcher/15 bg-gradient-to-b from-matcher-pale/40 to-matcher-mint/20 py-12 sm:py-14 md:py-16">
-        <div className={`mx-auto px-4 sm:px-6 ${
-          currentPair.length === 3 ? "max-w-2xl" : showAlone && currentPair.length > 0 ? "max-w-xl" : "max-w-lg"
-        }`}>
+        <div className="mx-auto max-w-4xl px-4 sm:px-6">
           <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-matcher-dark/90">
-            {t("trustedBy")}
+            {t("socialProofTitle")}
           </p>
-          <p className="mt-1.5 text-center text-sm text-gray-500">
-            {t("partnerNote")}
-          </p>
-          <p className="mt-2 text-center text-xs text-gray-400">{t("partnersSwipeHint")}</p>
-          <div className={`relative mx-auto mt-6 overflow-hidden rounded-2xl ${
-            currentPair.length === 3 ? "aspect-[2/1] max-h-[220px] sm:max-h-[260px] max-w-2xl" : showAlone && currentPair.length > 0 ? "aspect-[2/1] max-h-[260px] sm:max-h-[300px] max-w-2xl" : "aspect-[4/3] max-h-[280px] sm:max-h-[320px]"
-          }`}>
-            {currentPair.length > 0 ? (
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentPair.map((p) => p.name).join("-")}
-                  initial={{ opacity: 1, scale: 1 }}
-                  exit={{
-                    opacity: 0,
-                    x: partnerExitDir === "right" ? 320 : partnerExitDir === "left" ? -320 : 0,
-                    rotate: partnerExitDir === "right" ? 12 : partnerExitDir === "left" ? -12 : 0,
-                    transition: { duration: 0.25, ease: "easeIn" },
-                  }}
-                  className="absolute inset-0"
-                >
-                  <PartnerSwipeCard
-                    partners={currentPair}
-                    onSwipe={handlePartnerSwipe}
-                    t={t}
-                  />
-                </motion.div>
-              </AnimatePresence>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4 }}
-                className="flex h-full flex-col items-center justify-center rounded-2xl bg-gradient-to-br from-matcher/90 to-matcher-teal/90 p-6 text-center shadow-lg"
-              >
-                <p className="text-base font-medium text-white/95 sm:text-lg">{t("partnersDone")}</p>
-              </motion.div>
-            )}
+          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-8">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4 }}
+              className="rounded-2xl border border-matcher/20 bg-white px-6 py-6 text-center shadow-sm sm:px-8 sm:py-8"
+            >
+              <p className="font-heading text-3xl font-bold text-matcher-dark sm:text-4xl">20+</p>
+              <p className="mt-1 text-sm font-medium text-gray-600">{t("socialProofCompanies")}</p>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+              className="rounded-2xl border border-matcher/20 bg-white px-6 py-6 text-center shadow-sm sm:px-8 sm:py-8"
+            >
+              <p className="font-heading text-3xl font-bold text-matcher-dark sm:text-4xl">150</p>
+              <p className="mt-1 text-sm font-medium text-gray-600">{t("socialProofVacancies")}</p>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+              className="rounded-2xl border border-matcher/20 bg-white px-6 py-6 text-center shadow-sm sm:px-8 sm:py-8"
+            >
+              <p className="font-heading text-3xl font-bold text-matcher-dark sm:text-4xl">1,000+</p>
+              <p className="mt-1 text-sm font-medium text-gray-600">{t("socialProofUsers")}</p>
+            </motion.div>
           </div>
-          {currentPair.length > 0 && (
-            <div className="mt-4 flex justify-center">
-              <motion.button
-                type="button"
-                onClick={() => handlePartnerSwipe("right")}
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.92 }}
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-matcher text-white shadow-md hover:bg-matcher-dark sm:h-14 sm:w-14"
-              >
-                <span className="text-lg">→</span>
-              </motion.button>
-            </div>
-          )}
         </div>
       </section>
 

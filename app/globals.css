@@ -8,11 +8,15 @@
   /* Matcher.ge brand — aligned with logo (#a5c044) */
   --matcher: #a5c044;
   --matcher-dark: #7d9a2e;
+  /* High-contrast green for pills / Gen Z scannability */
+  --matcher-bright: #9fe955;
   --matcher-teal: #2d9d8f;
   --matcher-amber: #e6a817;
   --matcher-coral: #e07a5f;
   --matcher-mint: #eef4e4;
   --matcher-pale: #f5f9ef;
+  /* Dark mode / premium “fintech” depth */
+  --charcoal: #1a1c1e;
 }
 
 @theme inline {
@@ -24,17 +28,26 @@
   --font-mono: var(--font-geist-mono);
   --color-matcher: var(--matcher);
   --color-matcher-dark: var(--matcher-dark);
+  --color-matcher-bright: var(--matcher-bright);
   --color-matcher-teal: var(--matcher-teal);
   --color-matcher-amber: var(--matcher-amber);
   --color-matcher-coral: var(--matcher-coral);
   --color-matcher-mint: var(--matcher-mint);
   --color-matcher-pale: var(--matcher-pale);
+  --color-charcoal: var(--charcoal);
+  --font-heading: var(--font-manrope);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: var(--charcoal);
     --foreground: #ededed;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: linear-gradient(180deg, var(--charcoal) 0%, #121416 100%);
   }
 }
 
@@ -68,4 +81,10 @@ body {
 /* Prevent widows in hero with text balancing */
 .text-balance {
   text-wrap: balance;
+}
+
+/* Headings: Manrope, tight letter-spacing for modern “techy” feel */
+.font-heading {
+  font-family: var(--font-manrope), var(--font-geist-sans), system-ui, sans-serif;
+  letter-spacing: -0.02em;
 }

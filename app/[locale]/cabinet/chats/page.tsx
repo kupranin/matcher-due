@@ -6,6 +6,54 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getMutualMatches, type MutualMatch } from "@/lib/matchStorage";
 import MatchChatWindow from "@/components/MatchChatWindow";
 
+function formatLastActive(ts: number): string {
+  const d = Date.now() - ts;
+  if (d < 60 * 1000) return "Active just now";
+  if (d < 60 * 60 * 1000) return `Active ${Math.floor(d / 60000)} mins ago`;
+  if (d < 24 * 60 * 60 * 1000) return `Active ${Math.floor(d / 3600000)} hrs ago`;
+  return "Active recently";
+}
+
+function MatchListItem({
+  match,
+  t,
+  onClick,
+}: {
+  match: MutualMatch;
+  t: (key: string) => string;
+  onClick: () => void;
+}) {
+  const activeLabel = match.employerLastActiveAt != null ? formatLastActive(match.employerLastActiveAt) : null;
+  const read = match.applicationReadAt != null;
+
+  return (
+    <motion.button
+      type="button"
+      whileHover={{ scale: 1.01 }}
+      whileTap={{ scale: 0.99 }}
+      onClick={onClick}
+      className="flex w-full items-center gap-4 rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-matcher hover:bg-matcher-pale/30"
+    >
+      <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-matcher-mint text-xl">
+        💼
+        {read && (
+          <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-matcher text-xs text-white" title="Read">
+            ✓
+          </span>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-gray-900">{match.company}</p>
+        <p className="text-sm text-gray-600">{match.vacancyTitle}</p>
+        {activeLabel && (
+          <p className="mt-0.5 text-xs text-gray-500">{activeLabel}</p>
+        )}
+      </div>
+      <span className="text-matcher font-medium">{t("chat")}</span>
+    </motion.button>
+  );
+}
+
 export default function CandidateChatsPage() {
   const t = useTranslations("chats");
   const [matches, setMatches] = useState<MutualMatch[]>([]);
@@ -56,23 +104,7 @@ export default function CandidateChatsPage() {
 
       <div className="mt-6 space-y-3">
         {matches.map((match) => (
-          <motion.button
-            key={match.id}
-            type="button"
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-            onClick={() => setSelectedMatch(match)}
-            className="flex w-full items-center gap-4 rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-matcher hover:bg-matcher-pale/30"
-          >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-matcher-mint text-xl">
-              💼
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-gray-900">{match.company}</p>
-              <p className="text-sm text-gray-600">{match.vacancyTitle}</p>
-            </div>
-            <span className="text-matcher">{t("chat")}</span>
-          </motion.button>
+          <MatchListItem key={match.id} match={match} t={t} onClick={() => setSelectedMatch(match)} />
         ))}
       </div>
     </div>
