@@ -82,7 +82,7 @@ function SwipeCard({
 
 export default function AboutPage() {
   const t = useTranslations("about");
-  const [sections, setSections] = useState(aboutSections);
+  const [sections, setSections] = useState<AboutSection[]>(() => [...aboutSections]);
   const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
   const current = sections[0];
 
