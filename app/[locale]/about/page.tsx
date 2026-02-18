@@ -48,6 +48,9 @@ function SwipeCard({
       <div
         className={`relative h-full w-full overflow-hidden rounded-2xl border border-gray-100 border-l-4 bg-white p-6 shadow-lg ${section.accent}`}
       >
+        <div className="absolute right-5 top-5 opacity-90">
+          <Logo href="" height={40} />
+        </div>
         {/* Swipe overlays */}
         <motion.div
           style={{ opacity: likeOpacity }}

@@ -8,5 +8,6 @@ Add PNG logo files here for the homepage partners section:
 - `ugt.png` — UGT
 - `itechnics.png` — iTechnics
 - `kursi.png` — Kursi.ge
+- `gtex.png` — GTEX
 
 Until these files are added, fallback initials will be displayed.

@@ -62,6 +62,18 @@
     "company": "Company",
     "goToCabinet": "Go to cabinet"
   },
+  "footer": {
+    "tagline": "Fast, structured hiring for entry-level jobs in Georgia.",
+    "company": "Company",
+    "about": "About",
+    "team": "Team",
+    "contact": "Contact",
+    "legal": "Legal",
+    "userAgreement": "User Agreement",
+    "privacyPolicy": "Privacy Policy",
+    "followUs": "Follow us",
+    "allRightsReserved": "© {year} Matcher.ge — All rights reserved."
+  },
   "about": {
     "badge": "About us",
     "like": "Like",
@@ -99,6 +111,25 @@
       }
     }
   },
+  "contactPage": {
+    "title": "Contact",
+    "subtitle": "Get in touch for partnerships, press, or general enquiries.",
+    "backToHome": "← Back to home",
+    "email": "Email",
+    "phone": "Phone",
+    "hint": "We usually reply within 24 hours.",
+    "formTitle": "Send a message",
+    "name": "Name",
+    "namePlaceholder": "Your name",
+    "subject": "Subject",
+    "subjectPlaceholder": "What is this about?",
+    "message": "Message",
+    "messagePlaceholder": "Your message…",
+    "submit": "Send message",
+    "sending": "Sending…",
+    "successMessage": "Thanks! We'll get back to you within 24 hours.",
+    "errorMessage": "Something went wrong. Please try again or email us directly."
+  },
   "team": {
     "title": "Our Team",
     "subtitle": "Building the simplest way to get hired — from Georgia, for today's world.",
@@ -111,14 +142,39 @@
     "beliefsHeading": "What we believe",
     "values": ["Time is the most valuable currency of modern life.", "Simplicity wins — technology should remove friction, not add it.", "Everyone deserves a fair start, especially for a first job.", "Today matters — opportunities move fast, so hiring should too."],
     "foundingHeading": "Founding Team",
+    "swipeNext": "Next",
+    "swipePrev": "Skip",
+    "swipeHint": "Swipe or tap to meet the team.",
     "members": {
-      "nino": { "name": "Nino Kuprashvili", "role": "Product & Strategy", "text": "Founder and product-driven entrepreneur with 20+ years of experience in business, marketing, and building trusted platforms in Georgia. Nino leads Matcher's vision, user experience, and growth — keeping the product radically simple and built for real people." },
-      "ketevan": { "name": "Ketevan Ioseliani", "role": "Legal & Administration", "text": "Ketevan brings 20+ years of experience in legal, administrative, and organizational leadership. She ensures Matcher is built on strong foundations of trust, compliance, and long-term sustainability — for both job seekers and employers." },
-      "david": { "name": "David Tskhvariashvili", "role": "Engineering Lead", "text": "Senior-of-seniors full-stack developer with deep expertise in building scalable, production-grade platforms. David leads Matcher's engineering execution, architecture, and infrastructure — turning a fast-moving vision into a reliable product ready to scale." }
+      "ketevan": {
+        "name": "Ketevan Ioseliani",
+        "role": "Legal & Administration",
+        "expertise": "Legal, compliance, organizational leadership",
+        "reasonToBelieve": "20+ years in legal & admin. Built trust and long-term sustainability into Matcher.",
+        "text": "Ketevan brings 20+ years of experience in legal, administrative, and organizational leadership. She ensures Matcher is built on strong foundations of trust, compliance, and long-term sustainability — for both job seekers and employers."
+      },
+      "nino": {
+        "name": "Nino Kuprashvili",
+        "role": "Product & Strategy",
+        "expertise": "Product, growth, UX",
+        "reasonToBelieve": "20+ years building trusted platforms in Georgia. Keeps Matcher radically simple.",
+        "text": "Founder and product-driven entrepreneur with 20+ years of experience in business, marketing, and building trusted platforms in Georgia. Nino leads Matcher's vision, user experience, and growth — keeping the product radically simple and built for real people."
+      },
+      "david": {
+        "name": "David Tskhvariashvili",
+        "role": "Engineering Lead",
+        "expertise": "Full-stack, scalability, infrastructure",
+        "reasonToBelieve": "Senior-of-seniors. Turns vision into reliable, production-grade product.",
+        "text": "Senior-of-seniors full-stack developer with deep expertise in building scalable, production-grade platforms. David leads Matcher's engineering execution, architecture, and infrastructure — turning a fast-moving vision into a reliable product ready to scale."
+      }
     },
     "closingHeading": "Building for the next generation of work",
     "closingText": "Matcher is not just a platform — it's infrastructure for entry-level work. We're building a future where people get hired faster, employers hire smarter, and the process feels simple, clear, and fair.",
-    "closingLine": "From Georgia. For today. Ready for the world."
+    "closingLine": "From Georgia. For today. Ready for the world.",
+    "lastCardHeadline": "You've met the team.",
+    "lastCardSubtext": "Small team, big mission — building the future of entry-level hiring in Georgia.",
+    "lastCardLine": "From Georgia. For today. Ready for the world.",
+    "lastCardCta": "Get started"
   },
   "home": {
     "heroTitlePrefix": "Get matched to your first ",
@@ -131,7 +187,12 @@
     "builtForGeorgia": "🇬🇪 Built for Georgia",
     "assistantDemo": "Try it — swipe to match",
     "assistantGreeting": "👋 Pick a category, then drag or tap to like/pass",
-    "trySwiping": "Drag the card or use buttons below",
+    "trySwiping": "Drag the card or use the arrow below",
+    "swipeNext": "Next",
+    "swipeSkip": "Skip",
+    "demoLike": "Like",
+    "demoUnlike": "Unlike",
+    "demoSwipeInstruction": "Swipe right ♥ left ✕",
     "chips": {
       "barista": "Barista in Tbilisi",
       "parttime": "Part-time job",
@@ -140,6 +201,8 @@
     "match": "match",
     "trustedBy": "Trusted by leading employers in Georgia",
     "partnerNote": "Partner logos shown with permission.",
+    "partnersSwipeHint": "Swipe or tap arrow to see next.",
+    "partnersDone": "These employers trust Matcher.",
     "testimonialsTitle": "People get hired faster",
     "howItWorksTitle": "How it works",
     "howItWorks": {
@@ -155,6 +218,16 @@
       "matches": "matches",
       "cvRequired": "CV required",
       "builtForGeorgia": "Built for Georgia"
+    },
+    "stats": {
+      "stat_1_value": "1 Week",
+      "stat_1_desc": "to get hired",
+      "stat_2_value": "10 Hours",
+      "stat_2_desc": "saved on recruiting per hire",
+      "stat_3_value": "0",
+      "stat_3_desc": "CVs ever required",
+      "stat_4_value": "2 Minutes",
+      "stat_4_desc": "to first selection"
     },
     "readyTitle": "Ready to get matched today?",
     "readySubtitle": "Join job seekers across Georgia — no CV, no endless scrolling.",
@@ -180,19 +253,19 @@
     },
     "demoJobs": {
       "barista": [
-        { "title": "Barista — Coffee Lab", "location": "Tbilisi", "match": 92 },
-        { "title": "Cashier — Carrefour", "location": "Tbilisi", "match": 87 },
-        { "title": "Receptionist — Hotel Role", "location": "Batumi", "match": 81 }
+        { "title": "Barista", "company": "Coffee Lab", "location": "Tbilisi", "workType": "Full-time", "salary": "1,200-1,500 GEL", "match": 92, "employer": "Gulf", "photo": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&q=80" },
+        { "title": "Cashier", "company": "Carrefour", "location": "Tbilisi", "workType": "Full-time", "salary": "1,100-1,400 GEL", "match": 87, "employer": "Nikora", "photo": "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400&q=80" },
+        { "title": "Receptionist", "company": "Hotel Role", "location": "Batumi", "workType": "Full-time", "salary": "1,000-1,300 GEL", "match": 81, "employer": "2 Nabiji", "photo": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&q=80" }
       ],
       "parttime": [
-        { "title": "Part-time Sales — SPAR", "location": "Tbilisi", "match": 89 },
-        { "title": "Weekend Barista — Café", "location": "Tbilisi", "match": 85 },
-        { "title": "Retail Associate — H&M", "location": "Tbilisi", "match": 82 }
+        { "title": "Part-time Sales", "company": "SPAR", "location": "Tbilisi", "workType": "Part-time", "salary": "800-1,000 GEL", "match": 89, "employer": "UGT", "photo": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=80" },
+        { "title": "Weekend Barista", "company": "Café", "location": "Tbilisi", "workType": "Part-time", "salary": "600-800 GEL", "match": 85, "employer": "iTechnics", "photo": "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&q=80" },
+        { "title": "Retail Associate", "company": "H&M", "location": "Tbilisi", "workType": "Part-time", "salary": "700-950 GEL", "match": 82, "employer": "Kursi.ge", "photo": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&q=80" }
       ],
       "noexp": [
-        { "title": "First Job — Internship", "location": "Tbilisi", "match": 94 },
-        { "title": "Trainee — Tech Startup", "location": "Tbilisi", "match": 88 },
-        { "title": "Junior Host — Restaurant", "location": "Batumi", "match": 84 }
+        { "title": "First Job — Internship", "company": "Tech Co", "location": "Tbilisi", "workType": "Full-time", "salary": "600-900 GEL", "match": 94, "employer": "Gulf", "photo": "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&q=80" },
+        { "title": "Trainee", "company": "Tech Startup", "location": "Tbilisi", "workType": "Full-time", "salary": "700-1,000 GEL", "match": 88, "employer": "Nikora", "photo": "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=400&q=80" },
+        { "title": "Junior Host", "company": "Restaurant", "location": "Batumi", "workType": "Full-time", "salary": "900-1,200 GEL", "match": 84, "employer": "2 Nabiji", "photo": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80" }
       ]
     }
   },

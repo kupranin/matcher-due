@@ -46,52 +46,53 @@ function SwipeCard({
       style={{ x, rotate }}
       className="absolute inset-0 cursor-grab active:cursor-grabbing"
     >
-      <div className="relative h-full w-full overflow-hidden rounded-3xl shadow-2xl shadow-gray-300/50 ring-2 ring-white/20">
-        {/* Full-bleed photo */}
-        <div className="absolute inset-0">
+      <div className="flex h-full w-full flex-col overflow-hidden rounded-3xl bg-gray-900 shadow-2xl shadow-gray-300/50 ring-2 ring-white/20">
+        {/* Image block – full width, match badge only */}
+        <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden">
           <img
             src={vacancy.photo}
             alt=""
             className="h-full w-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-        </div>
-
-        {/* Swipe overlays */}
-        <motion.div
-          style={{ opacity: likeOpacity }}
-          className="pointer-events-none absolute inset-0 flex items-center justify-end pr-8"
-        >
-          <div className="rounded-2xl border-4 border-matcher bg-matcher/90 px-6 py-3 shadow-xl -rotate-12">
-            <span className="text-3xl font-black uppercase tracking-wider text-white">{t("like")}</span>
+          {/* Swipe overlays on image */}
+          <motion.div
+            style={{ opacity: likeOpacity }}
+            className="pointer-events-none absolute inset-0 flex items-center justify-end pr-8"
+          >
+            <div className="rounded-2xl border-4 border-matcher bg-matcher/90 px-6 py-3 shadow-xl -rotate-12">
+              <span className="text-3xl font-black uppercase tracking-wider text-white">{t("like")}</span>
+            </div>
+          </motion.div>
+          <motion.div
+            style={{ opacity: nopeOpacity }}
+            className="pointer-events-none absolute inset-0 flex items-center justify-start pl-8"
+          >
+            <div className="rounded-2xl border-4 border-rose-400 bg-rose-500/90 px-6 py-3 shadow-xl rotate-12">
+              <span className="text-3xl font-black uppercase tracking-wider text-white">{t("nope")}</span>
+            </div>
+          </motion.div>
+          <div className="absolute left-4 top-4 rounded-full bg-matcher px-4 py-1.5 text-sm font-bold text-white shadow-lg">
+            {t("matchPercent", { percent: vacancy.match })}
           </div>
-        </motion.div>
-        <motion.div
-          style={{ opacity: nopeOpacity }}
-          className="pointer-events-none absolute inset-0 flex items-center justify-start pl-8"
-        >
-          <div className="rounded-2xl border-4 border-rose-400 bg-rose-500/90 px-6 py-3 shadow-xl rotate-12">
-            <span className="text-3xl font-black uppercase tracking-wider text-white">{t("nope")}</span>
+        </div>
+
+        {/* Dark info block below image */}
+        <div className="flex flex-1 flex-col justify-between p-5 text-white">
+          <div>
+            <h2 className="text-2xl font-bold">{vacancy.title}</h2>
+            <p className="mt-0.5 text-lg font-medium text-white/90">{vacancy.company}</p>
+            <p className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium">
+                {vacancy.location}
+              </span>
+              <span className="rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium">
+                {vacancy.workType}
+              </span>
+            </p>
+            <p className="mt-3 text-base font-bold text-matcher">{vacancy.salary}</p>
           </div>
-        </motion.div>
-
-        {/* Match badge */}
-        <div className="absolute left-4 top-4 rounded-full bg-gradient-to-r from-matcher to-matcher-teal px-4 py-1.5 text-sm font-bold text-white shadow-lg">
-          {t("matchPercent", { percent: vacancy.match })}
+          <p className="mt-4 text-sm font-medium text-white/80">{t("swipeInstruction")}</p>
         </div>
-
-        {/* Info overlay at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 p-5">
-          <h2 className="text-2xl font-bold text-white drop-shadow-lg">{vacancy.title}</h2>
-          <p className="mt-0.5 text-lg font-medium text-white/90">{vacancy.company}</p>
-          <p className="mt-2 flex flex-wrap gap-2 text-sm">
-            <span className="rounded-full bg-white/20 px-3 py-0.5 font-medium text-white backdrop-blur-sm">{vacancy.location}</span>
-            <span className="rounded-full bg-white/20 px-3 py-0.5 font-medium text-white backdrop-blur-sm">{vacancy.workType}</span>
-          </p>
-          <p className="mt-2 text-base font-bold text-matcher">{vacancy.salary}</p>
-        </div>
-
-        <p className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs font-medium text-white/70">{t("swipeInstruction")}</p>
       </div>
     </motion.div>
   );

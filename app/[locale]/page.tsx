@@ -16,103 +16,95 @@ const PARTNER_SLUGS: Record<string, string> = {
   UGT: "ugt",
   iTechnics: "itechnics",
   "Kursi.ge": "kursi",
-};
-
-const DEMO_JOB_IMAGES: Record<string, string[]> = {
-  barista: [
-    "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&q=85",
-    "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&q=85",
-    "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=400&q=85",
-  ],
-  parttime: [
-    "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&q=85",
-    "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&q=85",
-    "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400&q=85",
-  ],
-  noexp: [
-    "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&q=85",
-    "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=85",
-    "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&q=85",
-  ],
+  GTEX: "gtex",
 };
 
 function SwipeCard({
   job,
-  imgSrc,
   exitDir,
   onDragEnd,
   t,
 }: {
-  job: { title: string; location: string; match: number };
-  imgSrc: string;
+  job: { title: string; company: string; location: string; workType: string; salary: string; match: number; employer: string; photo: string };
   exitDir: "left" | "right" | null;
   onDragEnd: (info: PanInfo) => boolean;
   t: (key: string) => string;
 }) {
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-180, 180], [-10, 10]);
-  const likeOpacity = useTransform(x, [0, 60, 140], [0, 0.7, 1]);
-  const nopeOpacity = useTransform(x, [-140, -60, 0], [1, 0.7, 0]);
+  const rotate = useTransform(x, [-200, 200], [-12, 12]);
+  const likeOpacity = useTransform(x, [0, 100, 200], [0, 0.5, 1]);
+  const nopeOpacity = useTransform(x, [-200, -100, 0], [1, 0.5, 0]);
 
   function handleDragEnd(e: unknown, info: PanInfo) {
     const consumed = onDragEnd(info);
     if (!consumed) {
-      animate(x, 0, { type: "spring", stiffness: 280, damping: 28 });
+      animate(x, 0, { type: "spring", stiffness: 300, damping: 30 });
     }
   }
 
   return (
     <motion.div
       drag="x"
-      dragConstraints={{ left: -120, right: 120 }}
-      dragElastic={0.4}
+      dragConstraints={{ left: -180, right: 180 }}
+      dragElastic={0.7}
       onDragEnd={handleDragEnd}
       style={{ x, rotate }}
       initial={{ opacity: 1, scale: 1, x: 0 }}
       exit={{
         opacity: 0,
-        x: exitDir === "right" ? 200 : exitDir === "left" ? -200 : 0,
-        scale: 0.92,
-        transition: { duration: 0.2, ease: "easeIn" },
+        x: exitDir === "right" ? 400 : exitDir === "left" ? -400 : 0,
+        rotate: exitDir === "right" ? 20 : exitDir === "left" ? -20 : 0,
+        transition: { duration: 0.3, ease: "easeIn" },
       }}
       transition={{ type: "spring", stiffness: 300, damping: 28 }}
-      className="absolute inset-0 cursor-grab active:cursor-grabbing"
+      className="absolute inset-0 flex cursor-grab flex-col active:cursor-grabbing"
     >
-      <div className="flex h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
-        <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden bg-gray-100">
-          <Image
-            src={imgSrc}
+      {/* Card content – fits in viewport; pointer-events-none so whole area is draggable */}
+      <div className="pointer-events-none flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-gray-900 shadow-2xl shadow-gray-300/50 ring-2 ring-white/20">
+        {/* Image – fixed share of height so card always fits */}
+        <div className="relative h-[52%] min-h-0 w-full shrink-0 overflow-hidden">
+          <img
+            src={job.photo}
             alt=""
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 400px"
+            className="h-full w-full object-cover object-center"
           />
-          <div
-            className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"
-            aria-hidden
-          />
-          <span className="absolute right-2 top-2 rounded-full bg-matcher/95 px-2.5 py-0.5 text-xs font-bold text-white shadow">
-            {job.match}% {t("match")}
-          </span>
-          <p className="absolute bottom-2 left-2 right-2 text-base font-bold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
-            {job.title}
-          </p>
           <motion.div
             style={{ opacity: likeOpacity }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg border-2 border-white/90 bg-matcher/95 px-3 py-1.5 text-xs font-bold text-white shadow-lg"
+            className="pointer-events-none absolute inset-0 flex items-center justify-end pr-6"
           >
-            Like
+            <div className="rounded-xl border-2 border-matcher bg-matcher/90 px-4 py-2 shadow-xl -rotate-12">
+              <span className="text-xl font-black uppercase tracking-wider text-white sm:text-2xl">{t("demoLike")}</span>
+            </div>
           </motion.div>
           <motion.div
             style={{ opacity: nopeOpacity }}
-            className="absolute left-3 top-1/2 -translate-y-1/2 rounded-lg border-2 border-white/90 bg-rose-500/95 px-3 py-1.5 text-xs font-bold text-white shadow-lg"
+            className="pointer-events-none absolute inset-0 flex items-center justify-start pl-6"
           >
-            Nope
+            <div className="rounded-xl border-2 border-rose-400 bg-rose-500/90 px-4 py-2 shadow-xl rotate-12">
+              <span className="text-xl font-black uppercase tracking-wider text-white sm:text-2xl">{t("demoUnlike")}</span>
+            </div>
           </motion.div>
+          <div className="absolute left-3 top-3 rounded-full bg-matcher px-3 py-1 text-xs font-bold text-white shadow-lg sm:left-4 sm:top-4 sm:px-4 sm:py-1.5 sm:text-sm">
+            {job.match}% {t("match")}
+          </div>
         </div>
-        <div className="shrink-0 bg-white p-4">
-          <p className="font-semibold text-gray-900">{job.title}</p>
-          <p className="text-sm text-gray-500">{job.location}</p>
+
+        {/* Info block – remaining height */}
+        <div className="flex min-h-0 flex-1 flex-col justify-between overflow-hidden p-3 text-white sm:p-4">
+          <div className="min-w-0">
+            <h2 className="truncate text-lg font-bold sm:text-xl">{job.title}</h2>
+            <p className="mt-0.5 truncate text-sm font-medium text-white/90 sm:text-base">{job.company}</p>
+            <p className="mt-1.5 flex flex-wrap gap-1 sm:mt-2 sm:gap-1.5">
+              <span className="rounded-md bg-white/15 px-2 py-0.5 text-xs font-medium sm:px-2.5 sm:py-1 sm:text-sm">
+                {job.location}
+              </span>
+              <span className="rounded-md bg-white/15 px-2 py-0.5 text-xs font-medium sm:px-2.5 sm:py-1 sm:text-sm">
+                {job.workType}
+              </span>
+            </p>
+            <p className="mt-1.5 text-xs font-bold text-matcher sm:mt-2 sm:text-sm">{job.salary}</p>
+          </div>
+          <p className="mt-2 shrink-0 text-[10px] font-medium text-white/80 sm:mt-3 sm:text-xs">{t("demoSwipeInstruction")}</p>
         </div>
       </div>
     </motion.div>
@@ -121,14 +113,12 @@ function SwipeCard({
 
 function InteractiveSwipeDemo({
   jobs,
-  jobImages,
   chips,
   selectedChip,
   onSelectChip,
   t,
 }: {
-  jobs: Array<{ title: string; location: string; match: number }>;
-  jobImages: string[];
+  jobs: Array<{ title: string; company: string; location: string; workType: string; salary: string; match: number; employer: string; photo: string }>;
   chips: readonly { id: string; label: string }[];
   selectedChip: string;
   onSelectChip: (id: string) => void;
@@ -137,7 +127,6 @@ function InteractiveSwipeDemo({
   const [index, setIndex] = useState(0);
   const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
   const current = jobs[index % jobs.length];
-  const imgSrc = jobImages[index % jobImages.length] ?? jobImages[0];
 
   function handleDragEnd(info: PanInfo): boolean {
     const threshold = 60;
@@ -202,36 +191,12 @@ function InteractiveSwipeDemo({
         ))}
       </div>
 
-      {/* Photo strip preview */}
-      <div className="mt-4 flex gap-1.5 overflow-hidden rounded-lg">
-        {[
-          "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=120&q=80",
-          "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=120&q=80",
-          "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=120&q=80",
-          "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=120&q=80",
-        ].map((src, i) => (
-          <div
-            key={i}
-            className="h-14 w-12 flex-1 overflow-hidden rounded-md bg-gray-100"
-          >
-            <Image
-              src={src}
-              alt=""
-              width={48}
-              height={56}
-              className="h-full w-full object-cover"
-            />
-          </div>
-        ))}
-      </div>
-
-      <div className="relative mt-3 aspect-[3/4] max-h-[240px] overflow-hidden rounded-xl sm:mt-4 sm:max-h-[280px] md:max-h-[300px]">
+      <div className="relative mt-4 aspect-[3/4] max-h-[320px] w-full overflow-hidden rounded-3xl sm:max-h-[380px] md:max-h-[420px]">
         {current && (
           <AnimatePresence mode="wait">
             <SwipeCard
               key={`${selectedChip}-${index}`}
               job={current}
-              imgSrc={imgSrc}
               exitDir={exitDir}
               onDragEnd={handleDragEnd}
               t={t}
@@ -240,27 +205,27 @@ function InteractiveSwipeDemo({
         )}
       </div>
 
-      <p className="mt-3 text-center text-xs text-gray-400">
-        {t("trySwiping")}
+      <p className="mt-4 text-center text-xs text-gray-500">
+        {t("demoSwipeInstruction")}
       </p>
-      <div className="mt-3 flex justify-center gap-5">
+      <div className="mt-4 flex justify-center gap-6 sm:gap-8">
         <motion.button
           type="button"
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.92 }}
           onClick={() => handleSwipe("left")}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 text-rose-600 shadow-sm transition-colors hover:bg-rose-100"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-lg shadow-rose-300/50 transition-shadow hover:shadow-xl hover:shadow-rose-400/50 sm:h-16 sm:w-16"
         >
-          ✕
+          <span className="text-2xl font-bold">✕</span>
         </motion.button>
         <motion.button
           type="button"
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.92 }}
           onClick={() => handleSwipe("right")}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-matcher-mint text-matcher-dark shadow-sm transition-colors hover:bg-matcher/90 hover:text-white"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-matcher to-matcher-teal text-white shadow-lg shadow-matcher/40 transition-shadow hover:shadow-xl hover:shadow-matcher/50 sm:h-16 sm:w-16"
         >
-          ♥
+          <span className="text-2xl">♥</span>
         </motion.button>
       </div>
     </motion.div>
@@ -272,8 +237,19 @@ const PARTNER_ASPECTS: Record<string, "square" | "wide"> = {
   Nikora: "square",
   "2 Nabiji": "square",
   UGT: "wide",        // symbol + text
-  iTechnics: "wide",  // circle + text
+  iTechnics: "wide",  // circle + text – shown alone
   "Kursi.ge": "square",
+  GTEX: "wide",       // G + tex
+};
+
+const PARTNER_DOMAINS: Record<string, string> = {
+  Gulf: "gulf.ge",
+  Nikora: "nikora.ge",
+  "2 Nabiji": "2nabiji.ge",
+  UGT: "ugt.ge",
+  iTechnics: "itechnics.ge",
+  "Kursi.ge": "kursi.ge",
+  GTEX: "gtex.ge",
 };
 
 function PartnerLogo({
@@ -282,26 +258,44 @@ function PartnerLogo({
   bg,
   text,
   aspect = "square",
+  compact = false,
+  size = "md",
 }: {
   name: string;
   domain: string;
   bg: string;
   text: string;
   aspect?: "square" | "wide";
+  compact?: boolean;
+  size?: "sm" | "md" | "lg" | "full";
 }) {
   const [useFallback, setUseFallback] = useState(false);
   const initials = name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase();
   const slug = PARTNER_SLUGS[name] ?? domain.replace(".ge", "");
   const localSrc = `/partners/${slug}.png`;
 
-  const containerClass = aspect === "wide"
-    ? "aspect-[7/4] w-24 sm:w-28 md:w-32"
-    : "aspect-square w-16 sm:w-[4.5rem] md:w-20";
+  const isWide = aspect === "wide";
+  const sizeClasses =
+    size === "full"
+      ? "w-full max-w-full aspect-[2/1] min-w-0 shrink-0"
+      : size === "lg"
+        ? isWide
+          ? "h-14 w-28 sm:h-16 sm:w-32 md:h-18 md:w-36"
+          : "h-14 w-14 sm:h-16 sm:w-16 md:h-18 md:w-18"
+        : size === "md"
+          ? isWide
+            ? "h-12 w-24 sm:h-14 sm:w-28"
+            : "h-12 w-12 sm:h-14 sm:w-14"
+          : compact
+            ? "h-10 w-10 sm:h-12 sm:w-12"
+            : isWide
+              ? "h-10 w-20 sm:h-12 sm:w-24"
+              : "h-10 w-10 sm:h-12 sm:w-12";
 
   if (useFallback) {
     return (
       <div
-        className={`flex shrink-0 items-center justify-center rounded-xl ${containerClass} ${bg} ${text} text-xs font-bold shadow-md transition-all hover:scale-105 md:text-sm`}
+        className={`flex shrink-0 items-center justify-center rounded-lg ${sizeClasses} ${bg} ${text} text-xs font-bold`}
         title={name}
       >
         {initials}
@@ -311,18 +305,103 @@ function PartnerLogo({
 
   return (
     <div
-      className={`group relative flex shrink-0 overflow-hidden rounded-xl bg-white p-3 shadow-md ring-1 ring-gray-100/80 transition-all duration-200 hover:scale-105 hover:shadow-lg hover:ring-matcher/20 ${containerClass}`}
+      className={`relative shrink-0 overflow-hidden rounded-lg bg-gray-50 ${sizeClasses}`}
       title={name}
     >
       <Image
         src={localSrc}
         alt={name}
         fill
-        sizes={aspect === "wide" ? "(max-width: 640px) 96px, (max-width: 768px) 112px, 128px" : "(max-width: 640px) 64px, (max-width: 768px) 72px, 80px"}
-        className="object-contain object-center"
+        sizes={size === "full" ? "100vw" : "144px"}
+        className="object-contain object-center p-1"
         onError={() => setUseFallback(true)}
       />
     </div>
+  );
+}
+
+const PARTNERS_ORDER = [
+  { name: "Gulf", domain: "gulf.ge", bg: "bg-matcher", text: "text-white", accent: "border-l-matcher" },
+  { name: "Nikora", domain: "nikora.ge", bg: "bg-matcher-teal", text: "text-white", accent: "border-l-matcher-teal" },
+  { name: "2 Nabiji", domain: "2nabiji.ge", bg: "bg-matcher-dark", text: "text-white", accent: "border-l-matcher-dark" },
+  { name: "UGT", domain: "ugt.ge", bg: "bg-matcher-amber", text: "text-gray-900", accent: "border-l-matcher-amber" },
+  { name: "iTechnics", domain: "itechnics.ge", bg: "bg-matcher-coral", text: "text-white", accent: "border-l-matcher-coral", alone: true },
+  { name: "Kursi.ge", domain: "kursi.ge", bg: "bg-matcher", text: "text-white", accent: "border-l-matcher" },
+  { name: "GTEX", domain: "gtex.ge", bg: "bg-gray-900", text: "text-white", accent: "border-l-gray-700" },
+] as const;
+
+type PartnerItem = (typeof PARTNERS_ORDER)[number];
+
+function PartnerSwipeCard({
+  partners,
+  onSwipe,
+  t,
+}: {
+  partners: PartnerItem[];
+  onSwipe: (dir: "left" | "right") => void;
+  t: (key: string) => string;
+}) {
+  const x = useMotionValue(0);
+  const rotate = useTransform(x, [-200, 200], [-8, 8]);
+  const nextOpacity = useTransform(x, [0, 60, 120], [0, 0.5, 1]);
+  const prevOpacity = useTransform(x, [-120, -60, 0], [1, 0.5, 0]);
+
+  function handleDragEnd(_: unknown, info: PanInfo) {
+    const threshold = 70;
+    if (info.offset.x > threshold) onSwipe("right");
+    else if (info.offset.x < -threshold) onSwipe("left");
+    else animate(x, 0, { type: "spring", stiffness: 300, damping: 30 });
+  }
+
+  const accent = partners[0]?.accent ?? "border-l-matcher";
+
+  return (
+    <motion.div
+      drag="x"
+      dragConstraints={{ left: -140, right: 140 }}
+      dragElastic={0.5}
+      onDragEnd={handleDragEnd}
+      style={{ x, rotate }}
+      className="absolute inset-0 cursor-grab active:cursor-grabbing"
+    >
+      <div className={`relative flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-2xl border border-gray-200 border-l-4 bg-white shadow-lg ${accent}`}>
+        <motion.div
+          style={{ opacity: nextOpacity }}
+          className="pointer-events-none absolute inset-0 z-10 flex items-center justify-end pr-6"
+        >
+          <div className="rounded-xl border-2 border-matcher bg-matcher/90 px-3 py-1.5 shadow-lg -rotate-12">
+            <span className="text-sm font-bold uppercase tracking-wider text-white">{t("swipeNext")}</span>
+          </div>
+        </motion.div>
+        <motion.div
+          style={{ opacity: prevOpacity }}
+          className="pointer-events-none absolute inset-0 z-10 flex items-center justify-start pl-6"
+        >
+          <div className="rounded-xl border-2 border-gray-400 bg-gray-500/90 px-3 py-1.5 shadow-lg rotate-12">
+            <span className="text-sm font-bold uppercase tracking-wider text-white">←</span>
+          </div>
+        </motion.div>
+        <div className="flex w-full flex-1 min-h-0 items-center justify-center gap-4 p-6 sm:gap-6 sm:p-8">
+          {partners.map((p) => (
+            <PartnerLogo
+              key={p.name}
+              name={p.name}
+              domain={p.domain}
+              bg={p.bg}
+              text={p.text}
+              aspect={PARTNER_ASPECTS[p.name] ?? "square"}
+              size={
+                partners.length === 1 && PARTNER_ASPECTS[p.name] === "wide"
+                  ? "full"
+                  : partners.length === 1
+                    ? "lg"
+                    : "md"
+              }
+            />
+          ))}
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -339,23 +418,59 @@ export default function Home() {
   const demoJobs = {
     barista: t.raw("demoJobs.barista") as Array<{
       title: string;
+      company: string;
       location: string;
+      workType: string;
+      salary: string;
       match: number;
+      employer: string;
+      photo: string;
     }>,
     parttime: t.raw("demoJobs.parttime") as Array<{
       title: string;
+      company: string;
       location: string;
+      workType: string;
+      salary: string;
       match: number;
+      employer: string;
+      photo: string;
     }>,
     noexp: t.raw("demoJobs.noexp") as Array<{
       title: string;
+      company: string;
       location: string;
+      workType: string;
+      salary: string;
       match: number;
+      employer: string;
+      photo: string;
     }>,
   };
 
   const [selectedChip, setSelectedChip] = useState<string>("barista");
   const jobs = demoJobs[selectedChip as keyof typeof demoJobs] ?? demoJobs.barista;
+
+  const [partners, setPartners] = useState<(typeof PARTNERS_ORDER)[number][]>(() => [...PARTNERS_ORDER]);
+  const [partnerExitDir, setPartnerExitDir] = useState<"left" | "right" | null>(null);
+  const firstPartner = partners[0] as (typeof PARTNERS_ORDER)[number] & { alone?: boolean } | undefined;
+  const showAlone = firstPartner && "alone" in firstPartner && firstPartner.alone;
+  const currentPair = showAlone && partners.length >= 1
+    ? partners.slice(0, 1)
+    : partners.length >= 3
+      ? partners.slice(0, 3)
+      : partners.length >= 2
+        ? partners.slice(0, 2)
+        : partners.length === 1
+          ? partners.slice(0, 1)
+          : [];
+
+  function handlePartnerSwipe(dir: "left" | "right") {
+    if (currentPair.length === 0) return;
+    setPartnerExitDir(dir);
+    setPartners((prev) => prev.slice(currentPair.length));
+    setTimeout(() => setPartnerExitDir(null), 50);
+  }
 
   // Dynamic hero: alternate "job" / "candidate"
   const [heroWord, setHeroWord] = useState<"job" | "candidate">("job");
@@ -481,7 +596,6 @@ export default function Home() {
         {/* Right side – interactive swipe demo */}
         <InteractiveSwipeDemo
           jobs={jobs}
-          jobImages={DEMO_JOB_IMAGES[selectedChip] ?? DEMO_JOB_IMAGES.barista}
           chips={CHIPS}
           selectedChip={selectedChip}
           onSelectChip={setSelectedChip}
@@ -489,62 +603,65 @@ export default function Home() {
         />
       </section>
 
-      {/* Collage strip under hero (mobile / secondary) */}
-      <motion.section
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6 }}
-        className="mx-auto max-w-6xl px-4 pb-8 sm:px-6 sm:pb-12 md:pb-16"
-      >
-        <div className="flex justify-center gap-3 md:hidden">
-          {[
-            { img: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=200&q=80", label: "Coffee" },
-            { img: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=200&q=80", label: "Retail" },
-            { img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=200&q=80", label: "Hotel" },
-            { img: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=200&q=80", label: "Warehouse" },
-          ].map(({ img, label }) => (
-            <div
-              key={label}
-              className="h-20 w-14 overflow-hidden rounded-xl opacity-90"
-              style={{
-                backgroundImage: `url("${img}")`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }}
-              title={label}
-            />
-          ))}
-        </div>
-      </motion.section>
-
-      {/* Partners / Logos strip */}
-      <section className="border-t border-matcher/15 bg-gradient-to-b from-matcher-pale/40 to-matcher-mint/20 py-12 sm:py-14 md:py-16 lg:py-20">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+      {/* Partners – swipe deck (3 logos per card; iTechnics alone) */}
+      <section className="border-t border-matcher/15 bg-gradient-to-b from-matcher-pale/40 to-matcher-mint/20 py-12 sm:py-14 md:py-16">
+        <div className={`mx-auto px-4 sm:px-6 ${
+          currentPair.length === 3 ? "max-w-2xl" : showAlone && currentPair.length > 0 ? "max-w-xl" : "max-w-lg"
+        }`}>
           <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-matcher-dark/90">
             {t("trustedBy")}
           </p>
           <p className="mt-1.5 text-center text-sm text-gray-500">
             {t("partnerNote")}
           </p>
-          <div className="mx-auto mt-10 grid max-w-3xl grid-cols-2 items-center justify-items-center gap-6 sm:grid-cols-3 sm:gap-8 md:mt-12 md:gap-10 lg:grid-cols-6 lg:gap-8">
-            {[
-              { name: "Gulf", domain: "gulf.ge", bg: "bg-matcher", text: "text-white" },
-              { name: "Nikora", domain: "nikora.ge", bg: "bg-matcher-teal", text: "text-white" },
-              { name: "2 Nabiji", domain: "2nabiji.ge", bg: "bg-matcher-dark", text: "text-white" },
-              { name: "UGT", domain: "ugt.ge", bg: "bg-matcher-amber", text: "text-gray-900" },
-              { name: "iTechnics", domain: "itechnics.ge", bg: "bg-matcher-coral", text: "text-white" },
-              { name: "Kursi.ge", domain: "kursi.ge", bg: "bg-matcher", text: "text-white" },
-            ].map(({ name, domain, bg, text }) => (
-              <PartnerLogo
-                key={name}
-                name={name}
-                domain={domain}
-                bg={bg}
-                text={text}
-                aspect={PARTNER_ASPECTS[name] ?? "square"}
-              />
-            ))}
+          <p className="mt-2 text-center text-xs text-gray-400">{t("partnersSwipeHint")}</p>
+          <div className={`relative mx-auto mt-6 overflow-hidden rounded-2xl ${
+            currentPair.length === 3 ? "aspect-[2/1] max-h-[220px] sm:max-h-[260px] max-w-2xl" : showAlone && currentPair.length > 0 ? "aspect-[2/1] max-h-[260px] sm:max-h-[300px] max-w-2xl" : "aspect-[4/3] max-h-[280px] sm:max-h-[320px]"
+          }`}>
+            {currentPair.length > 0 ? (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentPair.map((p) => p.name).join("-")}
+                  initial={{ opacity: 1, scale: 1 }}
+                  exit={{
+                    opacity: 0,
+                    x: partnerExitDir === "right" ? 320 : partnerExitDir === "left" ? -320 : 0,
+                    rotate: partnerExitDir === "right" ? 12 : partnerExitDir === "left" ? -12 : 0,
+                    transition: { duration: 0.25, ease: "easeIn" },
+                  }}
+                  className="absolute inset-0"
+                >
+                  <PartnerSwipeCard
+                    partners={currentPair}
+                    onSwipe={handlePartnerSwipe}
+                    t={t}
+                  />
+                </motion.div>
+              </AnimatePresence>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4 }}
+                className="flex h-full flex-col items-center justify-center rounded-2xl bg-gradient-to-br from-matcher/90 to-matcher-teal/90 p-6 text-center shadow-lg"
+              >
+                <p className="text-base font-medium text-white/95 sm:text-lg">{t("partnersDone")}</p>
+              </motion.div>
+            )}
           </div>
+          {currentPair.length > 0 && (
+            <div className="mt-4 flex justify-center">
+              <motion.button
+                type="button"
+                onClick={() => handlePartnerSwipe("right")}
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-matcher text-white shadow-md hover:bg-matcher-dark sm:h-14 sm:w-14"
+              >
+                <span className="text-lg">→</span>
+              </motion.button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -625,24 +742,55 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Metrics row */}
+      {/* LandingStats / ValueProp */}
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12 md:py-16">
         <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 md:gap-6">
-          {[
-            { value: "2 min", label: t("metrics.setup"), color: "text-matcher-dark" },
-            { value: "Top 3", label: t("metrics.matches"), color: "text-matcher-teal" },
-            { value: "0", label: t("metrics.cvRequired"), color: "text-matcher" },
-            { value: "🇬🇪", label: t("metrics.builtForGeorgia"), color: "text-matcher-dark" },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="rounded-xl border-2 border-matcher/20 bg-matcher-pale/50 p-4 text-center sm:rounded-2xl sm:p-5 md:p-6"
+          {(["stat_1", "stat_2", "stat_3", "stat_4"] as const).map((key, i) => (
+            <motion.div
+              key={key}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{
+                duration: 0.5,
+                delay: i * 0.08,
+                ease: [0.25, 0.46, 0.45, 0.94],
+              }}
+              whileHover={{
+                y: -6,
+                scale: 1.03,
+                transition: { duration: 0.2 },
+              }}
+              whileTap={{ scale: 0.98 }}
+              className={`stats-value-prop relative overflow-hidden rounded-xl border-2 p-4 text-center shadow-sm transition-shadow hover:shadow-md sm:rounded-2xl sm:p-5 md:p-6 ${
+                key === "stat_1"
+                  ? "border-matcher/30 bg-matcher-pale/60"
+                  : key === "stat_2"
+                    ? "border-matcher-teal/25 bg-matcher-mint/40"
+                    : key === "stat_3"
+                      ? "border-matcher-amber/25 bg-matcher-amber/10"
+                      : "border-matcher-dark/20 bg-matcher-pale/50"
+              }`}
             >
-              <p className={`text-xl font-bold sm:text-2xl md:text-3xl ${stat.color}`}>
-                {stat.value}
-              </p>
-              <p className="mt-1 text-sm text-gray-500">{stat.label}</p>
-            </div>
+              <motion.span
+                className="block text-3xl font-bold tracking-tight text-primary sm:text-4xl"
+                initial={{ scale: 0.9 }}
+                whileInView={{ scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.08 + 0.1 }}
+              >
+                {t(`stats.${key}_value`)}
+              </motion.span>
+              <motion.div
+                className="mt-1.5 text-sm font-medium text-muted-foreground leading-relaxed"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.08 + 0.2 }}
+              >
+                {t(`stats.${key}_desc`)}
+              </motion.div>
+            </motion.div>
           ))}
         </div>
       </section>

@@ -3,6 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --primary: #171717;
+  --muted-foreground: #6b7280;
   /* Matcher.ge brand — aligned with logo (#a5c044) */
   --matcher: #a5c044;
   --matcher-dark: #7d9a2e;
@@ -16,6 +18,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-muted-foreground: var(--muted-foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --color-matcher: var(--matcher);
@@ -53,6 +57,12 @@ body {
 
 [data-locale="ka"] {
   font-size: 103%;
+}
+
+/* Stats / ValueProp: Georgian legibility */
+[data-locale="ka"] .stats-value-prop {
+  font-family: var(--font-georgian), var(--font-geist-sans), system-ui, sans-serif;
+  line-height: 1.6;
 }
 
 /* Prevent widows in hero with text balancing */
