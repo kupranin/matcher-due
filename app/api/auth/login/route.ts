@@ -28,9 +28,15 @@ export async function POST(request: Request) {
     try {
       user = await prisma.user.findUnique({ where: { email } });
     } catch (dbErr) {
-      console.error("Login DB findUnique error:", dbErr);
+      const err = dbErr as Error & { code?: string };
+      const msg = err?.message ?? String(dbErr);
+      const code = err?.code ?? "";
+      console.error("Login DB findUnique error:", code || msg, msg);
       return NextResponse.json(
-        { error: "Database unavailable. Ensure the app is connected to the database (e.g. run: npx prisma db push)." },
+        {
+          error: "Database unavailable. Ensure the app is connected to the database (e.g. run: npx prisma db push).",
+          debug: process.env.NODE_ENV === "development" ? msg : undefined,
+        },
         { status: 503 }
       );
     }

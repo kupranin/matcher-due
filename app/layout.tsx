@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Matcher.ge — Job matching for Georgia",
   description: "Get matched to your first job in minutes. No CV required.",
   icons: {
-    icon: "/logo.svg",
+    icon: "/icon.png",
   },
 };
 
