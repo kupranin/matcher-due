@@ -231,7 +231,11 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json({ vacancyId: vacancy.id, companyId: company.id, userId: user.id });
+    return NextResponse.json({
+      vacancyId: vacancy.id,
+      companyId: company.id,
+      ...(user && { userId: user.id }),
+    });
   } catch (e) {
     console.error("Vacancy create error:", e);
     return NextResponse.json({ error: "Failed to create vacancy" }, { status: 500 });

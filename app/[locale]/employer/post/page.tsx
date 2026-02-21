@@ -293,8 +293,9 @@ export default function EmployerPostPage() {
         const sessionRes = await fetch("/api/auth/session", { credentials: "include" });
         const sessionData = await sessionRes.json().catch(() => ({}));
         if (sessionData?.user?.role === "EMPLOYER" && sessionData.user.id) {
-          userId = sessionData.user.id;
-          window.sessionStorage.setItem("matcher_employer_user_id", userId);
+          const id = String(sessionData.user.id);
+          userId = id;
+          window.sessionStorage.setItem("matcher_employer_user_id", id);
         }
       } catch {
         // ignore

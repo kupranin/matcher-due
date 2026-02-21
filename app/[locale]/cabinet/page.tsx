@@ -151,7 +151,7 @@ export default function CabinetPage() {
     if (profileUserId) {
       fetch(`/api/candidates/profile?userId=${encodeURIComponent(profileUserId)}`)
         .then((r) => r.json())
-        .then((data: { fullName?: string; email?: string; phone?: string; locationCityId?: string; salaryMin?: number; workTypes?: string[]; skills?: Array<{ name: string; level: string }>; educationLevel?: string; experienceMonths?: number; jobTitle?: string; availableToWork?: boolean } | null) => {
+        .then((data: { fullName?: string; email?: string; phone?: string; locationCityId?: string; salaryMin?: number; workTypes?: string[]; willingToRelocate?: boolean; skills?: Array<{ name: string; level: string }>; educationLevel?: string; experienceMonths?: number; jobTitle?: string; availableToWork?: boolean } | null) => {
           if (data && data.fullName) {
             setAvailableToWork(data.availableToWork !== false);
             saveCandidateProfile({

@@ -56,7 +56,6 @@ export const JOB_TITLE_EN_TO_KA: Record<string, string> = {
   "Grocery Store Clerk": "საკვები მაღაზიის მოლარე",
   "Restaurant Runner": "რესტორანის მიმწოდებელი",
   "Office Runner/Messenger": "ოფისის კურიერი",
-  "Housekeeper": "სახლის მეურნე",
   "Nursing Assistant": "მედდის ასისტენტი",
   "Daycare Assistant": "ბაღის აღმზრდელი",
   "Library Assistant": "ბიბლიოთეკის ასისტენტი",
