@@ -32,9 +32,16 @@ export async function POST(request: Request) {
       const msg = err?.message ?? String(dbErr);
       const code = err?.code ?? "";
       console.error("Login DB findUnique error:", code || msg, msg);
+      const hasDbUrl = !!(process.env.DATABASE_URL || process.env.DIRECT_URL);
+      const hint = !hasDbUrl
+        ? "DATABASE_URL (and optionally DIRECT_URL) are not set. On Vercel: add them in Project → Settings → Environment Variables, then redeploy. Locally: ensure .env exists with DATABASE_URL."
+        : code === "P2021"
+          ? "Table may be missing or wrong name. Run: npx prisma db push (and ensure User model uses @@map(\"users\") if your table is named 'users')."
+          : "Check DATABASE_URL is correct and the database is reachable (Supabase: use Connection string from Project Settings → Database).";
       return NextResponse.json(
         {
           error: "Database unavailable. Ensure the app is connected to the database (e.g. run: npx prisma db push).",
+          hint: process.env.NODE_ENV === "development" ? hint : undefined,
           debug: process.env.NODE_ENV === "development" ? msg : undefined,
         },
         { status: 503 }
