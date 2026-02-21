@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: "Database unavailable. Ensure the app is connected to the database (e.g. run: npx prisma db push).",
-          hint: process.env.NODE_ENV === "development" ? hint : undefined,
+          hint: process.env.NODE_ENV === "development" ? hint : "Open /api/debug-db on this site to see the connection error and fix (e.g. set DATABASE_URL and DIRECT_URL in Vercel → Settings → Environment Variables, then redeploy).",
           debug: process.env.NODE_ENV === "development" ? msg : undefined,
         },
         { status: 503 }

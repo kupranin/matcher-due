@@ -176,8 +176,8 @@ export function getRecommendedSalaryForSlug(slug: string | null | undefined): nu
   return DEFAULT_RECOMMENDED_SALARY;
 }
 
-/** Turn job title into slug for salary lookup (e.g. "Retail Cashier" → "retail-cashier"). */
-function titleToSlug(title: string): string {
+/** Turn job title into slug for salary lookup (e.g. "Retail Cashier" → "retail-cashier"). Exported for use with candidate average salaries. */
+export function titleToSlug(title: string): string {
   return title
     .toLowerCase()
     .replace(/\s*\/\s*.*$/, "")
@@ -188,6 +188,18 @@ function titleToSlug(title: string): string {
 /** Get recommended salary (GEL/month) for a job title (e.g. from vacancy list). */
 export function getRecommendedSalaryForTitle(title: string | null | undefined): number {
   return getRecommendedSalaryForSlug(title ? titleToSlug(title) : null);
+}
+
+/** Get recommended salary (GEL/month) for a job title, using candidate averages when available. */
+export function getRecommendedSalaryForTitleWithAverages(
+  title: string | null | undefined,
+  averagesBySlug: Record<string, number> | null | undefined
+): number {
+  if (!title) return getRecommendedSalaryForSlug(null);
+  const slug = titleToSlug(title);
+  if (slug && averagesBySlug && typeof averagesBySlug[slug] === "number")
+    return Math.round(averagesBySlug[slug]);
+  return getRecommendedSalaryForTitle(title);
 }
 
 /**

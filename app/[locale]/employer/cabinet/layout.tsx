@@ -27,6 +27,7 @@ export default function EmployerCabinetLayout({
   const [subscription, setSubscription] = useState<SubscriptionDisplay | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [companyName, setCompanyName] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/session", { credentials: "include" })
@@ -43,7 +44,7 @@ export default function EmployerCabinetLayout({
             window.sessionStorage.setItem("matcher_employer_user_id", data.user.id);
             return fetch(`/api/companies?userId=${encodeURIComponent(data.user.id)}`)
               .then((r) => r.json())
-              .then((company: { id?: string } | null) => {
+              .then((company: { id?: string; name?: string } | null) => {
                 if (company?.id) {
                   window.sessionStorage.setItem("matcher_employer_company_id", company.id);
                   if (!window.sessionStorage.getItem("employerHasSubscription")) {
@@ -51,6 +52,7 @@ export default function EmployerCabinetLayout({
                   }
                   window.dispatchEvent(new CustomEvent("employer-company-ready"));
                 }
+                setCompanyName(company?.name ?? null);
                 setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
               })
               .catch(() => setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription")));
@@ -107,6 +109,11 @@ export default function EmployerCabinetLayout({
       {/* Mobile header */}
       <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 md:hidden">
         <Logo height={56} />
+        {companyName && (
+          <p className="truncate px-2 text-sm font-medium text-gray-700 max-w-[140px]" title={companyName}>
+            {companyName}
+          </p>
+        )}
         <button
           type="button"
           onClick={() => setMobileMenuOpen((o) => !o)}
@@ -127,8 +134,13 @@ export default function EmployerCabinetLayout({
         }`}
       >
         <div className="flex h-full flex-col overflow-y-auto p-4 pt-14 md:pt-4">
-          <div className="mb-8 flex items-center justify-center rounded-xl border border-matcher/20 bg-matcher-pale/50 px-4 py-5">
+          <div className="mb-8 flex flex-col items-center justify-center rounded-xl border border-matcher/20 bg-matcher-pale/50 px-4 py-5">
             <Logo height={72} />
+            {companyName && (
+              <p className="mt-3 w-full truncate text-center text-sm font-medium text-matcher-dark" title={companyName}>
+                {companyName}
+              </p>
+            )}
           </div>
 
           {sub ? (

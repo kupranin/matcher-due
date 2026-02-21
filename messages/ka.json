@@ -675,7 +675,10 @@
     "checkBackLater": "მოგვიანებით შემოდი ახალი ვაკანსიებისთვის.",
     "availableToWorkLabel": "ღია ვარ სამსახურად",
     "availableToWorkOn": "მონიშნული ხარ როგორც ხელმისაწვდომი",
-    "availableToWorkOff": "ამჟამად არ ვეძებ სამსახურის"
+    "availableToWorkOff": "ამჟამად არ ვეძებ სამსახურის",
+    "interestSentTitle": "ინტერესი გაიგზავნა!",
+    "interestSentMessage": "შენი ინტერესი {vacancy} — {company}-ში გაიგზავნა. დამსაქმებელი ნახავს და შეიძლება მოგიწონოთ — შეხვედრისას შეამოწმე ჩატები.",
+    "keepSwiping": "განაგრძე გადაფურცვლა"
   },
   "chats": {
     "noMatchesYet": "ჯერ შესაბამისობები არ არის",
@@ -909,6 +912,7 @@
     "addAnotherVacancy": "+ სხვა ვაკანსიის დამატება",
     "candidates": "კანდიდატები",
     "candidatesFor": "ვაკანსიაზე",
+    "myVacancies": "ჩემი ვაკანსიები",
     "changeVacancy": "ვაკანსიის შეცვლა",
     "noVacanciesYet": "ჯერ ვაკანსიები არ არის",
     "noVacanciesHint": "გამოაქვეყნე პირველი ვაკანსია და აირჩიე პაკეტი — ნახავ შესაბამის კანდიდატებს.",
@@ -920,7 +924,14 @@
     "viewAnotherVacancy": "სხვა ვაკანსიის ნახვა",
     "deleteVacancy": "ვაკანსიის წაშლა",
     "deleteVacancyConfirm": "წავშალოთ ეს ვაკანსია? ვერ დაბრუნდება.",
-    "deleteVacancyError": "ვაკანსიის წაშლა ვერ მოხერხდა. სცადეთ თავიდან."
+    "deleteVacancyError": "ვაკანსიის წაშლა ვერ მოხერხდა. სცადეთ თავიდან.",
+    "likedYouCount": "{count} მოგიწონს",
+    "likedYouCount_one": "1 მოგიწონს",
+    "candidatesLikedYourVacancies": "კანდიდატები, რომლებსაც მოეწონათ თქვენი ვაკანსიები",
+    "likedThisJobFirst": "{count} კანდიდატს უკვე მოეწონა ეს სამსახური — ისინი პირველები ჩანან.",
+    "likedThisJobFirst_one": "1 კანდიდატს უკვე მოეწონა ეს სამსახური — ის პირველი ჩანს.",
+    "viewCandidates": "კანდიდატების ნახვა",
+    "loadingOpportunities": "შესაძლებლობები იტვირთება…"
   },
   "userFlowExtras": {
     "loadingJobs": "სამსახურები იტვირთება…",

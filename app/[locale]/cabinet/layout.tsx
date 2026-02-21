@@ -16,14 +16,22 @@ export default function CabinetLayout({
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [profileName, setProfileName] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/session", { credentials: "include" })
       .then((r) => r.json())
-      .then((data: { user: { role: string } | null }) => {
+      .then((data: { user: { id?: string; role: string } | null }) => {
         setAuthChecked(true);
         if (!data?.user || data.user.role !== "CANDIDATE") {
           router.replace("/login");
+          return;
+        }
+        if (data.user.id) {
+          fetch(`/api/candidates/profile?userId=${encodeURIComponent(data.user.id)}`, { credentials: "include" })
+            .then((r) => r.json())
+            .then((profile: { fullName?: string } | null) => setProfileName(profile?.fullName ?? null))
+            .catch(() => setProfileName(null));
         }
       })
       .catch(() => {
@@ -58,6 +66,11 @@ export default function CabinetLayout({
       {/* Mobile header */}
       <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 md:hidden">
         <Logo height={56} />
+        {profileName && (
+          <p className="truncate px-2 text-sm font-medium text-gray-700 max-w-[140px]" title={profileName}>
+            {profileName}
+          </p>
+        )}
         <button
           type="button"
           onClick={() => setMobileMenuOpen((o) => !o)}
@@ -84,8 +97,13 @@ export default function CabinetLayout({
         }`}
       >
         <div className="flex h-full flex-col p-4 pt-14 md:pt-4">
-          <div className="mb-6 hidden items-center justify-center rounded-xl border border-matcher/20 bg-matcher-pale/50 px-4 py-4 md:flex md:mb-8 md:py-5">
+          <div className="mb-6 hidden flex-col items-center justify-center rounded-xl border border-matcher/20 bg-matcher-pale/50 px-4 py-4 md:flex md:mb-8 md:py-5">
             <Logo height={72} />
+            {profileName && (
+              <p className="mt-3 w-full truncate text-center text-sm font-medium text-matcher-dark" title={profileName}>
+                {profileName}
+              </p>
+            )}
           </div>
 
           <nav className="flex flex-col gap-1">

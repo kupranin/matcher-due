@@ -564,7 +564,10 @@
     "checkBackLater": "Check back later for new vacancies.",
     "availableToWorkLabel": "Available to work",
     "availableToWorkOn": "You're marked as available to work",
-    "availableToWorkOff": "You're not looking right now"
+    "availableToWorkOff": "You're not looking right now",
+    "interestSentTitle": "Interest sent!",
+    "interestSentMessage": "Your interest in {vacancy} at {company} has been sent. The employer will see it and may like you back — check Chats when you match.",
+    "keepSwiping": "Keep swiping"
   },
   "chats": {
     "noMatchesYet": "No matches yet",
@@ -797,6 +800,7 @@
     "addAnotherVacancy": "+ Add another vacancy",
     "candidates": "Candidates",
     "candidatesFor": "for",
+    "myVacancies": "My vacancies",
     "changeVacancy": "Change vacancy",
     "noVacanciesYet": "No vacancies yet",
     "noVacanciesHint": "Post your first vacancy and choose a package to see relevant candidates and start matching.",
@@ -808,7 +812,14 @@
     "viewAnotherVacancy": "View another vacancy",
     "deleteVacancy": "Delete vacancy",
     "deleteVacancyConfirm": "Delete this vacancy? This cannot be undone.",
-    "deleteVacancyError": "Could not delete vacancy. Try again."
+    "deleteVacancyError": "Could not delete vacancy. Try again.",
+    "likedYouCount": "{count} liked you",
+    "likedYouCount_one": "1 liked you",
+    "candidatesLikedYourVacancies": "Candidates who liked your vacancies",
+    "likedThisJobFirst": "{count} candidates have already liked this job — they appear first.",
+    "likedThisJobFirst_one": "1 candidate has already liked this job — they appear first.",
+    "viewCandidates": "View candidates",
+    "loadingOpportunities": "Loading opportunities…"
   },
   "userFlowExtras": {
     "loadingJobs": "Loading jobs…",

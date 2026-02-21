@@ -120,7 +120,13 @@ export function buildVacancyCardsWithMatch(
   });
 }
 
-/** Build candidate cards with match % from API list and vacancy profile (for employer cabinet). */
+/** True if candidate's preferred job matches the vacancy title (so employer only sees candidates looking for this role). */
+export function candidateJobMatchesVacancy(candidateJobTitle: string | null | undefined, vacancyTitle: string): boolean {
+  if (!vacancyTitle || !candidateJobTitle) return true;
+  return vacancyTitleMatchesPreferredJob(vacancyTitle, candidateJobTitle);
+}
+
+/** Build candidate cards with match % from API list and vacancy profile (for employer cabinet). Only includes candidates whose preferred job matches the vacancy when vacancyTitle is provided. */
 export function buildCandidateCardsWithMatch(
   apiCandidates: Array<{
     id: string;
@@ -135,7 +141,9 @@ export function buildCandidateCardsWithMatch(
     availableToWork?: boolean;
     skills: Array<{ name: string; level: string }>;
   }>,
-  vacancyProfile: VacancyProfile
+  vacancyProfile: VacancyProfile,
+  /** When set, only candidates whose job title matches this vacancy are shown. */
+  vacancyTitle?: string | null
 ): Array<CandidateCard & { match: number }> {
   const safeSkills = (c: (typeof apiCandidates)[0]) => Array.isArray(c.skills) ? c.skills : [];
   const toSkillLevel = (level: string | null | undefined): CandidateProfile["skills"][0]["level"] => {
@@ -145,6 +153,7 @@ export function buildCandidateCardsWithMatch(
   };
   return apiCandidates
     .filter((c) => c.availableToWork !== false)
+    .filter((c) => !vacancyTitle || vacancyTitleMatchesPreferredJob(vacancyTitle, c.jobTitle))
     .map((c) => {
       const skills = safeSkills(c);
       const profile: CandidateProfile = {

@@ -129,6 +129,15 @@ function SwipeCard({
                 {vacancy.workType}
               </span>
             </div>
+            {vacancy.profile.skills?.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {vacancy.profile.skills.map((s) => (
+                  <span key={s.name} className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-medium text-white/95">
+                    {s.name}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <p className="mt-4 text-sm font-medium text-white/80">{t("swipeInstruction")}</p>
         </div>
@@ -170,13 +179,28 @@ export default function CabinetPage() {
       workTypes: data?.workTypes?.length ? data.workTypes : ["Full-time"],
       skills: (data?.skills ?? []).map((s) => ({ name: s.name, level: (s.level as "Intermediate") ?? "Intermediate" })),
     });
-    const loadVacanciesAndBuild = (profile: import("@/lib/matchCalculation").CandidateProfile, preferredJob: string | undefined) => {
-      fetch("/api/vacancies")
-        .then((r) => r.json())
-        .then((list: unknown) => {
-          if (Array.isArray(list) && list.length > 0) {
-            setVacancies(buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob));
-          }
+    const loadVacanciesAndBuild = (
+      profile: import("@/lib/matchCalculation").CandidateProfile,
+      preferredJob: string | undefined,
+      profileId?: string | null
+    ) => {
+      const vacancyListPromise = fetch("/api/vacancies").then((r) => r.json());
+      const matchesPromise =
+        profileId ? fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`).then((r) => r.json()) : Promise.resolve([]);
+      Promise.all([vacancyListPromise, matchesPromise])
+        .then(([list, matches]: [unknown, Array<{ vacancyId: string; employerLiked?: boolean }>]) => {
+          if (!Array.isArray(list) || list.length === 0) return;
+          const cards = buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob);
+          const employerLikedVacancyIds = new Set(
+            (matches || []).filter((m) => m.employerLiked).map((m) => m.vacancyId)
+          );
+          cards.sort((a, b) => {
+            const aLiked = employerLikedVacancyIds.has(a.id);
+            const bLiked = employerLikedVacancyIds.has(b.id);
+            if (aLiked !== bLiked) return aLiked ? -1 : 1;
+            return b.match - a.match;
+          });
+          setVacancies(cards);
         })
         .catch(() => {});
     };
@@ -194,22 +218,22 @@ export default function CabinetPage() {
               phone: data.phone ?? "",
               job: data.jobTitle ?? undefined,
             });
-            loadVacanciesAndBuild(profile, data.jobTitle ?? undefined);
+            loadVacanciesAndBuild(profile, data.jobTitle ?? undefined, getCandidateProfileId());
           } else {
             const stored = loadCandidateProfile();
             const fallback = getCandidateProfileForMatch();
-            loadVacanciesAndBuild(stored?.profile ?? fallback, stored?.job ?? undefined);
+            loadVacanciesAndBuild(stored?.profile ?? fallback, stored?.job ?? undefined, getCandidateProfileId());
           }
         })
         .catch(() => {
           const stored = loadCandidateProfile();
           const fallback = getCandidateProfileForMatch();
-          loadVacanciesAndBuild(stored?.profile ?? fallback, stored?.job ?? undefined);
+          loadVacanciesAndBuild(stored?.profile ?? fallback, stored?.job ?? undefined, getCandidateProfileId());
         });
     } else {
       const stored = loadCandidateProfile();
       const profile = stored?.profile ?? getCandidateProfileForMatch();
-      loadVacanciesAndBuild(profile, stored?.job ?? undefined);
+      loadVacanciesAndBuild(profile, stored?.job ?? undefined, getCandidateProfileId());
     }
   }, []);
   const [liked, setLiked] = useState<Vacancy[]>([]);
@@ -217,6 +241,7 @@ export default function CabinetPage() {
   const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
   const [newMatch, setNewMatch] = useState<MutualMatch | null>(null);
   const [pendingLikeVacancy, setPendingLikeVacancy] = useState<Vacancy | null>(null);
+  const [likeSuccess, setLikeSuccess] = useState<{ company: string; vacancyTitle: string } | null>(null);
   const current = vacancies[0];
 
   async function finishLike(vacancy: Vacancy, pitch: string) {
@@ -255,6 +280,7 @@ export default function CabinetPage() {
       }
     }
     setPendingLikeVacancy(null);
+    setLikeSuccess({ company: vacancy.company, vacancyTitle: vacancy.title });
   }
 
   function handleSwipe(dir: "left" | "right") {
@@ -389,6 +415,45 @@ export default function CabinetPage() {
           onSkip={() => finishLike(pendingLikeVacancy, "")}
         />
       )}
+
+      <AnimatePresence>
+        {likeSuccess && (
+          <motion.div
+            key="like-success"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="w-full max-w-sm rounded-2xl border-2 border-matcher/30 bg-white p-8 shadow-xl"
+            >
+              <div className="flex justify-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-matcher-mint text-4xl text-matcher-dark">
+                  ✓
+                </div>
+              </div>
+              <h2 className="mt-6 text-center text-xl font-bold tracking-tight text-gray-900">
+                {t("interestSentTitle")}
+              </h2>
+              <p className="mt-2 text-center text-gray-600">
+                {t("interestSentMessage", { company: likeSuccess.company, vacancy: likeSuccess.vacancyTitle })}
+              </p>
+              <button
+                type="button"
+                onClick={() => setLikeSuccess(null)}
+                className="mt-8 w-full rounded-xl bg-matcher py-3 font-semibold text-white shadow transition hover:bg-matcher-dark"
+              >
+                {t("keepSwiping")}
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <MatchCongratulationsModal
         match={newMatch}

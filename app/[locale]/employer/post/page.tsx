@@ -6,7 +6,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { GEORGIAN_CITIES } from "@/lib/georgianLocations";
 import Logo from "@/components/Logo";
-import { fetchJobTemplates, getRecommendedSalaryForSlug, getRecommendedSalaryForTitle, getSkillNamesFromRole, type JobTemplateRole } from "@/lib/jobTemplates";
+import { fetchJobTemplates, getRecommendedSalaryForSlug, getRecommendedSalaryForTitle, getRecommendedSalaryForTitleWithAverages, getSkillNamesFromRole, type JobTemplateRole } from "@/lib/jobTemplates";
 import { getStockPhotosForJob } from "@/lib/vacancyStockPhotos";
 import { addSkillToDb, createJobRoleInDb } from "@/lib/userContentApi";
 import { ALL_SKILLS } from "@/lib/allSkills";
@@ -78,6 +78,14 @@ export default function EmployerPostPage() {
     fetchJobTemplates(apiLocale).then(setJobRoles).catch(() => setJobRoles([]));
   }, [locale]);
 
+  const [salaryAveragesFromCandidates, setSalaryAveragesFromCandidates] = useState<Record<string, number> | null>(null);
+  useEffect(() => {
+    fetch("/api/salaries/average")
+      .then((r) => r.json())
+      .then((data: { bySlug?: Record<string, number> }) => setSalaryAveragesFromCandidates(data?.bySlug ?? null))
+      .catch(() => setSalaryAveragesFromCandidates(null));
+  }, []);
+
   useEffect(() => {
     if (step !== "success") return;
     const t = setTimeout(() => {
@@ -94,15 +102,15 @@ export default function EmployerPostPage() {
     () => (jobSlug ? jobRoles.find((r) => r.slug === jobSlug) ?? null : jobRoles.find((r) => r.title === jobTitle) ?? null),
     [jobSlug, jobTitle, jobRoles]
   );
-  const recommendedSalary = useMemo(
-    () =>
-      selectedRole?.slug != null
-        ? getRecommendedSalaryForSlug(selectedRole.slug)
-        : jobSlug
-          ? getRecommendedSalaryForSlug(jobSlug)
-          : getRecommendedSalaryForTitle(jobTitle),
-    [selectedRole?.slug, jobSlug, jobTitle]
-  );
+  const recommendedSalary = useMemo(() => {
+    const fromCandidates = (slug: string) =>
+      salaryAveragesFromCandidates != null && typeof salaryAveragesFromCandidates[slug] === "number"
+        ? salaryAveragesFromCandidates[slug]
+        : getRecommendedSalaryForSlug(slug);
+    if (selectedRole?.slug != null) return fromCandidates(selectedRole.slug);
+    if (jobSlug) return fromCandidates(jobSlug);
+    return getRecommendedSalaryForTitleWithAverages(jobTitle, salaryAveragesFromCandidates);
+  }, [selectedRole?.slug, jobSlug, jobTitle, salaryAveragesFromCandidates]);
   const [locationCityId, setLocationCityId] = useState("");
   const [locationDistrictId, setLocationDistrictId] = useState("");
 
