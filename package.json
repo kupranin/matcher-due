@@ -14,6 +14,9 @@
     "db:import:vacancies500": "tsx prisma/import-vacancies-500.ts",
     "db:import:companies": "tsx prisma/import-companies-simple.ts",
     "db:seed:companies": "tsx prisma/seed-companies-from-csv.ts",
+    "db:import:candidates": "tsx prisma/import-candidate-profiles.ts",
+    "db:ensure-candidate-users": "tsx prisma/ensure-candidate-users.ts",
+    "db:seed-candidate-skills": "tsx prisma/seed-candidate-skills.ts",
     "db:push": "prisma db push",
     "postinstall": "prisma generate"
   },

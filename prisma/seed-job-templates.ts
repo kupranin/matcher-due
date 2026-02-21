@@ -12,7 +12,7 @@ import { parse } from "csv-parse/sync";
 import * as fs from "fs";
 import * as path from "path";
 import { PrismaClient } from "@prisma/client";
-import { JOB_TITLE_EN_TO_KA } from "./data/job-title-en-to-ka";
+import { JOB_TITLE_EN_TO_KA, JOB_TITLE_SUFFIX_EN_TO_KA } from "./data/job-title-en-to-ka";
 
 const prisma = new PrismaClient();
 
@@ -34,6 +34,22 @@ function makeSlugUnique(baseSlug: string, seen: Map<string, number>): string {
   const n = seen.get(baseSlug) ?? 0;
   seen.set(baseSlug, n + 1);
   return n === 0 ? baseSlug : `${baseSlug}-${n + 1}`;
+}
+
+/** Resolve Georgian job title: exact match, or "Base (Suffix)" → "BaseKa (SuffixKa)". */
+function resolveTitleKa(titleEn: string): string {
+  const exact = JOB_TITLE_EN_TO_KA[titleEn];
+  if (exact) return exact;
+  const m = titleEn.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+  if (m) {
+    const base = m[1].trim();
+    const suffix = m[2].trim();
+    const baseKa = JOB_TITLE_EN_TO_KA[base];
+    const suffixKa = JOB_TITLE_SUFFIX_EN_TO_KA[suffix];
+    if (baseKa && suffixKa) return `${baseKa} (${suffixKa})`;
+    if (baseKa) return `${baseKa} (${suffix})`;
+  }
+  return titleEn;
 }
 
 function parseSkills(skillsStr: string): string[] {
@@ -116,8 +132,8 @@ async function main() {
       });
     }
 
-    // KA template: always create so Georgian locale has full list. Use CSV JobTitle_GE, else mapping, else EN fallback.
-    const titleKa = titleGe || JOB_TITLE_EN_TO_KA[titleEn] || titleEn;
+    // KA template: always create so Georgian locale has full list. Use CSV JobTitle_GE, else mapping (exact or base+suffix), else EN fallback.
+    const titleKa = titleGe || resolveTitleKa(titleEn) || titleEn;
     const roleKa = await prisma.jobRoleTemplate.upsert({
       where: { slug_locale: { slug, locale: "ka" } },
       update: {

@@ -1,5 +1,20 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Database (localhost)
+
+If you see **"Database unavailable"** on localhost, the app cannot connect to PostgreSQL. Common causes:
+
+1. **No `.env` file** – Next.js loads `DATABASE_URL` and `DIRECT_URL` from `.env` in the project root. Copy `.env.example` to `.env` and fill in your database URLs.
+2. **Placeholder password** – Replace `[YOUR-PASSWORD]` in `.env` with your real Supabase database password (Supabase → Project Settings → Database → Connection string).
+3. **Wrong pooler** – Use the **Session** pooler (port **5432**), not the Transaction pooler, in your connection string.
+4. **Running from wrong directory** – Start the app from the project root so `.env` is found: `npm run dev`.
+
+**Check the exact error:** open [http://localhost:3000/api/debug-db](http://localhost:3000/api/debug-db) (or `http://127.0.0.1:3000/api/debug-db`) in the browser. It will show whether `DATABASE_URL` is set and the real connection error (e.g. wrong password, max clients).
+
+**If you see "max clients reached":** In development the app automatically uses Supabase’s Transaction pooler (port 6543). Restart the dev server once. If it still fails, set `DATABASE_URL` in `.env` to the **Transaction** pooler URI from Supabase (Dashboard → Project Settings → Database → Connection string → **Transaction**, port 6543) and add `?pgbouncer=true&connection_limit=3` at the end.
+
+After any `.env` change, restart the dev server (`npm run dev`).
+
 ## Getting Started
 
 First, run the development server:

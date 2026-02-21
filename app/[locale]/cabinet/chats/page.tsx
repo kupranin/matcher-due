@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { getCandidateProfileId } from "@/lib/candidateProfileStorage";
 import { loadCandidateProfile } from "@/lib/candidateProfileStorage";
@@ -58,6 +59,8 @@ function MatchListItem({
 
 export default function CandidateChatsPage() {
   const t = useTranslations("chats");
+  const searchParams = useSearchParams();
+  const matchIdFromUrl = searchParams.get("matchId");
   const [matches, setMatches] = useState<MutualMatch[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<MutualMatch | null>(null);
 
@@ -83,6 +86,12 @@ export default function CandidateChatsPage() {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!matchIdFromUrl || matches.length === 0) return;
+    const match = matches.find((m) => m.id === matchIdFromUrl);
+    if (match) setSelectedMatch(match);
+  }, [matchIdFromUrl, matches]);
 
   if (matches.length === 0) {
     return (
