@@ -21,13 +21,11 @@ function getDatasourceUrl(): string | undefined {
 
 const datasourceUrl = getDatasourceUrl();
 
-const logLevels = process.env.NODE_ENV === "development" ? (["error", "warn"] as "error"[]) : (["error"] as "error"[]);
+const prismaOptions: { datasources?: { db: { url: string } }; log?: ("error" | "warn")[] } = datasourceUrl
+  ? { datasources: { db: { url: datasourceUrl } }, log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"] }
+  : { log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"] };
 
-const prismaOptions = datasourceUrl
-  ? { datasources: { db: { url: datasourceUrl } }, log: logLevels }
-  : { log: logLevels };
-
-export const prisma =
-  globalForPrisma.prisma ?? new PrismaClient(prismaOptions as unknown as ConstructorParameters<typeof PrismaClient>[0]);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- PrismaClient constructor types vary by environment (Vercel vs local)
+export const prisma = globalForPrisma.prisma ?? new PrismaClient(prismaOptions as any);
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
