@@ -32,9 +32,21 @@ export async function POST(request: Request) {
       const msg = err?.message ?? String(dbErr);
       const code = err?.code ?? "";
       console.error("Login DB findUnique error:", code || msg, msg);
+      const hasDbUrl = !!(process.env.DATABASE_URL || process.env.DIRECT_URL);
+      const isMaxClients = /max clients|MaxClientsInSessionMode/i.test(msg);
+      const hint = !hasDbUrl
+        ? "DATABASE_URL is not set. On localhost: add a .env file in the project root (copy .env.example), set DATABASE_URL and DIRECT_URL from Supabase Project Settings → Database, then restart the dev server."
+        : isMaxClients
+          ? "Too many DB connections. Restart the dev server (the app now uses the Transaction pooler in development). If it persists, set DATABASE_URL to the Transaction pooler URL (port 6543, ?pgbouncer=true)."
+          : code === "P2021"
+            ? "Table may be missing. Run: npx prisma db push"
+            : msg.includes("auth") || msg.includes("password")
+              ? "Wrong database password. Update .env with the password from Supabase Project Settings → Database."
+              : "Check DATABASE_URL in .env (Supabase: Project Settings → Database → Connection string).";
       return NextResponse.json(
         {
           error: "Database unavailable. Ensure the app is connected to the database (e.g. run: npx prisma db push).",
+          hint: process.env.NODE_ENV === "development" ? hint : undefined,
           debug: process.env.NODE_ENV === "development" ? msg : undefined,
         },
         { status: 503 }

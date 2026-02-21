@@ -13,7 +13,8 @@ export async function GET() {
     return NextResponse.json(
       {
         ok: false,
-        hint: "DATABASE_URL is not set on Vercel. Add it in Settings → Environment Variables (Production), then redeploy.",
+        hint:
+          "DATABASE_URL is not set. On localhost: create a .env file in the project root (copy from .env.example), set DATABASE_URL and DIRECT_URL with your Supabase connection strings, then restart the dev server. On Vercel: add DATABASE_URL in Project → Settings → Environment Variables, then redeploy.",
         env: { DATABASE_URL: "missing", DIRECT_URL: hasDirectUrl ? "set" : "missing" },
       },
       { status: 503 }
@@ -26,18 +27,21 @@ export async function GET() {
   } catch (err) {
     const e = err as Error;
     const message = e?.message ?? String(err);
+    const isMaxClients = /max clients|MaxClientsInSessionMode/i.test(message);
+    const hint = isMaxClients
+      ? "On localhost: the app now auto-switches to the Transaction pooler (port 6543) in development. Restart the dev server (npm run dev). If you still see this, close other apps using the DB or set DATABASE_URL to the Transaction pooler URL from Supabase (Dashboard → Database → Connection string → Transaction, port 6543, add ?pgbouncer=true&connection_limit=3)."
+      : message.includes("auth") || message.includes("password")
+        ? "Wrong database password. In Supabase: Project Settings → Database → reset password if needed, then put the new password in .env DATABASE_URL and DIRECT_URL (replace [YOUR-PASSWORD] in the URI)."
+        : message.includes("reach") || message.includes("ECONNREFUSED")
+          ? "App cannot reach the database. Check DATABASE_URL host/port. For Supabase use the connection string from Project Settings → Database (Session pooler, port 5432)."
+          : message.includes("prepared")
+            ? "Add ?pgbouncer=true to DATABASE_URL (use Supabase Transaction pooler, port 6543)."
+            : "Fix DATABASE_URL in .env from Supabase Project Settings → Database, then restart the dev server.";
     return NextResponse.json(
       {
         ok: false,
         error: message,
-        hint:
-          message.includes("auth") || message.includes("password")
-            ? "Wrong database password or user. Reset password in Supabase → Project Settings → Database and update the URI on Vercel."
-            : message.includes("reach") || message.includes("ECONNREFUSED")
-              ? "Server cannot reach the database. Use the Session pooler URI (port 5432) from Supabase Connect, and ensure DATABASE_URL and DIRECT_URL are set for Production."
-              : message.includes("prepared")
-                ? "Add ?pgbouncer=true to the end of your DATABASE_URL and DIRECT_URL (Supabase Transaction pooler)."
-                : "Check the error above and fix DATABASE_URL/DIRECT_URL on Vercel.",
+        hint,
         env: { DATABASE_URL: "set", DIRECT_URL: hasDirectUrl ? "set" : "missing" },
       },
       { status: 503 }

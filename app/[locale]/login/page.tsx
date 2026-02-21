@@ -45,7 +45,9 @@ export default function LoginPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || "Login failed");
+        const msg = data.error || "Login failed";
+        const hint = data.hint;
+        setError(hint ? `${msg} — ${hint}` : msg);
         setLoading(false);
         return;
       }
@@ -145,7 +147,12 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-900">{t("password")}</label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-900">{t("password")}</label>
+                <Link href="/login/forgot-password" className="text-sm text-matcher-dark hover:text-matcher">
+                  {t("forgotPassword")}
+                </Link>
+              </div>
               <input
                 type="password"
                 value={password}
@@ -161,9 +168,24 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
-                {error}
-              </p>
+              <div className="space-y-2">
+                <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {error}
+                </p>
+                {/database|unavailable|DATABASE_URL|\.env/i.test(error) && (
+                  <p className="text-sm text-gray-600">
+                    <a
+                      href="/api/debug-db"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-matcher-dark underline hover:text-matcher"
+                    >
+                      Open database debug page
+                    </a>
+                    {" "}to see the exact error and fix it.
+                  </p>
+                )}
+              </div>
             )}
             <button
               type="submit"

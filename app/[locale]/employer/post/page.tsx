@@ -461,6 +461,11 @@ export default function EmployerPostPage() {
         {/* Step: Package selection */}
         {step === "package" && (
           <div className="rounded-3xl border bg-white p-8 shadow-sm">
+            {saveError && (
+              <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                {saveError}
+              </div>
+            )}
             <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
               {t("choosePackage")}
             </h1>
@@ -490,7 +495,7 @@ export default function EmployerPostPage() {
             </p>
             <button
               type="button"
-              onClick={() => setStep("vacancy")}
+              onClick={() => { setSaveError(null); setStep("vacancy"); }}
               className="mt-6 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               {t("backToVacancy")}

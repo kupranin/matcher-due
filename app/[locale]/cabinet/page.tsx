@@ -147,43 +147,70 @@ export default function CabinetPage() {
 
   useEffect(() => {
     const profileUserId = getCandidateUserId();
-    const loadProfile = () => getCandidateProfileForMatch();
+    type ProfilePayload = {
+      fullName?: string;
+      email?: string;
+      phone?: string;
+      locationCityId?: string;
+      salaryMin?: number;
+      workTypes?: string[];
+      willingToRelocate?: boolean;
+      skills?: Array<{ name: string; level: string }>;
+      educationLevel?: string;
+      experienceMonths?: number;
+      jobTitle?: string;
+      availableToWork?: boolean;
+    } | null;
+    const buildProfileFromApi = (data: ProfilePayload): import("@/lib/matchCalculation").CandidateProfile => ({
+      locationCityId: data?.locationCityId ?? "tbilisi",
+      salaryMin: data?.salaryMin ?? 800,
+      willingToRelocate: data?.willingToRelocate ?? false,
+      experienceMonths: data?.experienceMonths ?? 0,
+      educationLevel: (data?.educationLevel as "High School") ?? "High School",
+      workTypes: data?.workTypes?.length ? data.workTypes : ["Full-time"],
+      skills: (data?.skills ?? []).map((s) => ({ name: s.name, level: (s.level as "Intermediate") ?? "Intermediate" })),
+    });
+    const loadVacanciesAndBuild = (profile: import("@/lib/matchCalculation").CandidateProfile, preferredJob: string | undefined) => {
+      fetch("/api/vacancies")
+        .then((r) => r.json())
+        .then((list: unknown) => {
+          if (Array.isArray(list) && list.length > 0) {
+            setVacancies(buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob));
+          }
+        })
+        .catch(() => {});
+    };
     if (profileUserId) {
       fetch(`/api/candidates/profile?userId=${encodeURIComponent(profileUserId)}`)
         .then((r) => r.json())
-        .then((data: { fullName?: string; email?: string; phone?: string; locationCityId?: string; salaryMin?: number; workTypes?: string[]; willingToRelocate?: boolean; skills?: Array<{ name: string; level: string }>; educationLevel?: string; experienceMonths?: number; jobTitle?: string; availableToWork?: boolean } | null) => {
-          if (data && data.fullName) {
+        .then((data: ProfilePayload) => {
+          if (data?.fullName) {
             setAvailableToWork(data.availableToWork !== false);
+            const profile = buildProfileFromApi(data);
             saveCandidateProfile({
-              profile: {
-                locationCityId: data.locationCityId ?? "tbilisi",
-                salaryMin: data.salaryMin ?? 800,
-                willingToRelocate: data.willingToRelocate ?? false,
-                experienceMonths: data.experienceMonths ?? 0,
-                educationLevel: (data.educationLevel as "High School") ?? "High School",
-                workTypes: data.workTypes ?? ["Full-time"],
-                skills: (data.skills ?? []).map((s) => ({ name: s.name, level: (s.level as "Intermediate") ?? "Intermediate" })),
-              },
+              profile,
               fullName: data.fullName,
               email: data.email ?? "",
               phone: data.phone ?? "",
               job: data.jobTitle ?? undefined,
             });
+            loadVacanciesAndBuild(profile, data.jobTitle ?? undefined);
+          } else {
+            const stored = loadCandidateProfile();
+            const fallback = getCandidateProfileForMatch();
+            loadVacanciesAndBuild(stored?.profile ?? fallback, stored?.job ?? undefined);
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          const stored = loadCandidateProfile();
+          const fallback = getCandidateProfileForMatch();
+          loadVacanciesAndBuild(stored?.profile ?? fallback, stored?.job ?? undefined);
+        });
+    } else {
+      const stored = loadCandidateProfile();
+      const profile = stored?.profile ?? getCandidateProfileForMatch();
+      loadVacanciesAndBuild(profile, stored?.job ?? undefined);
     }
-    const stored = loadCandidateProfile();
-    const profile = stored?.profile ?? loadProfile();
-    const preferredJob = stored?.job ?? undefined;
-    fetch("/api/vacancies")
-      .then((r) => r.json())
-      .then((list: unknown) => {
-        if (Array.isArray(list) && list.length > 0) {
-          setVacancies(buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob));
-        }
-      })
-      .catch(() => {});
   }, []);
   const [liked, setLiked] = useState<Vacancy[]>([]);
   const [passed, setPassed] = useState<Vacancy[]>([]);
@@ -290,7 +317,7 @@ export default function CabinetPage() {
         </div>
       )}
 
-      <h1 className="font-heading text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{t("yourMatches")}</h1>
+      <h1 className="font-heading text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{t("yourOpportunities")}</h1>
       <p className="mt-2 text-gray-600">{t("swipeHint")}</p>
 
       <div className="relative mx-auto mt-6 aspect-[3/4] max-h-[380px] sm:mt-8 sm:max-h-[440px] md:max-h-[520px]">

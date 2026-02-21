@@ -65,17 +65,19 @@ export default function EmployerCabinetLayout({
   }, [router]);
 
   useEffect(() => {
-    if (!hasSubscription) {
-      setSubscription(null);
-      return;
-    }
+    if (!authChecked) return;
     fetch("/api/subscriptions", { credentials: "include" })
       .then((r) => r.json())
       .then((data: { subscription: SubscriptionDisplay }) => {
-        setSubscription(data.subscription ?? null);
+        const sub = data.subscription ?? null;
+        setSubscription(sub);
+        setHasSubscription(!!sub);
       })
-      .catch(() => setSubscription(null));
-  }, [hasSubscription, pathname]);
+      .catch(() => {
+        setSubscription(null);
+        setHasSubscription(false);
+      });
+  }, [authChecked, pathname]);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });

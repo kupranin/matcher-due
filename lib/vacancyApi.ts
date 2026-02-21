@@ -59,7 +59,7 @@ function normalizeJobTitleForMatch(title: string): string {
   return t;
 }
 
-/** True if vacancy title matches candidate's preferred job (so we don't show Waiter to someone who wants Barista). */
+/** True if vacancy title matches candidate's preferred job (for sorting — relevant first). */
 function vacancyTitleMatchesPreferredJob(vacancyTitle: string, preferredJob: string | null | undefined): boolean {
   if (!preferredJob || typeof preferredJob !== "string") return true;
   const want = normalizeJobTitleForMatch(preferredJob);
@@ -68,7 +68,10 @@ function vacancyTitleMatchesPreferredJob(vacancyTitle: string, preferredJob: str
   return vacancy.includes(want) || want.includes(vacancy);
 }
 
-/** Build vacancy cards with match % from API list and candidate profile. Only shows vacancies whose title matches candidate's preferred job (e.g. Barista → no Waiter). */
+/** Minimum match % to show a vacancy (lower = more opportunities shown). */
+const OPPORTUNITIES_MATCH_THRESHOLD = 50;
+
+/** Build vacancy cards with match % from API list and candidate profile. Shows all vacancies that pass location/salary and meet the match threshold; sorts by job-title relevance then match. */
 export function buildVacancyCardsWithMatch(
   apiVacancies: Array<{
     id: string;
@@ -85,11 +88,10 @@ export function buildVacancyCardsWithMatch(
     photo?: string | null;
   }>,
   candidateProfile: CandidateProfile,
-  /** Candidate's preferred job title (e.g. "Barista"). Vacancies not matching this are excluded. */
+  /** Candidate's preferred job title. Vacancies matching this are sorted first; others still shown. */
   candidatePreferredJob?: string | null
 ): VacancyCardFromApi[] {
-  return apiVacancies
-    .filter((v) => vacancyTitleMatchesPreferredJob(v.title, candidatePreferredJob))
+  const cards = apiVacancies
     .map((v) => {
       const profile = apiVacancyToProfile(v);
       if (!passesPreCalcFilter(candidateProfile, profile)) return null;
@@ -107,8 +109,15 @@ export function buildVacancyCardsWithMatch(
         match,
       };
     })
-    .filter((x): x is VacancyCardFromApi => x != null && x.match >= 70)
-    .sort((a, b) => b.match - a.match);
+    .filter((x): x is VacancyCardFromApi => x != null && x.match >= OPPORTUNITIES_MATCH_THRESHOLD);
+
+  // Sort: preferred-job matches first, then by match % descending
+  return cards.sort((a, b) => {
+    const aRelevant = vacancyTitleMatchesPreferredJob(a.title, candidatePreferredJob) ? 1 : 0;
+    const bRelevant = vacancyTitleMatchesPreferredJob(b.title, candidatePreferredJob) ? 1 : 0;
+    if (aRelevant !== bRelevant) return bRelevant - aRelevant;
+    return b.match - a.match;
+  });
 }
 
 /** Build candidate cards with match % from API list and vacancy profile (for employer cabinet). */
