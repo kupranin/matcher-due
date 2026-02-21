@@ -1,26 +1,43 @@
 /**
  * Seed script — run with: npm run db:seed
  * Populates the database with sample data for development.
+ *
+ * Seeded users (password for both: password123):
+ *   Candidate: nino@example.com
+ *   Employer:  hr@coffeelab.ge
  */
 
+import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
+import { hashSync } from "bcryptjs";
 
-const prisma = new PrismaClient();
+// Use direct DB URL for seeding to avoid pooler timeouts (Supabase)
+const dbUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
+const prisma = new PrismaClient(
+  dbUrl ? { datasources: { db: { url: dbUrl } } } : undefined
+);
+
+const SEED_PASSWORD = "password123";
+const passwordHash = hashSync(SEED_PASSWORD, 10);
 
 async function main() {
+  console.log("Connecting to database...");
+  await prisma.$connect();
   console.log("Seeding database...");
 
   // Create candidate user + profile
+  console.log("  Creating candidate user nino@example.com...");
   const candidateUser = await prisma.user.upsert({
     where: { email: "nino@example.com" },
-    update: {},
+    update: { passwordHash },
     create: {
       email: "nino@example.com",
-      passwordHash: "$2a$10$dummy_hash_replace_with_real_bcrypt_in_prod",
+      passwordHash,
       role: "CANDIDATE",
     },
   });
 
+  console.log("  Creating candidate profile...");
   const candidateProfile = await prisma.candidateProfile.upsert({
     where: { userId: candidateUser.id },
     update: {},
@@ -48,16 +65,18 @@ async function main() {
   });
 
   // Create employer user + company
+  console.log("  Creating employer user hr@coffeelab.ge...");
   const employerUser = await prisma.user.upsert({
     where: { email: "hr@coffeelab.ge" },
-    update: {},
+    update: { passwordHash },
     create: {
       email: "hr@coffeelab.ge",
-      passwordHash: "$2a$10$dummy_hash_replace_with_real_bcrypt_in_prod",
+      passwordHash,
       role: "EMPLOYER",
     },
   });
 
+  console.log("  Creating company...");
   const company = await prisma.company.upsert({
     where: { userId: employerUser.id },
     update: {},
@@ -70,6 +89,7 @@ async function main() {
     },
   });
 
+  console.log("  Creating subscription...");
   // Create subscription
   const validUntil = new Date();
   validUntil.setFullYear(validUntil.getFullYear() + 1);
@@ -87,6 +107,7 @@ async function main() {
     },
   });
 
+  console.log("  Creating vacancy...");
   // Create vacancy
   const vacancy = await prisma.vacancy.create({
     data: {
@@ -169,15 +190,20 @@ async function main() {
 
   for (let i = 0; i < candidates.length; i++) {
     const c = candidates[i];
-    const u = await prisma.user.create({
-      data: {
-        email: `candidate${i + 2}@example.com`,
-        passwordHash: "$2a$10$dummy",
+    const email = `candidate${i + 2}@example.com`;
+    const u = await prisma.user.upsert({
+      where: { email },
+      update: { passwordHash },
+      create: {
+        email,
+        passwordHash,
         role: "CANDIDATE",
       },
     });
-    const cp = await prisma.candidateProfile.create({
-      data: {
+    const cp = await prisma.candidateProfile.upsert({
+      where: { userId: u.id },
+      update: {},
+      create: {
         userId: u.id,
         fullName: c.fullName,
         locationCityId: c.locationCityId,
@@ -190,6 +216,7 @@ async function main() {
     });
     await prisma.candidateSkill.createMany({
       data: c.skills.map((s) => ({ candidateProfileId: cp.id, ...s })),
+      skipDuplicates: true,
     });
   }
 
@@ -525,6 +552,7 @@ async function main() {
   }
 
   console.log("Seed complete.");
+  console.log("You can log in with: nino@example.com (candidate) or hr@coffeelab.ge (employer), password: password123");
 }
 
 main()

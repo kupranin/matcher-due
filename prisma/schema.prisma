@@ -25,6 +25,8 @@ model User {
   candidateProfile CandidateProfile?
   company          Company?
   sessions         Session[]
+
+  @@map("users")
 }
 
 enum UserRole {

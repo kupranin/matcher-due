@@ -8,7 +8,7 @@ export async function GET() {
     const cookieStore = await cookies();
     const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
     if (!token) {
-      return NextResponse.json({ user: null }, { status: 200 });
+      return NextResponse.json({ userId: null, user: null }, { status: 200 });
     }
 
     const session = await prisma.session.findUnique({
@@ -19,10 +19,11 @@ export async function GET() {
       if (session) {
         await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
       }
-      return NextResponse.json({ user: null }, { status: 200 });
+      return NextResponse.json({ userId: null, user: null }, { status: 200 });
     }
 
     return NextResponse.json({
+      userId: session.user.id,
       user: {
         id: session.user.id,
         email: session.user.email,
@@ -31,6 +32,6 @@ export async function GET() {
     });
   } catch (e) {
     console.error("Session get error:", e);
-    return NextResponse.json({ user: null }, { status: 200 });
+    return NextResponse.json({ userId: null, user: null }, { status: 200 });
   }
 }

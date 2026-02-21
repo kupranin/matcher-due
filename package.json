@@ -11,7 +11,9 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:jobs": "tsx prisma/seed-job-templates.ts",
     "db:import:csv": "tsx prisma/import-vacancies-from-csv.ts",
+    "db:import:vacancies500": "tsx prisma/import-vacancies-500.ts",
     "db:import:companies": "tsx prisma/import-companies-simple.ts",
+    "db:seed:companies": "tsx prisma/seed-companies-from-csv.ts",
     "db:push": "prisma db push",
     "postinstall": "prisma generate"
   },
@@ -22,6 +24,7 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.96.0",
     "bcryptjs": "^3.0.3",
+    "dotenv": "^17.3.1",
     "framer-motion": "^12.34.0",
     "leaflet": "^1.9.4",
     "next": "16.1.6",
