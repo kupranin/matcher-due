@@ -420,7 +420,9 @@
       "educationHighSchool": "High school",
       "educationBachelor": "Bachelor's",
       "educationMaster": "Master's",
-      "educationPhd": "PhD"
+      "educationPhd": "PhD",
+      "registrationSuccess": "Account created!",
+      "takingYouToCabinet": "Taking you to your cabinet…"
     },
     "continue": "Continue",
     "createAccount": "Create account",

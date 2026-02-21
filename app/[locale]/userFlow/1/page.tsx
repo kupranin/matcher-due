@@ -109,6 +109,7 @@ export default function UserFlow1Page() {
   const tExtras = useTranslations("userFlowExtras");
   const tSkillNames = useTranslations("skillNames");
   const locale = useLocale();
+  const apiLocale = (locale === "local" ? "en" : locale) as "en" | "ka";
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8>(1);
 
@@ -120,7 +121,7 @@ export default function UserFlow1Page() {
   useEffect(() => {
     setJobRolesLoading(true);
     setJobRolesError(null);
-    fetchJobTemplates(locale as "en" | "ka")
+    fetchJobTemplates(apiLocale)
       .then(setJobRoles)
       .catch((e) => setJobRolesError(e instanceof Error ? e.message : tExtras("failedToLoadJobs")))
       .finally(() => setJobRolesLoading(false));
@@ -170,6 +171,10 @@ export default function UserFlow1Page() {
   const [otp, setOtp] = useState("");
   const [otpSentTo, setOtpSentTo] = useState<"phone" | "email">("phone");
 
+  // After registration: show success screen then redirect to cabinet
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [registrationError, setRegistrationError] = useState<string | null>(null);
+
   // Salary above recommended → confirm before continuing
   const [salaryConfirmOpen, setSalaryConfirmOpen] = useState(false);
 
@@ -201,7 +206,7 @@ export default function UserFlow1Page() {
   const workTypeLabel = (key: string) => t(`workTypeLabels.${key}` as any);
   const workTypeDesc = (key: string) => t(`step3.${key}Desc` as any);
   const skillLevelLabel = (level: string) => t(`skillLevels.${level}` as any);
-  const cityName = (c: { nameEn: string; nameKa?: string }) => (locale === "ka" && c.nameKa ? c.nameKa : c.nameEn);
+  const cityName = (c: { nameEn: string; nameKa?: string }) => (apiLocale === "ka" && c.nameKa ? c.nameKa : c.nameEn);
 
   const filteredJobs = useMemo(() => {
     const q = jobSearch.trim().toLowerCase();
@@ -298,6 +303,7 @@ export default function UserFlow1Page() {
     else if (step === 8) {
       setOtpSentTo("phone");
       setOtp("");
+      setRegistrationError(null);
       setOtpOpen(true);
     }
   }
@@ -332,7 +338,7 @@ export default function UserFlow1Page() {
       const levelToWeight = (l?: string) => (l === "Advanced" ? 5 : l === "Intermediate" ? 4 : 3);
       await createJobRoleInDb({
         title: displayJobTitle,
-        locale: locale as "en" | "ka",
+        locale: apiLocale,
         category: "User-added",
         skills: skills.map((s) => ({ skillName: s.name, weight: levelToWeight(s.level) })),
       });
@@ -358,6 +364,7 @@ export default function UserFlow1Page() {
     };
     saveCandidateProfile(stored);
 
+    setRegistrationError(null);
     try {
       const res = await fetch("/api/candidates/profile", {
         method: "POST",
@@ -380,16 +387,41 @@ export default function UserFlow1Page() {
         }),
       });
       const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.error) {
+        setRegistrationError(data.error || "Failed to create account");
+        return;
+      }
       if (data.userId && typeof window !== "undefined") {
         window.localStorage.setItem("matcher_candidate_user_id", data.userId);
         if (data.profileId) window.localStorage.setItem("matcher_candidate_profile_id", data.profileId);
       }
+
+      // Log in so session cookie is set; cabinet checks session
+      const loginRes = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          role: "CANDIDATE",
+        }),
+      });
+      const loginData = await loginRes.json().catch(() => ({}));
+      if (!loginRes.ok || loginData.error) {
+        setRegistrationError(loginData.error || "Account created. Please log in.");
+        setOtpOpen(false);
+        setTimeout(() => router.push("/login?registered=1"), 2000);
+        return;
+      }
+
+      setOtpOpen(false);
+      setRegistrationSuccess(true);
+      setTimeout(() => router.push("/cabinet"), 1800);
     } catch (e) {
       console.warn("Failed to save profile to database", e);
+      setRegistrationError("Something went wrong. Please try again.");
     }
-
-    setOtpOpen(false);
-    router.push("/cabinet");
   }
 
   const progress = useMemo(() => {
@@ -410,6 +442,21 @@ export default function UserFlow1Page() {
     () => (job ? (AVG_SALARY_BY_SLUG[job] ?? 1100) : null),
     [job]
   );
+
+  if (registrationSuccess) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-matcher-pale/30 px-4">
+        <div className="w-full max-w-sm rounded-2xl border border-matcher/20 bg-white p-8 text-center shadow-lg">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-matcher-mint text-2xl text-matcher-dark">✓</div>
+          <h2 className="text-xl font-semibold text-gray-900">{t("step8.registrationSuccess")}</h2>
+          <p className="mt-2 text-sm text-gray-600">{t("step8.takingYouToCabinet")}</p>
+          <div className="mt-6 flex justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-matcher border-t-transparent" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -1285,6 +1332,9 @@ export default function UserFlow1Page() {
                 className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
               />
               <p className="mt-2 text-xs text-gray-500">MVP: any 4+ digits will pass.</p>
+              {registrationError && (
+                <p className="mt-3 text-sm text-red-600">{registrationError}</p>
+              )}
             </div>
 
             <div className="mt-6 flex items-center justify-between">

@@ -40,6 +40,7 @@ export default async function LocaleLayout({ children, params }: Props) {
     notFound();
   }
   setRequestLocale(locale);
+  const displayLocale = locale === "local" ? "en" : locale;
 
   const messages = await getMessages();
 
@@ -47,9 +48,9 @@ export default async function LocaleLayout({ children, params }: Props) {
     <NextIntlClientProvider messages={messages}>
       <div
         className={`${geistSans.variable} ${geistMono.variable} ${notoSansGeorgian.variable} ${manrope.variable} antialiased ${
-          locale === "ka" ? "[font-family:var(--font-georgian),var(--font-geist-sans),system-ui,sans-serif]" : ""
+          displayLocale === "ka" ? "[font-family:var(--font-georgian),var(--font-geist-sans),system-ui,sans-serif]" : ""
         }`}
-        lang={locale}
+        lang={displayLocale}
         data-locale={locale}
       >
         {/* Global language switcher - bottom-right, high z-index so it stays visible */}

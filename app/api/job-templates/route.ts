@@ -15,7 +15,7 @@ function slugify(title: string): string {
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const locale = searchParams.get("locale") ?? "en";
-  const validLocale = locale === "ka" ? "ka" : "en";
+  const validLocale = locale === "ka" ? "ka" : "en"; // "local" or anything else → en
 
   try {
     const roles = await prisma.jobRoleTemplate.findMany({

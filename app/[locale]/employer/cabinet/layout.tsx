@@ -44,7 +44,13 @@ export default function EmployerCabinetLayout({
             return fetch(`/api/companies?userId=${encodeURIComponent(data.user.id)}`)
               .then((r) => r.json())
               .then((company: { id?: string } | null) => {
-                if (company?.id) window.sessionStorage.setItem("matcher_employer_company_id", company.id);
+                if (company?.id) {
+                  window.sessionStorage.setItem("matcher_employer_company_id", company.id);
+                  if (!window.sessionStorage.getItem("employerHasSubscription")) {
+                    window.sessionStorage.setItem("employerHasSubscription", "1");
+                  }
+                  window.dispatchEvent(new CustomEvent("employer-company-ready"));
+                }
                 setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
               })
               .catch(() => setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription")));

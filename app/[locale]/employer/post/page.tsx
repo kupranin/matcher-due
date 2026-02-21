@@ -33,6 +33,7 @@ type Step = "vacancy" | "vacancySaved" | "package" | "payment" | "success";
 
 export default function EmployerPostPage() {
   const locale = useLocale();
+  const apiLocale = (locale === "local" ? "en" : locale) as "en" | "ka";
   const t = useTranslations("employerPost");
   const tCommon = useTranslations("common");
   const tSkillNames = useTranslations("skillNames");
@@ -74,7 +75,7 @@ export default function EmployerPostPage() {
   }, []);
 
   useEffect(() => {
-    fetchJobTemplates(locale as "en" | "ka").then(setJobRoles).catch(() => setJobRoles([]));
+    fetchJobTemplates(apiLocale).then(setJobRoles).catch(() => setJobRoles([]));
   }, [locale]);
 
   useEffect(() => {
@@ -262,7 +263,7 @@ export default function EmployerPostPage() {
       ];
       await createJobRoleInDb({
         title: jobTitle.trim(),
-        locale: locale as "en" | "ka",
+        locale: apiLocale,
         category: "User-added",
         description: description.trim() || undefined,
         skills: skillsPayload.length > 0 ? skillsPayload : undefined,

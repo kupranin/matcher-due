@@ -10,6 +10,8 @@
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:jobs": "tsx prisma/seed-job-templates.ts",
+    "db:import:csv": "tsx prisma/import-vacancies-from-csv.ts",
+    "db:import:companies": "tsx prisma/import-companies-simple.ts",
     "db:push": "prisma db push",
     "postinstall": "prisma generate"
   },

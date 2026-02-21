@@ -61,7 +61,12 @@ export default function LoginPage() {
         window.sessionStorage.setItem("employerLoggedIn", "1");
         const companyRes = await fetch(`/api/companies?userId=${encodeURIComponent(userId)}`);
         const companyData = await companyRes.json().catch(() => null);
-        if (companyData?.id) window.sessionStorage.setItem("matcher_employer_company_id", companyData.id);
+        if (companyData?.id) {
+          window.sessionStorage.setItem("matcher_employer_company_id", companyData.id);
+          if (!window.sessionStorage.getItem("employerHasSubscription")) {
+            window.sessionStorage.setItem("employerHasSubscription", "1");
+          }
+        }
       }
       if (userType === "candidate") router.replace("/cabinet");
       else router.replace("/employer/cabinet");

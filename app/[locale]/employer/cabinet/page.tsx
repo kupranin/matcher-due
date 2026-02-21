@@ -98,9 +98,9 @@ export default function EmployerCabinetPage() {
     }
   }, []);
 
-  useEffect(() => {
+  function loadVacanciesAndCandidates() {
     const companyId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_id") : null;
-    if (!companyId || !hasSubscription) return;
+    if (!companyId) return;
     fetch(`/api/vacancies?companyId=${encodeURIComponent(companyId)}`)
       .then((r) => r.json())
       .then((list: Array<{ id: string; title: string; company: string; locationCityId: string; salaryMin?: number | null; salaryMax: number; workType: string; isRemote?: boolean; requiredExperienceMonths?: number; requiredEducationLevel?: string; skills?: Array<{ name: string; level?: string; weight?: number }> }>) => {
@@ -125,7 +125,14 @@ export default function EmployerCabinetPage() {
       .then((r) => r.json())
       .then(setApiCandidates)
       .catch(() => {});
-  }, [hasSubscription]);
+  }
+
+  useEffect(() => {
+    loadVacanciesAndCandidates();
+    const handler = () => loadVacanciesAndCandidates();
+    window.addEventListener("employer-company-ready", handler);
+    return () => window.removeEventListener("employer-company-ready", handler);
+  }, []);
 
   const [selectedVacancy, setSelectedVacancy] = useState<EmployerVacancy | null>(null);
   useEffect(() => {
