@@ -48,15 +48,67 @@ export default function EmployerRegisterPage() {
   }
 
   const router = useRouter();
+  const [registerError, setRegisterError] = useState("");
 
-  function fakeVerifyOtp() {
+  async function fakeVerifyOtp() {
     const digits = otp.replace(/[^\d]/g, "");
     if (digits.length < 4) return;
     setOtpOpen(false);
-    if (typeof window !== "undefined") {
-      window.sessionStorage.removeItem("employerHasSubscription");
+    setRegisterError("");
+    try {
+      const regRes = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+          role: "EMPLOYER",
+        }),
+      });
+      const regData = await regRes.json().catch(() => ({}));
+      const userId = regData.userId;
+      if (!userId) {
+        setRegisterError(regData.error || "Registration failed");
+        return;
+      }
+      await fetch("/api/companies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          name: companyName.trim(),
+          companyId: companyId.trim() || "N/A",
+          contactEmail: email.trim().toLowerCase(),
+          contactPhone: phone.trim(),
+        }),
+      });
+      const loginRes = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+          role: "EMPLOYER",
+        }),
+      });
+      if (!loginRes.ok) {
+        setRegisterError("Account created. Please sign in on the login page.");
+        router.push("/login");
+        return;
+      }
+      const loginData = await loginRes.json().catch(() => ({}));
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem("employerHasSubscription");
+        window.sessionStorage.setItem("matcher_employer_user_id", loginData.userId || userId);
+        window.sessionStorage.setItem("employerLoggedIn", "1");
+        const companyRes = await fetch(`/api/companies?userId=${encodeURIComponent(loginData.userId || userId)}`);
+        const companyData = await companyRes.json().catch(() => null);
+        if (companyData?.id) window.sessionStorage.setItem("matcher_employer_company_id", companyData.id);
+      }
+      router.push("/employer/cabinet");
+    } catch {
+      setRegisterError("Something went wrong. Please try again.");
     }
-    router.push("/employer/cabinet");
   }
 
   return (
@@ -237,6 +289,9 @@ export default function EmployerRegisterPage() {
                 className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
               />
               <p className="mt-2 text-xs text-gray-500">{t("mvpHint")}</p>
+              {registerError && (
+                <p className="mt-2 text-sm text-red-600">{registerError}</p>
+              )}
             </div>
 
             <div className="mt-6 flex items-center justify-between">

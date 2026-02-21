@@ -4,21 +4,15 @@ import { useState, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence, animate } from "framer-motion";
-import { getVacanciesWithMatch } from "@/lib/matchMockData";
-import { getCandidateProfileForMatch, loadCandidateProfile } from "@/lib/candidateProfileStorage";
-import {
-  addCandidateLike,
-  setCandidatePitch,
-  getEmployerLikes,
-  checkAndRecordMutualMatch,
-  CANDIDATE_VACANCY_TO_EMPLOYER,
-  type MutualMatch,
-} from "@/lib/matchStorage";
+import { buildVacancyCardsWithMatch } from "@/lib/vacancyApi";
+import { GEORGIAN_CITIES } from "@/lib/georgianLocations";
+import { getCandidateProfileForMatch, loadCandidateProfile, getCandidateProfileId, getCandidateUserId, saveCandidateProfile } from "@/lib/candidateProfileStorage";
+import { addCandidateLike, setCandidatePitch, type MutualMatch } from "@/lib/matchStorage";
 import MatchCongratulationsModal from "@/components/MatchCongratulationsModal";
 import MatchProgressRing from "@/components/MatchProgressRing";
 import PitchModal from "@/components/PitchModal";
 
-type Vacancy = Awaited<ReturnType<typeof getVacanciesWithMatch>>[number];
+type Vacancy = import("@/lib/vacancyApi").VacancyCardFromApi;
 
 const VibeIcons = {
   noCv: (
@@ -148,9 +142,48 @@ export default function CabinetPage() {
   const router = useRouter();
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
 
+  const [availableToWork, setAvailableToWork] = useState(true);
+  const [availableToWorkLoading, setAvailableToWorkLoading] = useState(false);
+
   useEffect(() => {
-    const profile = getCandidateProfileForMatch();
-    setVacancies(getVacanciesWithMatch(profile));
+    const profileUserId = getCandidateUserId();
+    const loadProfile = () => getCandidateProfileForMatch();
+    if (profileUserId) {
+      fetch(`/api/candidates/profile?userId=${encodeURIComponent(profileUserId)}`)
+        .then((r) => r.json())
+        .then((data: { fullName?: string; email?: string; phone?: string; locationCityId?: string; salaryMin?: number; workTypes?: string[]; skills?: Array<{ name: string; level: string }>; educationLevel?: string; experienceMonths?: number; jobTitle?: string; availableToWork?: boolean } | null) => {
+          if (data && data.fullName) {
+            setAvailableToWork(data.availableToWork !== false);
+            saveCandidateProfile({
+              profile: {
+                locationCityId: data.locationCityId ?? "tbilisi",
+                salaryMin: data.salaryMin ?? 800,
+                willingToRelocate: data.willingToRelocate ?? false,
+                experienceMonths: data.experienceMonths ?? 0,
+                educationLevel: (data.educationLevel as "High School") ?? "High School",
+                workTypes: data.workTypes ?? ["Full-time"],
+                skills: (data.skills ?? []).map((s) => ({ name: s.name, level: (s.level as "Intermediate") ?? "Intermediate" })),
+              },
+              fullName: data.fullName,
+              email: data.email ?? "",
+              phone: data.phone ?? "",
+              job: data.jobTitle ?? undefined,
+            });
+          }
+        })
+        .catch(() => {});
+    }
+    const stored = loadCandidateProfile();
+    const profile = stored?.profile ?? loadProfile();
+    const preferredJob = stored?.job ?? undefined;
+    fetch("/api/vacancies")
+      .then((r) => r.json())
+      .then((list: unknown) => {
+        if (Array.isArray(list) && list.length > 0) {
+          setVacancies(buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob));
+        }
+      })
+      .catch(() => {});
   }, []);
   const [liked, setLiked] = useState<Vacancy[]>([]);
   const [passed, setPassed] = useState<Vacancy[]>([]);
@@ -159,28 +192,39 @@ export default function CabinetPage() {
   const [pendingLikeVacancy, setPendingLikeVacancy] = useState<Vacancy | null>(null);
   const current = vacancies[0];
 
-  function finishLike(vacancy: Vacancy, pitch: string) {
+  async function finishLike(vacancy: Vacancy, pitch: string) {
     setLiked((prev) => [...prev, vacancy]);
     addCandidateLike(vacancy.id);
     if (pitch) setCandidatePitch(vacancy.id, pitch);
-    const empVacancyId = CANDIDATE_VACANCY_TO_EMPLOYER[vacancy.id];
-    if (empVacancyId) {
-      const employerLikes = getEmployerLikes();
-      const alreadyLiked = employerLikes.some(
-        (l) => l.vacancyId === empVacancyId && l.candidateId === "1"
-      );
-      if (alreadyLiked) {
-        const stored = loadCandidateProfile();
-        const candidateName = stored?.fullName || "Nino K.";
-        const match = checkAndRecordMutualMatch(
-          vacancy.id,
-          empVacancyId,
-          "1",
-          candidateName,
-          vacancy.title,
-          vacancy.company
-        );
-        if (match) setNewMatch(match);
+    const profileId = getCandidateProfileId();
+    const stored = loadCandidateProfile();
+    const candidateName = stored?.fullName ?? "Candidate";
+    if (profileId) {
+      try {
+        const res = await fetch("/api/matches", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            vacancyId: vacancy.id,
+            candidateProfileId: profileId,
+            candidateLiked: true,
+            candidatePitch: pitch || undefined,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data.employerLiked) {
+          setNewMatch({
+            id: data.id,
+            vacancyId: vacancy.id,
+            candidateId: profileId,
+            candidateName,
+            vacancyTitle: vacancy.title,
+            company: vacancy.company,
+            createdAt: data.createdAt ? new Date(data.createdAt).getTime() : Date.now(),
+          });
+        }
+      } catch {
+        // ignore
       }
     }
     setPendingLikeVacancy(null);
@@ -203,10 +247,48 @@ export default function CabinetPage() {
     router.push("/cabinet/chats");
   }
 
+  async function toggleAvailableToWork() {
+    const userId = getCandidateUserId();
+    if (!userId) return;
+    setAvailableToWorkLoading(true);
+    const next = !availableToWork;
+    try {
+      const res = await fetch("/api/candidates/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, availableToWork: next }),
+      });
+      if (res.ok) setAvailableToWork(next);
+    } catch {
+      // keep previous state
+    } finally {
+      setAvailableToWorkLoading(false);
+    }
+  }
+
   return (
     <div className="relative mx-auto max-w-md px-4 py-5 sm:py-6 md:py-8">
       {/* Fun gradient background */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-matcher-pale via-matcher-mint/50 to-matcher-amber/30" />
+
+      {/* Available to work toggle */}
+      {getCandidateUserId() && (
+        <div className="mb-4 flex items-center justify-between rounded-2xl border border-matcher/20 bg-white/80 px-4 py-3 shadow-sm backdrop-blur sm:px-5">
+          <span className="text-sm font-medium text-gray-700">{t("availableToWorkLabel")}</span>
+          <button
+            type="button"
+            onClick={toggleAvailableToWork}
+            disabled={availableToWorkLoading}
+            className={`relative inline-flex h-8 w-14 shrink-0 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-matcher focus:ring-offset-2 ${availableToWork ? "bg-matcher" : "bg-gray-300"}`}
+            aria-pressed={availableToWork}
+            aria-label={availableToWork ? t("availableToWorkOn") : t("availableToWorkOff")}
+          >
+            <span
+              className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${availableToWork ? "translate-x-7" : "translate-x-1"} mt-1`}
+            />
+          </button>
+        </div>
+      )}
 
       <h1 className="font-heading text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{t("yourMatches")}</h1>
       <p className="mt-2 text-gray-600">{t("swipeHint")}</p>

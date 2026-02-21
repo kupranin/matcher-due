@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import Logo from "@/components/Logo";
@@ -15,10 +15,35 @@ export default function CabinetLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
-  function handleLogout() {
+  useEffect(() => {
+    fetch("/api/auth/session", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data: { user: { role: string } | null }) => {
+        setAuthChecked(true);
+        if (!data?.user || data.user.role !== "CANDIDATE") {
+          router.replace("/login");
+        }
+      })
+      .catch(() => {
+        setAuthChecked(true);
+        router.replace("/login");
+      });
+  }, [router]);
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     performCandidateLogout();
     router.push("/login");
+  }
+
+  if (!authChecked) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <p className="text-gray-500">Loading…</p>
+      </div>
+    );
   }
 
   const navLinks = [

@@ -6,7 +6,9 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { GEORGIAN_CITIES } from "@/lib/georgianLocations";
 import Logo from "@/components/Logo";
-import { fetchJobTemplates, getSkillsForRoleSlug, type JobTemplateRole } from "@/lib/jobTemplates";
+import { fetchJobTemplates, getRecommendedSalaryForSlug, getRecommendedSalaryForTitle, getSkillNamesFromRole, type JobTemplateRole } from "@/lib/jobTemplates";
+import { getStockPhotosForJob } from "@/lib/vacancyStockPhotos";
+import { addSkillToDb, createJobRoleInDb } from "@/lib/userContentApi";
 import { ALL_SKILLS } from "@/lib/allSkills";
 
 const PACKAGES = [
@@ -27,16 +29,7 @@ type VacancySkill = { name: string; level?: SkillLevel };
 
 const SKILL_LEVELS: SkillLevel[] = ["Beginner", "Intermediate", "Advanced"];
 
-function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-}
-
-function isValidPhone(phone: string) {
-  const digits = phone.replace(/[^\d]/g, "");
-  return digits.length >= 9;
-}
-
-type Step = "vacancy" | "package" | "payment" | "success";
+type Step = "vacancy" | "vacancySaved" | "package" | "payment" | "success";
 
 export default function EmployerPostPage() {
   const locale = useLocale();
@@ -55,14 +48,42 @@ export default function EmployerPostPage() {
   const [jobRoles, setJobRoles] = useState<JobTemplateRole[]>([]);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.sessionStorage.getItem("employerLoggedIn")) {
+    if (typeof window === "undefined") return;
+    if (window.sessionStorage.getItem("employerLoggedIn")) {
       setIsLoggedIn(true);
+      const userId = window.sessionStorage.getItem("matcher_employer_user_id");
+      const companyId = window.sessionStorage.getItem("matcher_employer_company_id");
+      if (userId && companyId) return;
+      fetch("/api/auth/session", { credentials: "include" })
+        .then((r) => r.json())
+        .then((data: { user?: { id: string; role: string } | null }) => {
+          if (data?.user?.role === "EMPLOYER" && data.user.id) {
+            window.sessionStorage.setItem("matcher_employer_user_id", data.user.id);
+            if (!window.sessionStorage.getItem("matcher_employer_company_id")) {
+              return fetch(`/api/companies?userId=${encodeURIComponent(data.user.id)}`)
+                .then((r) => r.json())
+                .then((company: { id?: string } | null) => {
+                  if (company?.id) window.sessionStorage.setItem("matcher_employer_company_id", company.id);
+                })
+                .catch(() => {});
+            }
+          }
+        })
+        .catch(() => {});
     }
   }, []);
 
   useEffect(() => {
     fetchJobTemplates(locale as "en" | "ka").then(setJobRoles).catch(() => setJobRoles([]));
   }, [locale]);
+
+  useEffect(() => {
+    if (step !== "success") return;
+    const t = setTimeout(() => {
+      router.push("/employer/cabinet");
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [step, router]);
 
   const [jobTitle, setJobTitle] = useState("");
   const [jobSlug, setJobSlug] = useState<string | null>(null);
@@ -71,6 +92,15 @@ export default function EmployerPostPage() {
   const selectedRole = useMemo(
     () => (jobSlug ? jobRoles.find((r) => r.slug === jobSlug) ?? null : jobRoles.find((r) => r.title === jobTitle) ?? null),
     [jobSlug, jobTitle, jobRoles]
+  );
+  const recommendedSalary = useMemo(
+    () =>
+      selectedRole?.slug != null
+        ? getRecommendedSalaryForSlug(selectedRole.slug)
+        : jobSlug
+          ? getRecommendedSalaryForSlug(jobSlug)
+          : getRecommendedSalaryForTitle(jobTitle),
+    [selectedRole?.slug, jobSlug, jobTitle]
   );
   const [locationCityId, setLocationCityId] = useState("");
   const [locationDistrictId, setLocationDistrictId] = useState("");
@@ -88,9 +118,18 @@ export default function EmployerPostPage() {
   const [goodToHaveSkills, setGoodToHaveSkills] = useState<VacancySkill[]>([]);
   const [addingAsRequired, setAddingAsRequired] = useState(true);
   const [description, setDescription] = useState("");
-  const [contactName, setContactName] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
+  const [salaryConfirmOpen, setSalaryConfirmOpen] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [vacancyPhotoUrl, setVacancyPhotoUrl] = useState("");
+  const [customPhotoUrl, setCustomPhotoUrl] = useState("");
+
+  const stockPhotos = useMemo(
+    () => getStockPhotosForJob(selectedRole?.slug ?? jobSlug ?? jobTitle ?? null),
+    [selectedRole?.slug, jobSlug, jobTitle]
+  );
+  const effectivePhotoUrl = customPhotoUrl.trim() || vacancyPhotoUrl || stockPhotos[0] || "";
 
   const filteredJobs = useMemo(() => {
     const q = jobTitle.trim().toLowerCase();
@@ -101,11 +140,8 @@ export default function EmployerPostPage() {
   const showJobDropdown = jobTitleFocused && jobTitle.trim().length >= 2 && filteredJobs.length > 0;
 
   const suggestedSkills = useMemo(() => {
-    if (selectedRole) {
-      const names = getSkillsForRoleSlug(selectedRole.slug);
-      return names.length > 0 ? names : FALLBACK_SKILLS;
-    }
-    return FALLBACK_SKILLS;
+    const names = getSkillNamesFromRole(selectedRole);
+    return names.length > 0 ? names : FALLBACK_SKILLS;
   }, [selectedRole]);
 
   const skillLabel = (s: string) => (ALL_SKILLS.includes(s) ? (tSkillNames(s) as string) : s);
@@ -137,8 +173,10 @@ export default function EmployerPostPage() {
     const finalName = canonical ?? displayName;
     if (addingAsRequired && requiredSkills.length < 5) {
       setRequiredSkills((prev) => [...prev, { ...skill, name: finalName }]);
+      addSkillToDb(finalName);
     } else if (!addingAsRequired && goodToHaveSkills.length < 5) {
       setGoodToHaveSkills((prev) => [...prev, { ...skill, name: finalName }]);
+      addSkillToDb(finalName);
     }
   }
 
@@ -188,6 +226,7 @@ export default function EmployerPostPage() {
     setDescription(role.description);
     setRequiredSkills([]);
     setGoodToHaveSkills([]);
+    setVacancyPhotoUrl("");
   }
 
   function handleJobTitleChange(value: string) {
@@ -198,22 +237,142 @@ export default function EmployerPostPage() {
       setDescription(match.description);
       setRequiredSkills([]);
       setGoodToHaveSkills([]);
+      setVacancyPhotoUrl("");
     } else {
       setJobSlug(null);
+      setVacancyPhotoUrl("");
     }
   }
 
   const canSubmit =
+    isLoggedIn &&
     jobTitle.trim().length >= 2 &&
     requiredSkills.length > 0 &&
     requiredSkills.every((s) => Boolean(s.level)) &&
-    locationCityId &&
-    (isLoggedIn || (isValidEmail(contactEmail) && isValidPhone(contactPhone) && contactName.trim().length >= 2));
+    locationCityId;
 
-  function handleSubmit(e: React.FormEvent) {
+  async function proceedToPackage() {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    if (!selectedRole && jobTitle.trim().length >= 2) {
+      const levelToWeight = (l: string) => (l === "Advanced" ? 5 : l === "Intermediate" ? 4 : 3);
+      const skillsPayload = [
+        ...requiredSkills.map((s) => ({ skillName: s.name, weight: levelToWeight(s.level ?? "Intermediate") })),
+        ...goodToHaveSkills.map((s) => ({ skillName: s.name, weight: levelToWeight(s.level ?? "Intermediate") })),
+      ];
+      await createJobRoleInDb({
+        title: jobTitle.trim(),
+        locale: locale as "en" | "ka",
+        category: "User-added",
+        description: description.trim() || undefined,
+        skills: skillsPayload.length > 0 ? skillsPayload : undefined,
+      });
+    }
+
+    const levelToWeight = (l?: string) => (l === "Advanced" ? 5 : l === "Intermediate" ? 4 : 3);
+    const skillsForApi = [
+      ...requiredSkills.map((s) => ({
+        name: s.name,
+        level: s.level ?? "Intermediate",
+        weight: levelToWeight(s.level),
+        isRequired: true,
+      })),
+      ...goodToHaveSkills.map((s) => ({
+        name: s.name,
+        level: s.level ?? "Intermediate",
+        weight: levelToWeight(s.level),
+        isRequired: false,
+      })),
+    ];
+    const salMin = salaryMin.trim() ? parseInt(salaryMin.replace(/\D/g, ""), 10) : null;
+    const salMax = salaryMax.trim() ? parseInt(salaryMax.replace(/\D/g, ""), 10) : 1200;
+    let companyId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_id") : null;
+    let userId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_user_id") : null;
+    if (typeof window !== "undefined" && !userId) {
+      try {
+        const sessionRes = await fetch("/api/auth/session", { credentials: "include" });
+        const sessionData = await sessionRes.json().catch(() => ({}));
+        if (sessionData?.user?.role === "EMPLOYER" && sessionData.user.id) {
+          userId = sessionData.user.id;
+          window.sessionStorage.setItem("matcher_employer_user_id", userId);
+        }
+      } catch {
+        // ignore
+      }
+    }
+    if (!companyId && userId && typeof window !== "undefined") {
+      try {
+        const companyRes = await fetch(`/api/companies?userId=${encodeURIComponent(userId)}`);
+        const companyData = await companyRes.json().catch(() => null);
+        if (companyData?.id) {
+          companyId = companyData.id;
+          window.sessionStorage.setItem("matcher_employer_company_id", companyData.id);
+        }
+      } catch {
+        // ignore
+      }
+    }
+    try {
+      const res = await fetch("/api/vacancies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          companyId: companyId || undefined,
+          userId: userId || undefined,
+          companyName: jobTitle.trim() || undefined,
+          title: jobTitle.trim(),
+          locationCityId,
+          locationDistrictId: locationDistrictId || undefined,
+          salaryMin: salMin ?? undefined,
+          salaryMax: salMax,
+          workType: "Full-time",
+          isRemote: false,
+          requiredExperienceMonths: experienceRequired === "yes" ? requiredExperienceMonths : 0,
+          requiredEducationLevel,
+          description: description.trim() || undefined,
+          skills: skillsForApi,
+          photo: effectivePhotoUrl || undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = typeof data?.error === "string" ? data.error : "Could not save vacancy. Please try again.";
+        setSaveError(msg);
+        if (res.status === 401 && typeof window !== "undefined") {
+          window.sessionStorage.removeItem("employerLoggedIn");
+          window.sessionStorage.removeItem("matcher_employer_user_id");
+          window.sessionStorage.removeItem("matcher_employer_company_id");
+          setIsLoggedIn(false);
+        }
+        return;
+      }
+      setSaveError(null);
+      if (typeof window !== "undefined") {
+        if (data.companyId) window.sessionStorage.setItem("matcher_employer_company_id", data.companyId);
+        if (data.userId) window.sessionStorage.setItem("matcher_employer_user_id", data.userId);
+      }
+      setStep("vacancySaved");
+    } catch (e) {
+      console.warn("Failed to save vacancy to database", e);
+      setSaveError("Could not save vacancy. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSubmit) return;
-    setStep("package");
+    if (!canSubmit || isSubmitting) return;
+    const minSal = salaryMin.trim() ? parseInt(salaryMin.replace(/\D/g, ""), 10) : NaN;
+    const maxSal = salaryMax.trim() ? parseInt(salaryMax.replace(/\D/g, ""), 10) : NaN;
+    const offerBelowRecommended =
+      (!isNaN(minSal) && minSal < recommendedSalary) || (!isNaN(maxSal) && maxSal < recommendedSalary);
+    if (offerBelowRecommended) {
+      setSalaryConfirmOpen(true);
+      return;
+    }
+    await proceedToPackage();
   }
 
   function handlePackageSelect(pkg: (typeof PACKAGES)[number]) {
@@ -221,12 +380,37 @@ export default function EmployerPostPage() {
     setStep("payment");
   }
 
-  function handlePaymentMethod(method: "invoice" | "card") {
+  async function handlePaymentMethod(method: "invoice" | "card") {
     setPaymentMethod(method);
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem("employerHasSubscription", "1");
+    setPaymentError(null);
+    if (!selectedPackage) {
+      setPaymentError("Please select a package first.");
+      return;
     }
-    setStep("success");
+    try {
+      const res = await fetch("/api/subscriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          packageType: selectedPackage.id,
+          pricePaid: selectedPackage.price,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPaymentError(typeof data?.error === "string" ? data.error : "Could not complete purchase.");
+        return;
+      }
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem("employerHasSubscription", "1");
+        if (data.companyId) window.sessionStorage.setItem("matcher_employer_company_id", data.companyId);
+      }
+      setStep("success");
+    } catch (e) {
+      console.warn("Subscription error", e);
+      setPaymentError("Could not complete purchase. Please try again.");
+    }
   }
 
   function handleGoToCabinet() {
@@ -248,6 +432,30 @@ export default function EmployerPostPage() {
       </header>
 
       <main className="mx-auto max-w-xl px-4 py-16">
+        {/* Step: Vacancy saved — success */}
+        {step === "vacancySaved" && (
+          <div className="rounded-3xl border-2 border-matcher/30 bg-white p-8 shadow-lg">
+            <div className="text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-matcher-mint text-4xl text-matcher-dark">
+                ✓
+              </div>
+              <h1 className="mt-6 text-2xl font-semibold tracking-tight text-gray-900">
+                {t("vacancySavedTitle")}
+              </h1>
+              <p className="mt-3 text-gray-600">
+                {t("vacancySavedMessage")}
+              </p>
+              <button
+                type="button"
+                onClick={() => setStep("package")}
+                className="mt-8 rounded-xl bg-matcher px-6 py-3 font-semibold text-white hover:bg-matcher-dark"
+              >
+                {t("vacancySavedContinue")}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Step: Package selection */}
         {step === "package" && (
           <div className="rounded-3xl border bg-white p-8 shadow-sm">
@@ -288,7 +496,7 @@ export default function EmployerPostPage() {
           </div>
         )}
 
-        {/* Step: Success */}
+        {/* Step: Success — redirect to cabinet */}
         {step === "success" && (
           <div className="rounded-3xl border-2 border-matcher/30 bg-white p-8 shadow-lg">
             <div className="text-center">
@@ -308,6 +516,9 @@ export default function EmployerPostPage() {
               >
                 {tCommon("goToCabinet")}
               </button>
+              <p className="mt-4 text-sm text-gray-500">
+                Redirecting to your cabinet in a few seconds…
+              </p>
             </div>
           </div>
         )}
@@ -321,6 +532,11 @@ export default function EmployerPostPage() {
             <p className="mt-2 text-gray-600">
               {t("payForPackage", { price: selectedPackage.price, label: selectedPackage.label })}
             </p>
+            {paymentError && (
+              <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {paymentError}
+              </p>
+            )}
             <div className="mt-8 space-y-3">
               <button
                 type="button"
@@ -374,8 +590,20 @@ export default function EmployerPostPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
             {t("postVacancy")}
           </h1>
+          {!isLoggedIn ? (
+            <div className="mt-6 rounded-2xl border border-matcher/30 bg-matcher-mint/50 p-8 text-center">
+              <p className="text-gray-700">{t("registerToPost")}</p>
+              <Link
+                href="/employer/register"
+                className="mt-4 inline-block rounded-2xl bg-matcher px-6 py-3 text-sm font-semibold text-white hover:bg-matcher-dark"
+              >
+                {t("registerCompany")}
+              </Link>
+            </div>
+          ) : (
+          <>
           <p className="mt-2 text-gray-600">
-            {fromRegistration ? t("fromRegistrationIntro") : t("noRegIntro")}
+            {fromRegistration ? t("fromRegistrationIntro") : t("vacancyIntro")}
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
@@ -433,6 +661,24 @@ export default function EmployerPostPage() {
               </select>
             </div>
 
+            <div className="rounded-2xl border-2 border-matcher/30 bg-matcher-mint/30 p-4">
+              <p className="text-sm font-semibold text-matcher-dark">
+                {selectedRole || jobTitle.trim()
+                  ? t("salaryRecommendation", { amount: recommendedSalary.toLocaleString() })
+                  : t("salaryRecommendationGeneric", { amount: recommendedSalary.toLocaleString() })}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSalaryMin(String(recommendedSalary));
+                  setSalaryMax(String(Math.round(recommendedSalary * 1.2)));
+                }}
+                className="mt-2 text-sm font-medium text-matcher-dark underline hover:no-underline"
+              >
+                {t("useRecommendation")}
+              </button>
+            </div>
+
             {selectedCity?.districts && selectedCity.districts.length > 0 && (
               <div>
                 <label className="text-sm font-medium text-gray-900">
@@ -469,6 +715,74 @@ export default function EmployerPostPage() {
                 </div>
               </div>
             )}
+
+            <div>
+              <label className="text-sm font-medium text-gray-900">{t("vacancyPhoto")}</label>
+              <p className="mt-1 text-xs text-gray-500">{t("vacancyPhotoHint")}</p>
+              <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {stockPhotos.slice(0, 8).map((url) => {
+                  const selected = !customPhotoUrl.trim() && (vacancyPhotoUrl === url || (vacancyPhotoUrl === "" && url === stockPhotos[0]));
+                  return (
+                    <button
+                      key={url}
+                      type="button"
+                      onClick={() => { setVacancyPhotoUrl(url); setCustomPhotoUrl(""); }}
+                      className={classNames(
+                        "relative aspect-square overflow-hidden rounded-xl border-2 bg-gray-100 transition",
+                        selected ? "border-matcher ring-2 ring-matcher/30" : "border-gray-200 hover:border-matcher/50"
+                      )}
+                    >
+                      <img src={url} alt="" className="h-full w-full object-cover" />
+                      {selected && (
+                        <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-matcher text-xs text-white">✓</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-4">
+                <label className="text-xs font-medium text-gray-600">{t("useMyOwnImage")}</label>
+                <input
+                  type="url"
+                  value={customPhotoUrl}
+                  onChange={(e) => { setCustomPhotoUrl(e.target.value); if (e.target.value.trim()) setVacancyPhotoUrl(""); }}
+                  placeholder={t("useMyOwnImagePlaceholder")}
+                  className="mt-1.5 w-full rounded-2xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
+                />
+              </div>
+            </div>
+
+            {/* Preview: how this vacancy looks in the candidate swipe deck */}
+            <div className="rounded-2xl border-2 border-dashed border-matcher/30 bg-gray-50 p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-matcher-dark">
+                {t("deckPreviewTitle")}
+              </p>
+              <div className="mx-auto max-w-[280px] overflow-hidden rounded-2xl bg-gray-900 shadow-lg ring-2 ring-white/20">
+                <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden">
+                  <img
+                    src={effectivePhotoUrl || stockPhotos[0]}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="absolute right-2 top-2 rounded-full bg-matcher-bright px-2.5 py-1 text-xs font-bold tracking-tight text-charcoal">
+                    {salaryMin.trim() && salaryMax.trim()
+                      ? `${salaryMin.replace(/\D/g, "")}–${salaryMax.replace(/\D/g, "")} GEL`
+                      : salaryMax.trim()
+                        ? `${salaryMax.replace(/\D/g, "")} GEL`
+                        : "—"}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 p-3 text-white">
+                  <h3 className="font-heading text-lg font-bold leading-tight">
+                    {jobTitle.trim() || t("deckPreviewJobPlaceholder")}
+                  </h3>
+                  <p className="text-sm text-white/90">{t("deckPreviewCompany")}</p>
+                  <p className="text-xs text-white/80">
+                    {locationCityId ? (GEORGIAN_CITIES.find((c) => c.id === locationCityId)?.nameEn ?? locationCityId) : "—"} · Full-time
+                  </p>
+                </div>
+              </div>
+            </div>
 
             <div>
               <label className="text-sm font-medium text-gray-900">{t("educationRequired")}</label>
@@ -779,79 +1093,22 @@ export default function EmployerPostPage() {
               <p className="mt-1 text-xs text-gray-500">{t("charactersMax", { count: description.length })}</p>
             </div>
 
-            {!isLoggedIn && (
-            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-              <p className="text-sm font-medium text-gray-900">{t("contactDetails")}</p>
-              <p className="mt-1 text-xs text-gray-500">
-                {t("contactHint")}
+            {saveError && (
+              <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {saveError}
               </p>
-
-              <div className="mt-4 space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-900">{t("contactName")}</label>
-                  <input
-                    type="text"
-                    value={contactName}
-                    onChange={(e) => setContactName(e.target.value)}
-                    placeholder={t("contactNamePlaceholder")}
-                    className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/600/30 ${
-                      contactName.length > 0 && contactName.trim().length < 2
-                        ? "border-red-300"
-                        : "border-gray-200"
-                    }`}
-                  />
-                  {contactName.length > 0 && contactName.trim().length < 2 && (
-                    <p className="mt-2 text-xs text-red-600">{t("minTwoChars")}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-900">{t("emailLabel")}</label>
-                  <input
-                    type="email"
-                    value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
-                    placeholder="hr@company.ge"
-                    className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/600/30 ${
-                      contactEmail.length > 0 && !isValidEmail(contactEmail)
-                        ? "border-red-300"
-                        : "border-gray-200"
-                    }`}
-                  />
-                  {contactEmail.length > 0 && !isValidEmail(contactEmail) && (
-                    <p className="mt-2 text-xs text-red-600">{t("validEmail")}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-900">{t("phoneLabel")}</label>
-                  <input
-                    type="tel"
-                    value={contactPhone}
-                    onChange={(e) => setContactPhone(e.target.value)}
-                    placeholder="+995 5xx xx xx xx"
-                    className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/600/30 ${
-                      contactPhone.length > 0 && !isValidPhone(contactPhone)
-                        ? "border-red-300"
-                        : "border-gray-200"
-                    }`}
-                  />
-                  {contactPhone.length > 0 && !isValidPhone(contactPhone) && (
-                    <p className="mt-2 text-xs text-red-600">{t("validPhone")}</p>
-                  )}
-                </div>
-              </div>
-            </div>
             )}
-
             <button
               type="submit"
-              disabled={!canSubmit}
+              disabled={!canSubmit || isSubmitting}
+              onClick={() => setSaveError(null)}
               className={`w-full rounded-2xl px-5 py-3 text-sm font-semibold transition ${
-                canSubmit
+                canSubmit && !isSubmitting
                   ? "bg-matcher text-white hover:bg-matcher-dark"
                   : "bg-gray-200 text-gray-500 cursor-not-allowed"
               }`}
             >
-              {t("postVacancy")}
+              {isSubmitting ? tCommon("saving") || "Saving…" : t("postVacancy")}
             </button>
           </form>
 
@@ -861,10 +1118,42 @@ export default function EmployerPostPage() {
               {t("registerCompany")}
             </Link>
           </p>
+          </>
+          )}
         </div>
         </>
         )}
       </main>
+
+      {/* Salary below recommended — confirm to continue */}
+      {salaryConfirmOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-gray-900">{tCommon("salaryConfirmTitle")}</h2>
+            <p className="mt-2 text-sm text-gray-600">{tCommon("salaryConfirmMessage")}</p>
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setSalaryConfirmOpen(false)}
+                className="flex-1 rounded-2xl border border-gray-300 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                {tCommon("salaryConfirmChange")}
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => {
+                  setSalaryConfirmOpen(false);
+                  proceedToPackage();
+                }}
+                className="flex-1 rounded-2xl bg-matcher px-4 py-3 text-sm font-semibold text-white hover:bg-matcher-dark disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (tCommon("saving") || "Saving…") : tCommon("salaryConfirmContinue")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

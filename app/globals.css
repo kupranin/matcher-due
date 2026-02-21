@@ -15,7 +15,7 @@
   --matcher-coral: #e07a5f;
   --matcher-mint: #eef4e4;
   --matcher-pale: #f5f9ef;
-  /* Dark mode / premium “fintech” depth */
+  /* Dark mode / premium "fintech" depth */
   --charcoal: #1a1c1e;
 }
 
@@ -83,7 +83,7 @@ body {
   text-wrap: balance;
 }
 
-/* Headings: Manrope, tight letter-spacing for modern “techy” feel */
+/* Headings: Manrope, tight letter-spacing for modern "techy" feel */
 .font-heading {
   font-family: var(--font-manrope), var(--font-geist-sans), system-ui, sans-serif;
   letter-spacing: -0.02em;

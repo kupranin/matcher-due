@@ -19,7 +19,7 @@ export interface VacancyCard {
 
 type SkillLevel = "Beginner" | "Intermediate" | "Advanced";
 
-const CITIES = GEORGIAN_CITIES.map((c) => c.nameEn).filter(Boolean);
+const CITIES = GEORGIAN_CITIES;
 
 const COMPANIES = [
   "Coffee Lab", "Carrefour", "SPAR", "Nikora", "Wissol", "Gulf", "Socar",
@@ -583,7 +583,7 @@ const SEED_VACANCIES: VacancyCard[] = [
     salary: "1,200–1,500 GEL",
     photo: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=500&q=80",
     profile: {
-      locationCity: "Tbilisi",
+      locationCityId: "tbilisi",
       isRemote: false,
       salaryMax: 1500,
       requiredExperienceMonths: 6,
@@ -605,7 +605,7 @@ const SEED_VACANCIES: VacancyCard[] = [
     salary: "900–1,100 GEL",
     photo: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=500&q=80",
     profile: {
-      locationCity: "Tbilisi",
+      locationCityId: "tbilisi",
       isRemote: false,
       salaryMax: 1100,
       requiredExperienceMonths: 0,
@@ -637,7 +637,7 @@ function generateVacancies(): VacancyCard[] {
     const isRemote = workType === "Remote";
 
     const profile: VacancyProfile = {
-      locationCity: city,
+      locationCityId: city.id,
       isRemote,
       salaryMax,
       requiredExperienceMonths: expMonths,
@@ -650,7 +650,7 @@ function generateVacancies(): VacancyCard[] {
       id: String(id++),
       title: tmpl.title,
       company,
-      location: city,
+      location: city.nameEn,
       workType,
       salary: `${salaryMin.toLocaleString()}–${salaryMax.toLocaleString()} GEL`,
       photo: pick(tmpl.photos, i),

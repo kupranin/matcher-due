@@ -6,7 +6,11 @@ import {
   loadCandidateProfile,
   saveCandidateProfile,
   buildProfileFromProfilePage,
+  getCandidateUserId,
+  parseExperienceMonths,
 } from "@/lib/candidateProfileStorage";
+import { GEORGIAN_CITIES } from "@/lib/georgianLocations";
+import { addSkillToDb } from "@/lib/userContentApi";
 import { ALL_SKILLS } from "@/lib/allSkills";
 
 const WORK_TYPES = ["Full-time", "Part-time", "Temporary", "Remote"];
@@ -31,6 +35,7 @@ export default function CabinetProfilePage() {
   const [bio, setBio] = useState("");
   const [job, setJob] = useState("");
   const [location, setLocation] = useState("");
+  const [willingToRelocate, setWillingToRelocate] = useState(false);
   const [workTypes, setWorkTypes] = useState<string[]>([]);
   const [skills, setSkills] = useState<{ name: string; level: SkillLevel }[]>([]);
   const [newSkillName, setNewSkillName] = useState("");
@@ -55,7 +60,8 @@ export default function CabinetProfilePage() {
     setLanguages(stored.languages ?? "");
     const p = stored.profile;
     if (p) {
-      setLocation(p.locationCity ?? "");
+      setLocation("locationCityId" in p && p.locationCityId ? (GEORGIAN_CITIES.find((c) => c.id === p.locationCityId)?.nameEn ?? p.locationCityId) : "");
+      setWillingToRelocate("willingToRelocate" in p ? Boolean(p.willingToRelocate) : false);
       setSalary(String(p.salaryMin || ""));
       setExperience(p.experienceMonths ? String(p.experienceMonths) + " months" : "");
       setWorkTypes(p.workTypes ?? []);
@@ -76,6 +82,7 @@ export default function CabinetProfilePage() {
     if (skills.some((s) => s.name.toLowerCase() === name.toLowerCase())) return;
     setSkills((prev) => [...prev, { name, level: newSkillLevel }]);
     setNewSkillName("");
+    addSkillToDb(name);
   }
 
   function removeSkill(name: string) {
@@ -147,6 +154,16 @@ export default function CabinetProfilePage() {
             <div>
               <label className="text-sm font-medium text-gray-900">{t("locationCity")}</label>
               <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder={t("locationPlaceholder")} className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="willingToRelocate"
+                checked={willingToRelocate}
+                onChange={(e) => setWillingToRelocate(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-matcher focus:ring-matcher/30"
+              />
+              <label htmlFor="willingToRelocate" className="text-sm font-medium text-gray-900">{t("willingToRelocate")}</label>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-900">{t("workType")}</label>
@@ -228,13 +245,14 @@ export default function CabinetProfilePage() {
       <div className="mt-8 flex justify-end">
         <button
           type="button"
-          onClick={() => {
+          onClick={async () => {
             const profile = buildProfileFromProfilePage({
               location,
               salary,
               experience,
               skills,
               workTypes,
+              willingToRelocate,
             });
             saveCandidateProfile({
               profile,
@@ -246,7 +264,32 @@ export default function CabinetProfilePage() {
               linkedIn: linkedIn.trim() || undefined,
               languages: languages.trim() || undefined,
             });
-            // Toast-style feedback (MVP: no toast lib)
+            const userId = getCandidateUserId();
+            if (userId) {
+              const locationCityId = GEORGIAN_CITIES.find((c) => c.nameEn === location.trim())?.id ?? (location.trim() || "");
+              try {
+                await fetch("/api/candidates/profile", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    userId,
+                    fullName: fullName.trim(),
+                    phone: phone.trim() || undefined,
+                    locationCityId: locationCityId || undefined,
+                    willingToRelocate,
+                    salaryMin: Math.max(0, parseInt(salary.replace(/\s/g, ""), 10) || 0) || undefined,
+                    experienceMonths: experience.trim() ? parseExperienceMonths(experience) : undefined,
+                    experienceText: experience.trim() || undefined,
+                    educationLevel: profile.educationLevel,
+                    workTypes: workTypes.length ? workTypes : undefined,
+                    skills: profile.skills.map((s) => ({ name: s.name, level: s.level })),
+                    jobTitle: job.trim() || undefined,
+                  }),
+                });
+              } catch {
+                // ignore
+              }
+            }
             const btn = document.activeElement as HTMLButtonElement;
             const orig = btn?.textContent;
             if (btn) btn.textContent = t("saved");

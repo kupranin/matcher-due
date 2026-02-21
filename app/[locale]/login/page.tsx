@@ -18,18 +18,58 @@ export default function LoginPage() {
   const [userType, setUserType] = useState<UserType>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const canSubmit =
     userType &&
     isValidEmail(email) &&
-    password.length >= 8;
+    password.length >= 8 &&
+    !loading;
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
-    // MVP: redirect to cabinet based on user type — wire to auth later
-    if (userType === "candidate") router.push("/cabinet");
-    else router.push("/employer/cabinet");
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+          role: userType === "candidate" ? "CANDIDATE" : "EMPLOYER",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Login failed");
+        setLoading(false);
+        return;
+      }
+      const userId = data.userId;
+      if (userType === "candidate" && userId && typeof window !== "undefined") {
+        window.localStorage.setItem("matcher_candidate_user_id", userId);
+        const profileRes = await fetch(`/api/candidates/profile?userId=${encodeURIComponent(userId)}`);
+        const profileData = await profileRes.json().catch(() => null);
+        if (profileData?.profileId) window.localStorage.setItem("matcher_candidate_profile_id", profileData.profileId);
+      }
+      if (userType === "business" && userId && typeof window !== "undefined") {
+        window.sessionStorage.setItem("matcher_employer_user_id", userId);
+        window.sessionStorage.setItem("employerLoggedIn", "1");
+        const companyRes = await fetch(`/api/companies?userId=${encodeURIComponent(userId)}`);
+        const companyData = await companyRes.json().catch(() => null);
+        if (companyData?.id) window.sessionStorage.setItem("matcher_employer_company_id", companyData.id);
+      }
+      if (userType === "candidate") router.replace("/cabinet");
+      else router.replace("/employer/cabinet");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -115,6 +155,11 @@ export default function LoginPage() {
               )}
             </div>
 
+            {error && (
+              <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </p>
+            )}
             <button
               type="submit"
               disabled={!canSubmit}
@@ -124,7 +169,7 @@ export default function LoginPage() {
                   : "bg-gray-200 text-gray-500 cursor-not-allowed"
               }`}
             >
-              {t("submit")}
+              {loading ? (t("loggingIn") || "Signing in…") : t("submit")}
             </button>
           </form>
 

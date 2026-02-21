@@ -405,44 +405,59 @@ export default function Home() {
         />
       </section>
 
-      {/* Social proof – stats instead of logos */}
-      <section className="border-t border-matcher/15 bg-gradient-to-b from-matcher-pale/40 to-matcher-mint/20 py-12 sm:py-14 md:py-16">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6">
-          <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-matcher-dark/90">
-            {t("socialProofTitle")}
-          </p>
-          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-8">
+      {/* Value proposition – stats */}
+      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12 md:py-16">
+        <h2 className="text-center text-xl font-bold tracking-tight text-gray-900 sm:text-2xl md:text-3xl">
+          {t("valuePropositionTitle")}
+        </h2>
+        <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 md:gap-6 sm:mt-10 md:mt-12">
+          {(["stat_1", "stat_2", "stat_3", "stat_4"] as const).map((key, i) => (
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              key={key}
+              initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4 }}
-              className="rounded-2xl border border-matcher/20 bg-white px-6 py-6 text-center shadow-sm sm:px-8 sm:py-8"
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{
+                duration: 0.5,
+                delay: i * 0.08,
+                ease: [0.25, 0.46, 0.45, 0.94],
+              }}
+              whileHover={{
+                y: -6,
+                scale: 1.03,
+                transition: { duration: 0.2 },
+              }}
+              whileTap={{ scale: 0.98 }}
+              className={`stats-value-prop relative overflow-hidden rounded-xl border-2 p-4 text-center shadow-sm transition-shadow hover:shadow-md sm:rounded-2xl sm:p-5 md:p-6 ${
+                key === "stat_1"
+                  ? "border-matcher/30 bg-matcher-pale/60"
+                  : key === "stat_2"
+                    ? "border-matcher-teal/25 bg-matcher-mint/40"
+                    : key === "stat_3"
+                      ? "border-matcher-amber/25 bg-matcher-amber/10"
+                      : "border-matcher-dark/20 bg-matcher-pale/50"
+              }`}
             >
-              <p className="font-heading text-3xl font-bold text-matcher-dark sm:text-4xl">20+</p>
-              <p className="mt-1 text-sm font-medium text-gray-600">{t("socialProofCompanies")}</p>
+              <motion.span
+                className="block text-3xl font-bold tracking-tight text-primary sm:text-4xl"
+                initial={{ scale: 0.9 }}
+                whileInView={{ scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.08 + 0.1 }}
+              >
+                {t(`stats.${key}_value`)}
+              </motion.span>
+              <motion.div
+                className="mt-1.5 text-sm font-medium text-muted-foreground leading-relaxed"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.08 + 0.2 }}
+              >
+                {t(`stats.${key}_desc`)}
+              </motion.div>
             </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: 0.1 }}
-              className="rounded-2xl border border-matcher/20 bg-white px-6 py-6 text-center shadow-sm sm:px-8 sm:py-8"
-            >
-              <p className="font-heading text-3xl font-bold text-matcher-dark sm:text-4xl">150</p>
-              <p className="mt-1 text-sm font-medium text-gray-600">{t("socialProofVacancies")}</p>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-              className="rounded-2xl border border-matcher/20 bg-white px-6 py-6 text-center shadow-sm sm:px-8 sm:py-8"
-            >
-              <p className="font-heading text-3xl font-bold text-matcher-dark sm:text-4xl">1,000+</p>
-              <p className="mt-1 text-sm font-medium text-gray-600">{t("socialProofUsers")}</p>
-            </motion.div>
-          </div>
+          ))}
         </div>
       </section>
 
@@ -523,56 +538,44 @@ export default function Home() {
         </div>
       </section>
 
-      {/* LandingStats / ValueProp */}
-      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12 md:py-16">
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 md:gap-6">
-          {(["stat_1", "stat_2", "stat_3", "stat_4"] as const).map((key, i) => (
+      {/* Trusted – social proof */}
+      <section className="border-t border-matcher/15 bg-gradient-to-b from-matcher-pale/40 to-matcher-mint/20 py-12 sm:py-14 md:py-16">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6">
+          <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-matcher-dark/90">
+            {t("socialProofTitle")}
+          </p>
+          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-8">
             <motion.div
-              key={key}
-              initial={{ opacity: 0, y: 24 }}
+              initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{
-                duration: 0.5,
-                delay: i * 0.08,
-                ease: [0.25, 0.46, 0.45, 0.94],
-              }}
-              whileHover={{
-                y: -6,
-                scale: 1.03,
-                transition: { duration: 0.2 },
-              }}
-              whileTap={{ scale: 0.98 }}
-              className={`stats-value-prop relative overflow-hidden rounded-xl border-2 p-4 text-center shadow-sm transition-shadow hover:shadow-md sm:rounded-2xl sm:p-5 md:p-6 ${
-                key === "stat_1"
-                  ? "border-matcher/30 bg-matcher-pale/60"
-                  : key === "stat_2"
-                    ? "border-matcher-teal/25 bg-matcher-mint/40"
-                    : key === "stat_3"
-                      ? "border-matcher-amber/25 bg-matcher-amber/10"
-                      : "border-matcher-dark/20 bg-matcher-pale/50"
-              }`}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4 }}
+              className="rounded-2xl border border-matcher/20 bg-white px-6 py-6 text-center shadow-sm sm:px-8 sm:py-8"
             >
-              <motion.span
-                className="block text-3xl font-bold tracking-tight text-primary sm:text-4xl"
-                initial={{ scale: 0.9 }}
-                whileInView={{ scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.08 + 0.1 }}
-              >
-                {t(`stats.${key}_value`)}
-              </motion.span>
-              <motion.div
-                className="mt-1.5 text-sm font-medium text-muted-foreground leading-relaxed"
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.08 + 0.2 }}
-              >
-                {t(`stats.${key}_desc`)}
-              </motion.div>
+              <p className="font-heading text-3xl font-bold text-matcher-dark sm:text-4xl">20+</p>
+              <p className="mt-1 text-sm font-medium text-gray-600">{t("socialProofCompanies")}</p>
             </motion.div>
-          ))}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+              className="rounded-2xl border border-matcher/20 bg-white px-6 py-6 text-center shadow-sm sm:px-8 sm:py-8"
+            >
+              <p className="font-heading text-3xl font-bold text-matcher-dark sm:text-4xl">150</p>
+              <p className="mt-1 text-sm font-medium text-gray-600">{t("socialProofVacancies")}</p>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+              className="rounded-2xl border border-matcher/20 bg-white px-6 py-6 text-center shadow-sm sm:px-8 sm:py-8"
+            >
+              <p className="font-heading text-3xl font-bold text-matcher-dark sm:text-4xl">1,000+</p>
+              <p className="mt-1 text-sm font-medium text-gray-600">{t("socialProofUsers")}</p>
+            </motion.div>
+          </div>
         </div>
       </section>
 

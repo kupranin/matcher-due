@@ -3,11 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
-import {
-  getChatMessages,
-  addChatMessage,
-  type ChatMessage,
-} from "@/lib/chatStorage";
+import type { ChatMessage } from "@/lib/chatStorage";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 import type { MutualMatch } from "@/lib/matchStorage";
 
@@ -42,26 +38,52 @@ export default function MatchChatWindow({
   const defaultTitle = `Interview: ${match.vacancyTitle} with ${otherName}`;
 
   useEffect(() => {
-    setMessages(getChatMessages(match.id));
+    fetch(`/api/chat?matchId=${encodeURIComponent(match.id)}`)
+      .then((r) => r.json())
+      .then((list: Array<{ id: string; matchId: string; sender: string; text: string; createdAt: number }>) => {
+        setMessages(list.map((m) => ({ id: m.id, matchId: m.matchId, sender: m.sender as "candidate" | "employer", text: m.text, createdAt: m.createdAt })));
+      })
+      .catch(() => setMessages([]));
   }, [match.id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  function handleSend() {
+  async function handleSend() {
     const text = input.trim();
     if (!text) return;
     const sender = userRole;
-    const msg = addChatMessage(match.id, sender, text);
-    setMessages((prev) => [...prev, msg]);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ matchId: match.id, sender, text }),
+      });
+      const msg = await res.json();
+      if (msg.id) setMessages((prev) => [...prev, { id: msg.id, matchId: match.id, sender: msg.sender as "candidate" | "employer", text: msg.text, createdAt: msg.createdAt }]);
+    } catch {
+      // fallback local
+      const fallback: ChatMessage = { id: `msg-${Date.now()}`, matchId: match.id, sender, text, createdAt: Date.now() };
+      setMessages((prev) => [...prev, fallback]);
+    }
     setInput("");
   }
 
-  function handleSuggested(msg: string) {
+  async function handleSuggested(msg: string) {
     const sender = userRole;
-    const message = addChatMessage(match.id, sender, msg);
-    setMessages((prev) => [...prev, message]);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ matchId: match.id, sender, text: msg }),
+      });
+      const message = await res.json();
+      if (message.id) setMessages((prev) => [...prev, { id: message.id, matchId: match.id, sender: message.sender as "candidate" | "employer", text: message.text, createdAt: message.createdAt }]);
+    } catch {
+      const fallback: ChatMessage = { id: `msg-${Date.now()}`, matchId: match.id, sender, text: msg, createdAt: Date.now() };
+      setMessages((prev) => [...prev, fallback]);
+    }
   }
 
   function handleOpenCalendar() {

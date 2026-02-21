@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
-import { getMutualMatches, type MutualMatch } from "@/lib/matchStorage";
+import { getCandidateProfileId } from "@/lib/candidateProfileStorage";
+import { loadCandidateProfile } from "@/lib/candidateProfileStorage";
+import type { MutualMatch } from "@/lib/matchStorage";
 import MatchChatWindow from "@/components/MatchChatWindow";
 
 function formatLastActive(ts: number): string {
@@ -60,7 +62,26 @@ export default function CandidateChatsPage() {
   const [selectedMatch, setSelectedMatch] = useState<MutualMatch | null>(null);
 
   useEffect(() => {
-    setMatches(getMutualMatches());
+    const profileId = getCandidateProfileId();
+    const stored = loadCandidateProfile();
+    if (!profileId) return;
+    fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`)
+      .then((r) => r.json())
+      .then((list: Array<{ id: string; vacancyId: string; candidateProfileId: string; candidateLiked: boolean; employerLiked: boolean; vacancyTitle: string; company: string; createdAt: string }>) => {
+        const mutual = list
+          .filter((m) => m.candidateLiked && m.employerLiked)
+          .map((m) => ({
+            id: m.id,
+            vacancyId: m.vacancyId,
+            candidateId: m.candidateProfileId,
+            candidateName: stored?.fullName ?? "",
+            vacancyTitle: m.vacancyTitle,
+            company: m.company,
+            createdAt: new Date(m.createdAt).getTime(),
+          }));
+        setMatches(mutual);
+      })
+      .catch(() => {});
   }, []);
 
   if (matches.length === 0) {

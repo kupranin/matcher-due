@@ -10,7 +10,7 @@ import type { VacancyCard } from "./hardcodedVacancies";
 
 // ——— Current user (logged-in candidate) ———
 export const MOCK_CANDIDATE_PROFILE: CandidateProfile = {
-  locationCity: "Tbilisi",
+  locationCityId: "tbilisi",
   salaryMin: 1000,
   willingToRelocate: true,
   experienceMonths: 12,
@@ -26,7 +26,7 @@ export const MOCK_CANDIDATE_PROFILE: CandidateProfile = {
 
 // ——— Current vacancy (employer's posted job) ———
 export const MOCK_VACANCY_PROFILE: VacancyProfile = {
-  locationCity: "Tbilisi",
+  locationCityId: "tbilisi",
   isRemote: false,
   salaryMax: 1500,
   requiredExperienceMonths: 6,
@@ -69,7 +69,7 @@ export const MOCK_CANDIDATES_FULL: CandidateCard[] = [
     skills: "Customer service, Coffee prep, Cash handling",
     photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=80",
     profile: {
-      locationCity: "Tbilisi",
+      locationCityId: "tbilisi",
       salaryMin: 1100,
       willingToRelocate: false,
       experienceMonths: 12,
@@ -91,7 +91,7 @@ export const MOCK_CANDIDATES_FULL: CandidateCard[] = [
     skills: "POS, Attention to detail, Customer service",
     photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80",
     profile: {
-      locationCity: "Tbilisi",
+      locationCityId: "tbilisi",
       salaryMin: 900,
       willingToRelocate: true,
       experienceMonths: 6,
@@ -113,7 +113,7 @@ export const MOCK_CANDIDATES_FULL: CandidateCard[] = [
     skills: "MS Office, Communication, Organization",
     photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=80",
     profile: {
-      locationCity: "Batumi",
+      locationCityId: "batumi",
       salaryMin: 1000,
       willingToRelocate: false,
       experienceMonths: 8,
@@ -135,7 +135,7 @@ export const MOCK_CANDIDATES_FULL: CandidateCard[] = [
     skills: "Upselling, Product knowledge, Communication",
     photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&q=80",
     profile: {
-      locationCity: "Tbilisi",
+      locationCityId: "tbilisi",
       salaryMin: 850,
       willingToRelocate: true,
       experienceMonths: 3,
@@ -157,7 +157,7 @@ export const MOCK_CANDIDATES_FULL: CandidateCard[] = [
     skills: "Typing, Patience, Communication",
     photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&q=80",
     profile: {
-      locationCity: "Tbilisi",
+      locationCityId: "tbilisi",
       salaryMin: 1200,
       willingToRelocate: true,
       experienceMonths: 18,
@@ -179,7 +179,7 @@ export const MOCK_CANDIDATES_FULL: CandidateCard[] = [
     skills: "Physical stamina, Teamwork, Attention to detail",
     photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&q=80",
     profile: {
-      locationCity: "Rustavi",
+      locationCityId: "rustavi",
       salaryMin: 1000,
       willingToRelocate: false,
       experienceMonths: 24,
@@ -226,7 +226,7 @@ export const MOCK_EMPLOYER_VACANCIES: EmployerVacancy[] = [
     workType: "Full-time",
     salary: "1,200–1,500 GEL",
     profile: {
-      locationCity: "Tbilisi",
+      locationCityId: "tbilisi",
       isRemote: false,
       salaryMax: 1500,
       requiredExperienceMonths: 6,
@@ -246,7 +246,7 @@ export const MOCK_EMPLOYER_VACANCIES: EmployerVacancy[] = [
     workType: "Part-time",
     salary: "900–1,100 GEL",
     profile: {
-      locationCity: "Tbilisi",
+      locationCityId: "tbilisi",
       isRemote: false,
       salaryMax: 1100,
       requiredExperienceMonths: 0,

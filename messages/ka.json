@@ -60,7 +60,12 @@
     "candidates": "კანდიდატები",
     "postVacancy": "ვაკანსიის გამოქვეყნება",
     "company": "კომპანია",
-    "goToCabinet": "კაბინეტში"
+    "goToCabinet": "კაბინეტში",
+    "salaryConfirmTitle": "დარწმუნებული ხარ?",
+    "salaryConfirmMessage": "ნაკლები შესაბამისობა მიიღებ.",
+    "salaryConfirmContinue": "დიახ, გავაგრძელო",
+    "salaryConfirmChange": "არა, ხელფასი შევცვლი",
+    "saving": "იწერება…"
   },
   "footer": {
     "tagline": "სწრაფი, სტრუქტურირებული დასაქმება დამწყებ დონის სამუშაოებზე საქართველოში.",
@@ -223,6 +228,7 @@
       "cvRequired": "0 რეზიუმე",
       "builtForGeorgia": "საქართველოსთვის"
     },
+    "valuePropositionTitle": "რატომ მუშაობს მეჩერი",
     "stats": {
       "stat_1_value": "1 კვირა",
       "stat_1_desc": "სამსახურის საპოვნელად",
@@ -287,13 +293,14 @@
   },
   "login": {
     "title": "შესვლა",
-    "subtitle": "აირჩიე ტიპი და შედი ელფოსტით.",
+    "subtitle": "აირჩიე ტიპი და შედი ელფოსტით და პაროლით.",
     "iAm": "მე ვარ",
     "candidate": "სამუშაოს მაძიებელი",
     "business": "დამსაქმებელი",
     "email": "ელფოსტა",
     "password": "პაროლი",
     "submit": "შესვლა",
+    "loggingIn": "შედის…",
     "noAccount": "ანგარიში არ გაქვს?",
     "registerCompany": "კომპანიის რეგისტრაცია",
     "candidateCabinet": "კანდიდატის კაბინეტი",
@@ -307,7 +314,10 @@
       "subtitle": "აირჩიეთ ერთი — შემდეგ შემოგთავაზებთ უნარებსა და შესაბამისობებს.",
       "placeholder": "სამუშაოს ძებნა… (მაგ., ბარისტა, მოლარე)",
       "selectToContinue": "აირჩიეთ გასაგრძელებლად",
-      "showMore": "ნახეთ კიდევ {count}"
+      "showMore": "ნახეთ კიდევ {count}",
+      "otherJob": "ჩემი სამუშაო არ არის სიაში",
+      "customJobLabel": "თქვენი სამუშაოს დასახელება",
+      "customJobPlaceholder": "მაგ. ივენთების კოორდინატორი, პერსონალური ასისტენტი"
     },
     "step2": {
       "title": "გაქვთ გამოცდილება?",
@@ -355,7 +365,10 @@
       "noCitiesFound": "ქალაქი ვერ მოიძებნა. სცადეთ სხვა ასოები.",
       "district": "რაიონი (არჩევითი)",
       "any": "ნებისმიერი",
-      "selected": "არჩეული"
+      "selected": "არჩეული",
+      "willingToRelocate": "მზად ხართ სამუშაოდ სხვა ქალაქში გადასვლისთვის?",
+      "willingToRelocateYes": "დიახ",
+      "willingToRelocateNo": "არა"
     },
     "step6": {
       "title": "რა ხელფასს ელით?",
@@ -369,13 +382,17 @@
       "validNumber": "ჩაწერეთ სწორი დადებითი რიცხვი."
     },
     "step7": {
-      "title": "შექმენით პროფილი",
+      "title": "რა არის თქვენი განათლების დონე?",
+      "subtitle": "აირჩიეთ უმაღლესი განათლების დონე. დამსაქმებლები ამის მიხედვით შეიძლება ირჩევნენ.",
       "education": "განათლება",
       "educationNone": "ფორმალური განათლება არ აქვს",
       "educationHighSchool": "საშუალო სკოლა",
       "educationBachelor": "ბაკალავრი",
       "educationMaster": "მაგისტრი",
-      "educationPhd": "დოქტორი",
+      "educationPhd": "დოქტორი"
+    },
+    "step8": {
+      "title": "შექმენით პროფილი",
       "subtitle": "ერთი მოკლე ნაბიჯი — შემდეგ ვაჩვენებთ საუკეთესო შესაბამისობებს.",
       "fullName": "სახელი და გვარი",
       "fullNamePlaceholder": "მაგ., ნინო კუპრაშვილი",
@@ -390,6 +407,7 @@
       "passwordMin": "პაროლი უნდა იყოს მინიმუმ 8 სიმბოლო.",
       "yourAnswers": "თქვენი პასუხები (პრევიუ)",
       "job": "სამუშაო",
+      "education": "განათლება",
       "experience": "გამოცდილება",
       "schedule": "გრაფიკი",
       "skills": "უნარები",
@@ -397,7 +415,12 @@
       "salary": "ხელფასი",
       "perMonth": "/ თვეში",
       "verifySms": "SMS-ით დადასტურება (MVP)",
-      "verifyEmail": "ელფოსტით დადასტურება (MVP)"
+      "verifyEmail": "ელფოსტით დადასტურება (MVP)",
+      "educationNone": "ფორმალური განათლება არ აქვს",
+      "educationHighSchool": "საშუალო სკოლა",
+      "educationBachelor": "ბაკალავრი",
+      "educationMaster": "მაგისტრი",
+      "educationPhd": "დოქტორი"
     },
     "continue": "გაგრძელება",
     "createAccount": "ანგარიშის შექმნა",
@@ -447,7 +470,8 @@
     "used": "გამოყენებული",
     "unlimited": "ულიმიტო",
     "vacanciesUsed": "ვაკანსია გამოყენებული",
-    "validUntil": "მოქმედებს"
+    "validUntil": "მოქმედებს",
+    "overLimit": "გამოქვეყნებული გაქვთ მეტი ვაკანსია, ვიდრე პაკეტი იძლევა."
   },
   "cabinet": {
     "yourMatches": "შენი შესაბამისობები",
@@ -458,7 +482,10 @@
     "swipeInstruction": "მარჯვნივ ♥ · მარცხნივ ✕",
     "allCaughtUp": "ყველაფერი ნახე!",
     "likedPassed": "{liked} მოწონს · {passed} გავლილი",
-    "checkBackLater": "მოგვიანებით შემოდი ახალი ვაკანსიებისთვის."
+    "checkBackLater": "მოგვიანებით შემოდი ახალი ვაკანსიებისთვის.",
+    "availableToWorkLabel": "ღია ვარ სამუშაოდ",
+    "availableToWorkOn": "მონიშნული ხარ როგორც ხელმისაწვდომი",
+    "availableToWorkOff": "ამჟამად არ ვეძებ სამუშაოს"
   },
   "chats": {
     "noMatchesYet": "ჯერ შესაბამისობები არ არის",
@@ -474,6 +501,9 @@
   "employerPost": {
     "choosePackage": "აირჩიე პაკეტი",
     "packageReady": "ვაკანსია მზადაა. აირჩიე პაკეტი გამოსაქვეყნებლად. მოქმედებს 1 წელი.",
+    "vacancySavedTitle": "ვაკანსია შენახულია",
+    "vacancySavedMessage": "ვაკანსია შეინახა. აირჩიე პაკეტი ქვემოთ, რომ გამოაქვეყნო და დაიწყო შესაბამისი კანდიდატების ნახვა.",
+    "vacancySavedContinue": "პაკეტის არჩევაზე გადასვლა",
     "postAsMany": "გამოაქვეყნე რამდენიც გინდა",
     "vacancySlots": "{count} ვაკანსია",
     "packageExpires": "პაკეტი 1 წელი მოქმედებს",
@@ -491,7 +521,8 @@
     "backToPackages": "← უკან პაკეტებზე",
     "postVacancy": "ვაკანსიის გამოქვეყნება",
     "fromRegistrationIntro": "შეავსე სამუშაოს დეტალები ქვემოთ. კანდიდატები დაამატჩდებიან — ურთიერთშეხვედრაზე შეგატყობინებთ.",
-    "noRegIntro": "რეგისტრაცია არ სჭირდება. შეავსე დეტალები. კანდიდატები დაამატჩდებიან — შეგატყობინებთ.",
+    "vacancyIntro": "შეავსე სამუშაოს დეტალები ქვემოთ. კანდიდატები დაამატჩდებიან — ურთიერთშეხვედრაზე შეგატყობინებთ.",
+    "registerToPost": "დარეგისტრირდი კომპანია ვაკანსიის გამოსაქვეყნებლად.",
     "youRegistered": "დარეგისტრირდი!",
     "addFirstVacancy": "დაამატე პირველი ვაკანსია კანდიდატებთან შესაბამისობისთვის.",
     "jobTitle": "სამუშაოს სახელი",
@@ -529,6 +560,9 @@
     "moveToRequired": "საჭიროზე გადატანა",
     "salaryMin": "ხელფასი მინ (₾)",
     "salaryMax": "ხელფასი მაქს (₾)",
+    "salaryRecommendation": "რეკომენდებული ამ როლისთვის: ~{amount} ₾/თვეში",
+    "salaryRecommendationGeneric": "ტიპური დიაპაზონი: ~{amount} ₾/თვეში",
+    "useRecommendation": "გამოვიყენო",
     "description": "აღწერა",
     "descriptionHint": "ავტომატური. დაარედაქტირე საჭიროებისამებრ. მაქს 2 წინადადება.",
     "descriptionPlaceholder": "მოკლე აღწერა სამუშაოს შესახებ...",
@@ -543,7 +577,14 @@
     "validEmail": "ჩაწერე სწორი ელფოსტა.",
     "validPhone": "ჩაწერე სწორი ტელეფონის ნომერი.",
     "registerCompany": "კომპანიის რეგისტრაცია",
-    "wantManageMultiple": "რამდენიმე ვაკანსიის მართვა გინდა?"
+    "wantManageMultiple": "რამდენიმე ვაკანსიის მართვა გინდა?",
+    "vacancyPhoto": "ვაკანსიის ფოტო",
+    "vacancyPhotoHint": "აირჩიეთ სტოკ ფოტო ან ჩაიდეთ საკუთარი. ჩანს vacancy ბარათზე.",
+    "useMyOwnImage": "საკუთარი სურათის ჩასმა",
+    "useMyOwnImagePlaceholder": "https://example.com/your-image.jpg",
+    "deckPreviewTitle": "ასე ჩანს სვაიპ დეკში",
+    "deckPreviewJobPlaceholder": "სამუშაოს დასახელება",
+    "deckPreviewCompany": "თქვენი კომპანია"
   },
   "employerRegister": {
     "validEmail": "ჩაწერე სწორი ელფოსტა.",
@@ -597,6 +638,7 @@
     "jobPlaceholder": "მაგ. ბარისტა, მოლარე",
     "locationCity": "ადგილმდებარეობა (ქალაქი)",
     "locationPlaceholder": "მაგ. თბილისი, ბათუმი",
+    "willingToRelocate": "მზად ხართ სამუშაოდ სხვა ქალაქში გადასვლისთვის",
     "workType": "განაკვეთი",
     "expectedSalary": "სასურველი ხელფასი (₾ / თვე)",
     "salaryPlaceholder": "მაგ. 1200",
@@ -660,6 +702,7 @@
   "employerCabinetPage": {
     "chooseVacancy": "აირჩიე ვაკანსია",
     "chooseVacancyHint": "აირჩიე რომელ ვაკანსიაზე გინდა კანდიდატების ნახვა.",
+    "recommendedSalary": "რეკომენდებული: ~{amount} ₾",
     "addAnotherVacancy": "+ სხვა ვაკანსიის დამატება",
     "candidates": "კანდიდატები",
     "candidatesFor": "ვაკანსიაზე",
@@ -671,7 +714,10 @@
     "noMoreCandidates": "ამ ვაკანსიაზე უკვე მეტი კანდიდატი არ არის.",
     "allCaughtUp": "ყველაფერი ნახე!",
     "likedPassed": "{liked} მოწონს · {passed} გავლილი",
-    "viewAnotherVacancy": "სხვა ვაკანსიის ნახვა"
+    "viewAnotherVacancy": "სხვა ვაკანსიის ნახვა",
+    "deleteVacancy": "ვაკანსიის წაშლა",
+    "deleteVacancyConfirm": "წავშალოთ ეს ვაკანსია? ვერ დაბრუნდება.",
+    "deleteVacancyError": "ვაკანსიის წაშლა ვერ მოხერხდა. სცადეთ თავიდან."
   },
   "userFlowExtras": {
     "loadingJobs": "სამუშაოები იტვირთება…",

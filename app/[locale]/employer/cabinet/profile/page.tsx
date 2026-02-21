@@ -27,17 +27,42 @@ export default function EmployerCabinetProfilePage() {
 
   useEffect(() => {
     const stored = loadEmployerProfile();
-    if (!stored) return;
-    setCompanyName(stored.companyName ?? "");
-    setBio(stored.bio ?? "");
-    setIndustry(stored.industry ?? "");
-    setLocation(stored.location ?? "");
-    setWebsite(stored.website ?? "");
-    setEmployeeCount(stored.employeeCount ?? "");
-    setEmail(stored.email ?? "");
-    setPhone(stored.phone ?? "");
-    setLinkedIn(stored.linkedIn ?? "");
-    setAddress(stored.address ?? "");
+    const userId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_user_id") : null;
+    if (userId) {
+      fetch(`/api/companies?userId=${encodeURIComponent(userId)}`)
+        .then((r) => r.json())
+        .then((company: { name?: string; contactEmail?: string; contactPhone?: string; bio?: string; website?: string; industry?: string; employeeCount?: string; address?: string; linkedIn?: string } | null) => {
+          if (company) {
+            setCompanyName(company.name ?? "");
+            setEmail(company.contactEmail ?? "");
+            setPhone(company.contactPhone ?? "");
+            setBio(company.bio ?? "");
+            setWebsite(company.website ?? "");
+            setIndustry(company.industry ?? "");
+            setEmployeeCount(company.employeeCount ?? "");
+            setAddress(company.address ?? "");
+            setLinkedIn(company.linkedIn ?? "");
+            return;
+          }
+          if (stored) fillFromStored(stored);
+        })
+        .catch(() => { if (stored) fillFromStored(stored); });
+    } else if (stored) {
+      fillFromStored(stored);
+    }
+    function fillFromStored(s: ReturnType<typeof loadEmployerProfile>) {
+      if (!s) return;
+      setCompanyName(s.companyName ?? "");
+      setBio(s.bio ?? "");
+      setIndustry(s.industry ?? "");
+      setLocation(s.location ?? "");
+      setWebsite(s.website ?? "");
+      setEmployeeCount(s.employeeCount ?? "");
+      setEmail(s.email ?? "");
+      setPhone(s.phone ?? "");
+      setLinkedIn(s.linkedIn ?? "");
+      setAddress(s.address ?? "");
+    }
   }, []);
 
   function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -147,7 +172,7 @@ export default function EmployerCabinetProfilePage() {
       <div className="mt-8 flex justify-end">
         <button
           type="button"
-          onClick={() => {
+          onClick={async () => {
             saveEmployerProfile({
               companyName: companyName.trim(),
               bio: bio.trim(),
@@ -160,6 +185,29 @@ export default function EmployerCabinetProfilePage() {
               linkedIn: linkedIn.trim(),
               address: address.trim(),
             });
+            const userId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_user_id") : null;
+            if (userId) {
+              try {
+                await fetch("/api/companies", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    userId,
+                    name: companyName.trim(),
+                    contactEmail: email.trim(),
+                    contactPhone: phone.trim(),
+                    bio: bio.trim() || undefined,
+                    website: website.trim() || undefined,
+                    industry: industry || undefined,
+                    employeeCount: employeeCount || undefined,
+                    address: address.trim() || undefined,
+                    linkedIn: linkedIn.trim() || undefined,
+                  }),
+                });
+              } catch {
+                // ignore
+              }
+            }
             const btn = document.activeElement as HTMLButtonElement;
             const orig = btn?.textContent;
             if (btn) btn.textContent = t("saved");

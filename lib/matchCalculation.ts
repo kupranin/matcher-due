@@ -26,6 +26,18 @@ const EDUCATION_LEVEL_NUM: Record<EducationLevel, number> = {
   PhD: 4,
 };
 
+/** Normalize API/DB education string to EducationLevel */
+export function normalizeEducationLevel(value: string | null | undefined): EducationLevel {
+  if (!value || typeof value !== "string") return "High School";
+  const v = value.trim();
+  if (v === "None") return "None";
+  if (v === "High School" || v.toLowerCase() === "high school") return "High School";
+  if (v === "Bachelor" || v.toLowerCase() === "bachelor") return "Bachelor";
+  if (v === "Master" || v.toLowerCase() === "master") return "Master";
+  if (v === "PhD" || v.toLowerCase() === "phd") return "PhD";
+  return "High School";
+}
+
 export interface CandidateSkill {
   name: string;
   level: SkillLevel;
@@ -38,7 +50,8 @@ export interface VacancySkill {
 }
 
 export interface CandidateProfile {
-  locationCity: string;
+  /** City ID for geography check (must match vacancy or willingToRelocate / remote) */
+  locationCityId: string;
   salaryMin: number; // GEL/month
   willingToRelocate: boolean;
   experienceMonths: number;
@@ -48,13 +61,18 @@ export interface CandidateProfile {
 }
 
 export interface VacancyProfile {
-  locationCity: string;
+  /** City ID for geography check */
+  locationCityId: string;
   isRemote: boolean;
   salaryMax: number; // GEL/month
   requiredExperienceMonths: number;
   requiredEducationLevel: EducationLevel;
-  skills: VacancySkill[]; // required + good-to-have with weights
-  workType: string; // e.g. "Full-time"
+  /** Weight 1–5 for experience segment (default 3) */
+  experienceWeight?: number;
+  /** Weight 1–5 for education segment (default 3) */
+  educationWeight?: number;
+  skills: VacancySkill[];
+  workType: string;
 }
 
 /** 1. Pre-Calculation Filter (Hard Gate) — returns false if candidate is disqualified */
@@ -62,15 +80,15 @@ export function passesPreCalcFilter(
   candidate: CandidateProfile,
   vacancy: VacancyProfile
 ): boolean {
-  // Geography: match city, remote role, or willing to relocate
+  // Geography: must match city, be remote role, or candidate has "Willing to Relocate"
   const geographyOk =
     vacancy.isRemote ||
-    vacancy.locationCity === candidate.locationCity ||
+    vacancy.locationCityId === candidate.locationCityId ||
     candidate.willingToRelocate;
 
   if (!geographyOk) return false;
 
-  // Financial Viability: vacancy max >= 80% of candidate min
+  // Financial Viability: vacancy's maximum budget >= 80% of candidate's minimum salary
   const financialOk = vacancy.salaryMax >= candidate.salaryMin * 0.8;
 
   if (!financialOk) return false;
@@ -78,10 +96,19 @@ export function passesPreCalcFilter(
   return true;
 }
 
-/** Partial credit for skill: userLevel / requiredLevel (cap at 1) */
-function skillScore(userLevel: SkillLevel, requiredLevel: SkillLevel): number {
-  const u = SKILL_LEVEL_NUM[userLevel];
-  const r = SKILL_LEVEL_NUM[requiredLevel];
+/** Normalize API/DB skill level to SkillLevel so we never get NaN. */
+function normalizeSkillLevel(level: string | null | undefined): SkillLevel {
+  if (!level || typeof level !== "string") return "Intermediate";
+  const v = level.trim();
+  if (v === "Beginner") return "Beginner";
+  if (v === "Advanced") return "Advanced";
+  return "Intermediate";
+}
+
+/** Partial credit for skill: userLevel / requiredLevel (cap at 1). Accepts any string so API values (e.g. "Expert") don't produce NaN. */
+function skillScore(userLevel: SkillLevel | string, requiredLevel: SkillLevel | string): number {
+  const u = SKILL_LEVEL_NUM[normalizeSkillLevel(userLevel)];
+  const r = SKILL_LEVEL_NUM[normalizeSkillLevel(requiredLevel)];
   if (u >= r) return 1.0;
   return u / r; // e.g. Beginner(1) / Advanced(3) = 1/3
 }
@@ -118,16 +145,16 @@ export function calculateMatch(
 
   const segments: { score: number; weight: number }[] = [];
 
-  // Experience (weight 3 by default; vacancy could specify)
-  const expWeight = 3;
+  // Experience — weight 1–5 (default 3)
+  const expWeight = Math.min(5, Math.max(1, vacancy.experienceWeight ?? 3));
   const expScore = experienceScore(
     candidate.experienceMonths,
     vacancy.requiredExperienceMonths
   );
   segments.push({ score: expScore, weight: expWeight });
 
-  // Education (weight 2 by default)
-  const eduWeight = 2;
+  // Education — weight 1–5 (default 3)
+  const eduWeight = Math.min(5, Math.max(1, vacancy.educationWeight ?? 3));
   const eduScore = educationScore(
     candidate.educationLevel,
     vacancy.requiredEducationLevel
@@ -151,5 +178,6 @@ export function calculateMatch(
   if (sumWeights <= 0) return 100; // no requirements = perfect
 
   const raw = (sumPoints / sumWeights) * 100;
-  return Math.round(raw);
+  const rounded = Math.round(raw);
+  return Number.isFinite(rounded) ? Math.min(100, Math.max(0, rounded)) : 0;
 }

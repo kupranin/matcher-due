@@ -16,7 +16,8 @@ import {
   saveCandidateProfile,
   type StoredCandidateProfile,
 } from "@/lib/candidateProfileStorage";
-import { fetchJobTemplates, AVG_SALARY_BY_SLUG, getSkillsForRoleSlug, type JobTemplateRole } from "@/lib/jobTemplates";
+import { fetchJobTemplates, AVG_SALARY_BY_SLUG, getSkillNamesFromRole, type JobTemplateRole } from "@/lib/jobTemplates";
+import { addSkillToDb, createJobRoleInDb } from "@/lib/userContentApi";
 import { ALL_SKILLS } from "@/lib/allSkills";
 import type { EducationLevel } from "@/lib/matchCalculation";
 
@@ -104,11 +105,12 @@ function isValidPassword(password: string) {
 
 export default function UserFlow1Page() {
   const t = useTranslations("userFlow");
+  const tCommon = useTranslations("common");
   const tExtras = useTranslations("userFlowExtras");
   const tSkillNames = useTranslations("skillNames");
   const locale = useLocale();
   const router = useRouter();
-  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8>(1);
 
   // Job templates from DB
   const [jobRoles, setJobRoles] = useState<JobTemplateRole[]>([]);
@@ -124,13 +126,14 @@ export default function UserFlow1Page() {
       .finally(() => setJobRolesLoading(false));
   }, [locale]);
 
-  // Step 1 — job is slug (e.g. "barista")
+  // Step 1 — job is slug (e.g. "barista") or "other" for custom title
   const [job, setJob] = useState<string | null>(null);
+  const [customJobTitle, setCustomJobTitle] = useState("");
   const [jobSearch, setJobSearch] = useState("");
   const [jobListExpanded, setJobListExpanded] = useState(false);
 
   const selectedRole = useMemo(
-    () => (job ? jobRoles.find((r) => r.slug === job) ?? null : null),
+    () => (job && job !== "other" ? jobRoles.find((r) => r.slug === job) ?? null : null),
     [job, jobRoles]
   );
 
@@ -150,12 +153,13 @@ export default function UserFlow1Page() {
   const [locationCityId, setLocationCityId] = useState<CityId | null>(null);
   const [locationDistrictId, setLocationDistrictId] = useState<DistrictId | null>(null);
   const [locationSearch, setLocationSearch] = useState("");
+  const [willingToRelocate, setWillingToRelocate] = useState(false);
 
   // Step 6 — salary
   const [salary, setSalary] = useState("");
   const [education, setEducation] = useState<EducationLevel>("High School");
 
-  // Step 7 registration
+  // Step 8 — registration (personal info)
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -166,9 +170,11 @@ export default function UserFlow1Page() {
   const [otp, setOtp] = useState("");
   const [otpSentTo, setOtpSentTo] = useState<"phone" | "email">("phone");
 
+  // Salary above recommended → confirm before continuing
+  const [salaryConfirmOpen, setSalaryConfirmOpen] = useState(false);
+
   const suggestedSkills = useMemo(() => {
-    if (!selectedRole) return [];
-    const names = getSkillsForRoleSlug(selectedRole.slug);
+    const names = getSkillNamesFromRole(selectedRole);
     return names.length > 0 ? names : FALLBACK_SKILLS;
   }, [selectedRole]);
 
@@ -189,7 +195,8 @@ export default function UserFlow1Page() {
     }).slice(0, 12);
   }, [skillSearch, skills, tSkillNames]);
 
-  const jobLabel = (slug: string) => jobRoles.find((r) => r.slug === slug)?.title ?? slug;
+  const jobLabel = (slug: string) => (slug === "other" ? customJobTitle || "Other" : jobRoles.find((r) => r.slug === slug)?.title ?? slug);
+  const displayJobTitle = job === "other" ? customJobTitle.trim() : (selectedRole?.title ?? job ?? "");
   const skillLabel = (s: string) => (ALL_SKILLS.includes(s) ? (tSkillNames(s) as string) : s);
   const workTypeLabel = (key: string) => t(`workTypeLabels.${key}` as any);
   const workTypeDesc = (key: string) => t(`step3.${key}Desc` as any);
@@ -237,7 +244,9 @@ export default function UserFlow1Page() {
     if (raw.length < 2 || skills.length >= 5) return;
     if (skills.some((s) => s.name.toLowerCase() === raw.toLowerCase())) return;
     const match = ALL_SKILLS.find((s) => s.toLowerCase() === raw.toLowerCase());
-    toggleSkill(match ?? raw);
+    const nameToAdd = match ?? raw;
+    toggleSkill(nameToAdd);
+    addSkillToDb(nameToAdd);
     setSkillSearch("");
   }
 
@@ -246,7 +255,7 @@ export default function UserFlow1Page() {
   }
 
   const canContinue = useMemo(() => {
-    if (step === 1) return Boolean(job);
+    if (step === 1) return job === "other" ? customJobTitle.trim().length >= 2 : Boolean(job);
     if (step === 2) {
       if (experience === "no") return true;
       if (experience === "yes") return experienceText.trim().length >= 2;
@@ -259,7 +268,8 @@ export default function UserFlow1Page() {
       const n = parseInt(salary.replace(/\s/g, ""), 10);
       return !isNaN(n) && n > 0;
     }
-    if (step === 7) {
+    if (step === 7) return true; // education always has a value
+    if (step === 8) {
       return (
         fullName.trim().length >= 2 &&
         isValidEmail(email) &&
@@ -268,7 +278,7 @@ export default function UserFlow1Page() {
       );
     }
     return false;
-  }, [step, job, experience, experienceText, workType, skills, locationCityId, salary, fullName, email, phone, password]);
+  }, [step, job, customJobTitle, experience, experienceText, workType, skills, locationCityId, salary, fullName, email, phone, password]);
 
   function next() {
     if (!canContinue) return;
@@ -277,8 +287,15 @@ export default function UserFlow1Page() {
     else if (step === 3) setStep(4);
     else if (step === 4) setStep(5);
     else if (step === 5) setStep(6);
-    else if (step === 6) setStep(7);
-    else if (step === 7) {
+    else if (step === 6) {
+      const num = parseInt(salary.replace(/\s/g, ""), 10);
+      if (recommendedSalary != null && !isNaN(num) && num > recommendedSalary) {
+        setSalaryConfirmOpen(true);
+        return;
+      }
+      setStep(7);
+    } else if (step === 7) setStep(8);
+    else if (step === 8) {
       setOtpSentTo("phone");
       setOtp("");
       setOtpOpen(true);
@@ -297,6 +314,7 @@ export default function UserFlow1Page() {
     else if (step === 5) setStep(4);
     else if (step === 6) setStep(5);
     else if (step === 7) setStep(6);
+    else if (step === 8) setStep(7);
   }
 
   function fakeSendOtp(to: "phone" | "email") {
@@ -306,12 +324,20 @@ export default function UserFlow1Page() {
     setOtpOpen(true);
   }
 
-  function fakeVerifyOtp() {
-    // MVP: accept any 4-6 digits
+  async function fakeVerifyOtp() {
     const digits = otp.replace(/[^\d]/g, "");
     if (digits.length < 4) return;
 
-    // Save candidate profile from userFlow data before redirect
+    if (job === "other" && displayJobTitle) {
+      const levelToWeight = (l?: string) => (l === "Advanced" ? 5 : l === "Intermediate" ? 4 : 3);
+      await createJobRoleInDb({
+        title: displayJobTitle,
+        locale: locale as "en" | "ka",
+        category: "User-added",
+        skills: skills.map((s) => ({ skillName: s.name, weight: levelToWeight(s.level) })),
+      });
+    }
+
     const profile = buildProfileFromUserFlow({
       job,
       experience,
@@ -319,6 +345,7 @@ export default function UserFlow1Page() {
       workType,
       skills,
       locationCityId,
+      willingToRelocate,
       salary,
       education,
     });
@@ -327,8 +354,39 @@ export default function UserFlow1Page() {
       fullName: fullName.trim(),
       email: email.trim(),
       phone: phone.trim(),
+      job: displayJobTitle || undefined,
     };
     saveCandidateProfile(stored);
+
+    try {
+      const res = await fetch("/api/candidates/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password,
+          fullName: fullName.trim(),
+          phone: phone.trim() || undefined,
+          locationCityId: locationCityId ?? "",
+          locationDistrictId: locationDistrictId ?? undefined,
+          willingToRelocate: profile.willingToRelocate,
+          salaryMin: profile.salaryMin,
+          experienceMonths: profile.experienceMonths,
+          experienceText: experienceText.trim() || undefined,
+          educationLevel: profile.educationLevel,
+          workTypes: profile.workTypes,
+          skills: profile.skills.map((s) => ({ name: s.name, level: s.level })),
+          jobTitle: displayJobTitle || undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.userId && typeof window !== "undefined") {
+        window.localStorage.setItem("matcher_candidate_user_id", data.userId);
+        if (data.profileId) window.localStorage.setItem("matcher_candidate_profile_id", data.profileId);
+      }
+    } catch (e) {
+      console.warn("Failed to save profile to database", e);
+    }
 
     setOtpOpen(false);
     router.push("/cabinet");
@@ -336,13 +394,14 @@ export default function UserFlow1Page() {
 
   const progress = useMemo(() => {
     const map: Record<number, number> = {
-      1: 0.1,
-      2: 0.24,
-      3: 0.38,
-      4: 0.52,
-      5: 0.66,
-      6: 0.8,
-      7: 0.92,
+      1: 0.08,
+      2: 0.22,
+      3: 0.36,
+      4: 0.5,
+      5: 0.64,
+      6: 0.78,
+      7: 0.88,
+      8: 0.96,
     };
     return map[step] ?? 0.1;
   }, [step]);
@@ -367,7 +426,7 @@ export default function UserFlow1Page() {
           <Logo height={72} />
 
           <div className="text-sm text-gray-500">
-            {t("step")} <span className="text-gray-900 font-medium">{step}</span>/7
+            {t("step")} <span className="text-gray-900 font-medium">{step}</span>/8
           </div>
         </div>
 
@@ -463,6 +522,32 @@ export default function UserFlow1Page() {
                   >
                     {t("step1.showMore", { count: filteredJobs.length - 5 })}
                   </button>
+                )}
+
+                {!jobRolesLoading && (
+                  <button
+                    type="button"
+                    onClick={() => setJob("other")}
+                    className={classNames(
+                      "mt-4 w-full rounded-2xl border px-4 py-3 text-left text-sm transition",
+                      job === "other" ? "border-matcher bg-matcher-mint" : "border-gray-200 hover:bg-gray-50"
+                    )}
+                  >
+                    <span className="font-bold text-matcher-dark">{t("step1.otherJob")}</span>
+                  </button>
+                )}
+
+                {job === "other" && (
+                  <div className="mt-4">
+                    <label className="text-sm font-medium text-gray-700">{t("step1.customJobLabel")}</label>
+                    <input
+                      type="text"
+                      value={customJobTitle}
+                      onChange={(e) => setCustomJobTitle(e.target.value)}
+                      placeholder={t("step1.customJobPlaceholder")}
+                      className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
+                    />
+                  </div>
                 )}
               </div>
             )}
@@ -560,7 +645,7 @@ export default function UserFlow1Page() {
                 </p>
 
                 <div className="mt-5">
-                  <div className="text-sm font-medium text-gray-900">{t("step4.suggestedFor")} <span className="font-bold text-matcher-dark">{selectedRole ? selectedRole.title : t("step4.yourJob")}</span></div>
+                  <div className="text-sm font-medium text-gray-900">{t("step4.suggestedFor")} <span className="font-bold text-matcher-dark">{displayJobTitle || t("step4.yourJob")}</span></div>
                   <div className="mt-2 flex flex-wrap gap-2 items-center">
                     {(suggestedSkills.length ? suggestedSkills : ["Communication", "Teamwork", "Time management"]).map(
                       (s) => {
@@ -843,6 +928,32 @@ export default function UserFlow1Page() {
                     </span>
                   </p>
                 )}
+
+                <div className="mt-5">
+                  <label className="text-sm font-medium text-gray-900">{t("step5.willingToRelocate")}</label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setWillingToRelocate(false)}
+                      className={classNames(
+                        "rounded-full border px-3 py-1.5 text-xs transition",
+                        !willingToRelocate ? "border-matcher bg-matcher-mint text-matcher-dark" : "border-gray-200 hover:bg-gray-50"
+                      )}
+                    >
+                      {t("step5.willingToRelocateNo")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWillingToRelocate(true)}
+                      className={classNames(
+                        "rounded-full border px-3 py-1.5 text-xs transition",
+                        willingToRelocate ? "border-matcher bg-matcher-mint text-matcher-dark" : "border-gray-200 hover:bg-gray-50"
+                      )}
+                    >
+                      {t("step5.willingToRelocateYes")}
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -857,7 +968,7 @@ export default function UserFlow1Page() {
                 {recommendedSalary != null && (
                   <div className="mt-5 rounded-2xl border border-matcher bg-matcher-mint p-4">
                     <p className="text-sm font-medium text-matcher-dark">
-                      {t("step6.averageFor")} <span className="font-bold text-matcher-dark">{selectedRole ? selectedRole.title : ""}</span> {t("step6.averageInGeorgia")}
+                      {t("step6.averageFor")} <span className="font-bold text-matcher-dark">{displayJobTitle}</span> {t("step6.averageInGeorgia")}
                     </p>
                     <p className="mt-1 text-2xl font-semibold text-matcher-dark">
                       {recommendedSalary.toLocaleString()} ₾ <span className="text-base font-normal text-matcher-dark">{t("step7.perMonth")}</span>
@@ -900,116 +1011,125 @@ export default function UserFlow1Page() {
               </div>
             )}
 
-            {/* STEP 7 — Registration */}
+            {/* STEP 7 — Education only */}
             {step === 7 && (
               <div className="animate-[fadeIn_240ms_ease-out]">
                 <h1 className="text-2xl font-semibold tracking-tight">{t("step7.title")}</h1>
                 <p className="mt-2 text-gray-600">
                   {t("step7.subtitle")}
                 </p>
+                <div className="mt-6">
+                  <label className="text-sm font-medium text-gray-900">{t("step7.education")}</label>
+                  <select
+                    value={education}
+                    onChange={(e) => setEducation(e.target.value as EducationLevel)}
+                    className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
+                  >
+                    <option value="None">{educationLabel("None")}</option>
+                    <option value="High School">{educationLabel("High School")}</option>
+                    <option value="Bachelor">{educationLabel("Bachelor")}</option>
+                    <option value="Master">{educationLabel("Master")}</option>
+                    <option value="PhD">{educationLabel("PhD")}</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 8 — Registration (personal info) */}
+            {step === 8 && (
+              <div className="animate-[fadeIn_240ms_ease-out]">
+                <h1 className="text-2xl font-semibold tracking-tight">{t("step8.title")}</h1>
+                <p className="mt-2 text-gray-600">
+                  {t("step8.subtitle")}
+                </p>
 
                 <div className="mt-6 grid gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-900">{t("step7.education")}</label>
-                    <select
-                      value={education}
-                      onChange={(e) => setEducation(e.target.value as EducationLevel)}
-                      className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
-                    >
-                      <option value="None">{educationLabel("None")}</option>
-                      <option value="High School">{educationLabel("High School")}</option>
-                      <option value="Bachelor">{educationLabel("Bachelor")}</option>
-                      <option value="Master">{educationLabel("Master")}</option>
-                      <option value="PhD">{educationLabel("PhD")}</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-gray-900">{t("step7.fullName")}</label>
+                    <label className="text-sm font-medium text-gray-900">{t("step8.fullName")}</label>
                     <input
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder={t("step7.fullNamePlaceholder")}
+                      placeholder={t("step8.fullNamePlaceholder")}
                       className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
                     />
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="text-sm font-medium text-gray-900">{t("step7.email")}</label>
+                      <label className="text-sm font-medium text-gray-900">{t("step8.email")}</label>
                       <input
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder={t("step7.emailPlaceholder")}
+                        placeholder={t("step8.emailPlaceholder")}
                         className={classNames(
                           "mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30",
                           email.length > 0 && !isValidEmail(email) && "border-red-300"
                         )}
                       />
                       {email.length > 0 && !isValidEmail(email) && (
-                        <p className="mt-2 text-xs text-red-600">{t("step7.validEmail")}</p>
+                        <p className="mt-2 text-xs text-red-600">{t("step8.validEmail")}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium text-gray-900">{t("step7.phone")}</label>
+                      <label className="text-sm font-medium text-gray-900">{t("step8.phone")}</label>
                       <input
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        placeholder={t("step7.phonePlaceholder")}
+                        placeholder={t("step8.phonePlaceholder")}
                         className={classNames(
                           "mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30",
                           phone.length > 0 && !isValidPhone(phone) && "border-red-300"
                         )}
                       />
                       {phone.length > 0 && !isValidPhone(phone) && (
-                        <p className="mt-2 text-xs text-red-600">{t("step7.validPhone")}</p>
+                        <p className="mt-2 text-xs text-red-600">{t("step8.validPhone")}</p>
                       )}
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-gray-900">{t("step7.password")}</label>
+                    <label className="text-sm font-medium text-gray-900">{t("step8.password")}</label>
                     <input
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder={t("step7.passwordPlaceholder")}
+                      placeholder={t("step8.passwordPlaceholder")}
                       className={classNames(
                         "mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30",
                         password.length > 0 && !isValidPassword(password) && "border-red-300"
                       )}
                     />
                     {password.length > 0 && !isValidPassword(password) && (
-                      <p className="mt-2 text-xs text-red-600">{t("step7.passwordMin")}</p>
+                      <p className="mt-2 text-xs text-red-600">{t("step8.passwordMin")}</p>
                     )}
                   </div>
 
                   <div className="rounded-2xl border bg-gray-50 p-4">
-                    <div className="text-sm font-medium text-gray-900">{t("step7.yourAnswers")}</div>
+                    <div className="text-sm font-medium text-gray-900">{t("step8.yourAnswers")}</div>
                     <ul className="mt-2 space-y-1 text-sm text-gray-700">
                       <li>
-                        <span className="text-gray-500">{t("step7.job")}:</span>{" "}
-                        <span className="font-bold text-matcher-dark">{selectedRole ? selectedRole.title : "—"}</span>
+                        <span className="text-gray-500">{t("step8.job")}:</span>{" "}
+                        <span className="font-bold text-matcher-dark">{displayJobTitle || "—"}</span>
                       </li>
                       <li>
-                        <span className="text-gray-500">{t("step7.education")}:</span> {educationLabel(education)}
+                        <span className="text-gray-500">{t("step8.education")}:</span> {educationLabel(education)}
                       </li>
                       <li>
-                        <span className="text-gray-500">{t("step7.experience")}:</span>{" "}
+                        <span className="text-gray-500">{t("step8.experience")}:</span>{" "}
                         {experience === "yes" ? experienceText : experience === "no" ? t("step2.no") : "—"}
                       </li>
                       <li>
-                        <span className="text-gray-500">{t("step7.schedule")}:</span> {workType ? workTypeLabel(workType) : "—"}
+                        <span className="text-gray-500">{t("step8.schedule")}:</span> {workType ? workTypeLabel(workType) : "—"}
                       </li>
                       <li>
-                        <span className="text-gray-500">{t("step7.skills")}:</span>{" "}
+                        <span className="text-gray-500">{t("step8.skills")}:</span>{" "}
                         {skills.length
                           ? skills.map((s) => `${skillLabel(s.name)} (${s.level ? skillLevelLabel(s.level) : "—"})`).join(", ")
                           : "—"}
                       </li>
                       <li>
-                        <span className="text-gray-500">{t("step7.location")}:</span>{" "}
+                        <span className="text-gray-500">{t("step8.location")}:</span>{" "}
                         {selectedCity
                           ? locationDistrictId && selectedCity.districts
                             ? (() => {
@@ -1020,9 +1140,9 @@ export default function UserFlow1Page() {
                           : "—"}
                       </li>
                       <li>
-                        <span className="text-gray-500">{t("step7.salary")}:</span>{" "}
+                        <span className="text-gray-500">{t("step8.salary")}:</span>{" "}
                         {salary
-                          ? `${parseInt(salary.replace(/\s/g, ""), 10).toLocaleString()} ₾ ${t("step7.perMonth")}`
+                          ? `${parseInt(salary.replace(/\s/g, ""), 10).toLocaleString()} ₾ ${t("step8.perMonth")}`
                           : "—"}
                       </li>
                     </ul>
@@ -1034,14 +1154,14 @@ export default function UserFlow1Page() {
                       onClick={() => fakeSendOtp("phone")}
                       className="rounded-2xl border px-4 py-3 text-sm font-medium text-gray-900 hover:bg-gray-50"
                     >
-                      {t("step7.verifySms")}
+                      {t("step8.verifySms")}
                     </button>
                     <button
                       type="button"
                       onClick={() => fakeSendOtp("email")}
                       className="rounded-2xl border px-4 py-3 text-sm font-medium text-gray-900 hover:bg-gray-50"
                     >
-                      {t("step7.verifyEmail")}
+                      {t("step8.verifyEmail")}
                     </button>
                   </div>
                 </div>
@@ -1067,7 +1187,7 @@ export default function UserFlow1Page() {
                     : "bg-gray-200 text-gray-500 cursor-not-allowed"
                 )}
               >
-                {step < 7 ? t("continue") : t("createAccount")}
+                {step < 8 ? t("continue") : t("createAccount")}
               </button>
             </div>
           </section>
@@ -1106,6 +1226,35 @@ export default function UserFlow1Page() {
           </aside>
         </div>
       </main>
+
+      {/* Salary above recommended — confirm to continue */}
+      {salaryConfirmOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-gray-900">{tCommon("salaryConfirmTitle")}</h2>
+            <p className="mt-2 text-sm text-gray-600">{tCommon("salaryConfirmMessage")}</p>
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setSalaryConfirmOpen(false)}
+                className="flex-1 rounded-2xl border border-gray-300 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                {tCommon("salaryConfirmChange")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSalaryConfirmOpen(false);
+                  setStep(7);
+                }}
+                className="flex-1 rounded-2xl bg-matcher px-4 py-3 text-sm font-semibold text-white hover:bg-matcher-dark"
+              >
+                {tCommon("salaryConfirmContinue")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* OTP Modal */}
       {otpOpen && (

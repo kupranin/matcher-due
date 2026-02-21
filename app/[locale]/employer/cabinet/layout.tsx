@@ -4,8 +4,15 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import Logo from "@/components/Logo";
-import { MOCK_EMPLOYER_SUBSCRIPTION } from "@/lib/matchMockData";
 import { performEmployerLogout } from "@/lib/logoutUtils";
+
+type SubscriptionDisplay = {
+  packageLabel: string;
+  pricePaid: number;
+  validUntil: string;
+  vacanciesUsed: number;
+  vacanciesTotal: number;
+} | null;
 
 export default function EmployerCabinetLayout({
   children,
@@ -17,21 +24,68 @@ export default function EmployerCabinetLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [hasSubscription, setHasSubscription] = useState(false);
+  const [subscription, setSubscription] = useState<SubscriptionDisplay | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
-  function handleLogout() {
+  useEffect(() => {
+    fetch("/api/auth/session", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data: { user: { id?: string; role: string } | null }) => {
+        setAuthChecked(true);
+        if (!data?.user || data.user.role !== "EMPLOYER") {
+          router.replace("/login");
+          return;
+        }
+        if (typeof window !== "undefined") {
+          window.sessionStorage.setItem("employerLoggedIn", "1");
+          if (data.user.id) {
+            window.sessionStorage.setItem("matcher_employer_user_id", data.user.id);
+            return fetch(`/api/companies?userId=${encodeURIComponent(data.user.id)}`)
+              .then((r) => r.json())
+              .then((company: { id?: string } | null) => {
+                if (company?.id) window.sessionStorage.setItem("matcher_employer_company_id", company.id);
+                setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
+              })
+              .catch(() => setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription")));
+          }
+          setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
+        }
+      })
+      .catch(() => {
+        setAuthChecked(true);
+        router.replace("/login");
+      });
+  }, [router]);
+
+  useEffect(() => {
+    if (!hasSubscription) {
+      setSubscription(null);
+      return;
+    }
+    fetch("/api/subscriptions", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data: { subscription: SubscriptionDisplay }) => {
+        setSubscription(data.subscription ?? null);
+      })
+      .catch(() => setSubscription(null));
+  }, [hasSubscription, pathname]);
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     performEmployerLogout();
     router.push("/login");
   }
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem("employerLoggedIn", "1");
-      setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
-    }
-  }, []);
+  if (!authChecked) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <p className="text-gray-500">Loading…</p>
+      </div>
+    );
+  }
 
-  const sub = hasSubscription ? MOCK_EMPLOYER_SUBSCRIPTION : null;
+  const sub = subscription;
 
   const navLinks = [
     { href: "/employer/cabinet", label: tCommon("candidates"), active: pathname?.endsWith("/employer/cabinet") && !pathname?.includes("/chats") },
@@ -80,6 +134,9 @@ export default function EmployerCabinetLayout({
                   ? `${sub.vacanciesUsed} ${tCabinet("used")} · ${tCabinet("unlimited")}`
                   : `${sub.vacanciesUsed} / ${sub.vacanciesTotal} ${tCabinet("vacanciesUsed")}`}
               </p>
+              {sub.vacanciesTotal !== -1 && sub.vacanciesUsed > sub.vacanciesTotal && (
+                <p className="mt-1 text-xs font-medium text-amber-700">{tCabinet("overLimit")}</p>
+              )}
               <p className="mt-1 text-xs text-gray-500">
                 {tCabinet("validUntil")} {new Date(sub.validUntil).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
               </p>

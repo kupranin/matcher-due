@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
-import { getMutualMatches, type MutualMatch } from "@/lib/matchStorage";
+import type { MutualMatch } from "@/lib/matchStorage";
 import MatchChatWindow from "@/components/MatchChatWindow";
 
 export default function EmployerChatsPage() {
@@ -12,7 +12,25 @@ export default function EmployerChatsPage() {
   const [selectedMatch, setSelectedMatch] = useState<MutualMatch | null>(null);
 
   useEffect(() => {
-    setMatches(getMutualMatches());
+    const companyId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_id") : null;
+    if (!companyId) return;
+    fetch(`/api/matches?companyId=${encodeURIComponent(companyId)}`)
+      .then((r) => r.json())
+      .then((list: Array<{ id: string; vacancyId: string; candidateProfileId: string; candidateLiked: boolean; employerLiked: boolean; vacancyTitle: string; company: string; candidateName: string; createdAt: string }>) => {
+        const mutual = list
+          .filter((m) => m.candidateLiked && m.employerLiked)
+          .map((m) => ({
+            id: m.id,
+            vacancyId: m.vacancyId,
+            candidateId: m.candidateProfileId,
+            candidateName: m.candidateName ?? "Candidate",
+            vacancyTitle: m.vacancyTitle,
+            company: m.company,
+            createdAt: new Date(m.createdAt).getTime(),
+          }));
+        setMatches(mutual);
+      })
+      .catch(() => {});
   }, []);
 
   if (matches.length === 0) {

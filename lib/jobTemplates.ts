@@ -159,7 +159,46 @@ export const AVG_SALARY_BY_SLUG: Record<string, number> = {
   "teaching-assistant": 950,
 };
 
-/** Get English skill names for a role slug (for storage & matching). */
+const DEFAULT_RECOMMENDED_SALARY = 1100;
+
+/**
+ * Get recommended salary (GEL/month) for a job slug.
+ * Handles API/CSV slugs (e.g. retail-cashier) by matching to canonical slugs.
+ */
+export function getRecommendedSalaryForSlug(slug: string | null | undefined): number {
+  if (!slug || typeof slug !== "string") return DEFAULT_RECOMMENDED_SALARY;
+  const normalized = slug.toLowerCase().trim();
+  if (AVG_SALARY_BY_SLUG[normalized] != null) return AVG_SALARY_BY_SLUG[normalized];
+  for (const key of Object.keys(AVG_SALARY_BY_SLUG)) {
+    if (normalized === key || normalized.endsWith("-" + key) || normalized.startsWith(key + "-"))
+      return AVG_SALARY_BY_SLUG[key];
+  }
+  return DEFAULT_RECOMMENDED_SALARY;
+}
+
+/** Turn job title into slug for salary lookup (e.g. "Retail Cashier" → "retail-cashier"). */
+function titleToSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/\s*\/\s*.*$/, "")
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
+
+/** Get recommended salary (GEL/month) for a job title (e.g. from vacancy list). */
+export function getRecommendedSalaryForTitle(title: string | null | undefined): number {
+  return getRecommendedSalaryForSlug(title ? titleToSlug(title) : null);
+}
+
+/**
+ * Get skill names from a role (from API/DB or fallback).
+ * Prefer this when you have the selected role; skills come from the same source as the role.
+ */
+export function getSkillNamesFromRole(role: JobTemplateRole | null): string[] {
+  return role?.skills?.map((s) => s.skillName) ?? [];
+}
+
+/** Get English skill names for a role slug (fallback only — use getSkillNamesFromRole when you have the role). */
 export function getSkillsForRoleSlug(slug: string): string[] {
   const role = FALLBACK_TEMPLATES.en.find((r) => r.slug === slug);
   return role ? role.skills.map((s) => s.skillName) : [];
@@ -170,8 +209,8 @@ export async function fetchJobTemplates(locale: "en" | "ka" = "en"): Promise<Job
     const res = await fetch(`/api/job-templates?locale=${locale}`);
     if (!res.ok) throw new Error("API error");
     const data = await res.json();
-    // Use API data only if we have the full set; otherwise fallback (handles partial DB seed)
-    if (Array.isArray(data) && data.length >= FALLBACK_TEMPLATES[locale].length) return data;
+    // Use API/DB data whenever we have any roles (seeded job_role_templates)
+    if (Array.isArray(data) && data.length > 0) return data;
   } catch {
     // Fallback when DB/API unavailable
   }

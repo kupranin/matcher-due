@@ -60,7 +60,12 @@
     "candidates": "Candidates",
     "postVacancy": "Post vacancy",
     "company": "Company",
-    "goToCabinet": "Go to cabinet"
+    "goToCabinet": "Go to cabinet",
+    "salaryConfirmTitle": "Are you sure?",
+    "salaryConfirmMessage": "You will get fewer matches.",
+    "salaryConfirmContinue": "Yes, continue",
+    "salaryConfirmChange": "No, change salary",
+    "saving": "Saving…"
   },
   "footer": {
     "tagline": "Fast, structured hiring for entry-level jobs in Georgia.",
@@ -223,6 +228,7 @@
       "cvRequired": "CV required",
       "builtForGeorgia": "Built for Georgia"
     },
+    "valuePropositionTitle": "Why Matcher works",
     "stats": {
       "stat_1_value": "1 Week",
       "stat_1_desc": "to get hired",
@@ -294,6 +300,7 @@
     "email": "Email",
     "password": "Password",
     "submit": "Sign in",
+    "loggingIn": "Signing in…",
     "noAccount": "Don't have an account?",
     "registerCompany": "Register company",
     "candidateCabinet": "Candidate cabinet",
@@ -307,7 +314,10 @@
       "subtitle": "Pick one — we'll suggest skills and matches based on it.",
       "placeholder": "Search jobs… (e.g., Barista, Cashier)",
       "selectToContinue": "Select to continue",
-      "showMore": "Show {count} more"
+      "showMore": "Show {count} more",
+      "otherJob": "My job isn't listed",
+      "customJobLabel": "Your job title",
+      "customJobPlaceholder": "e.g. Event coordinator, Personal assistant"
     },
     "step2": {
       "title": "Do you have experience?",
@@ -355,7 +365,10 @@
       "noCitiesFound": "No cities found. Try different letters.",
       "district": "District (optional)",
       "any": "Any",
-      "selected": "Selected"
+      "selected": "Selected",
+      "willingToRelocate": "Are you willing to relocate for a job?",
+      "willingToRelocateYes": "Yes",
+      "willingToRelocateNo": "No"
     },
     "step6": {
       "title": "What salary do you expect?",
@@ -369,13 +382,17 @@
       "validNumber": "Please enter a valid positive number."
     },
     "step7": {
-      "title": "Create your profile",
+      "title": "What's your education level?",
+      "subtitle": "Select your highest level of education. Employers may use this to match with you.",
       "education": "Education",
       "educationNone": "No formal education",
       "educationHighSchool": "High school",
       "educationBachelor": "Bachelor's",
       "educationMaster": "Master's",
-      "educationPhd": "PhD",
+      "educationPhd": "PhD"
+    },
+    "step8": {
+      "title": "Create your profile",
       "subtitle": "One quick step — then we'll show your top matches.",
       "fullName": "Full name",
       "fullNamePlaceholder": "e.g., Nino Kuprashvili",
@@ -390,6 +407,7 @@
       "passwordMin": "Password must be at least 8 characters.",
       "yourAnswers": "Your answers (preview)",
       "job": "Job",
+      "education": "Education",
       "experience": "Experience",
       "schedule": "Schedule",
       "skills": "Skills",
@@ -397,7 +415,12 @@
       "salary": "Salary",
       "perMonth": "/ month",
       "verifySms": "Verify by SMS (MVP)",
-      "verifyEmail": "Verify by Email (MVP)"
+      "verifyEmail": "Verify by Email (MVP)",
+      "educationNone": "No formal education",
+      "educationHighSchool": "High school",
+      "educationBachelor": "Bachelor's",
+      "educationMaster": "Master's",
+      "educationPhd": "PhD"
     },
     "continue": "Continue",
     "createAccount": "Create account",
@@ -447,7 +470,8 @@
     "used": "used",
     "unlimited": "Unlimited",
     "vacanciesUsed": "vacancies used",
-    "validUntil": "Valid until"
+    "validUntil": "Valid until",
+    "overLimit": "You have published more than your plan allows."
   },
   "cabinet": {
     "yourMatches": "Your matches",
@@ -458,7 +482,10 @@
     "swipeInstruction": "Swipe right ♥ · left ✕",
     "allCaughtUp": "You're all caught up!",
     "likedPassed": "{liked} liked · {passed} passed",
-    "checkBackLater": "Check back later for new vacancies."
+    "checkBackLater": "Check back later for new vacancies.",
+    "availableToWorkLabel": "Available to work",
+    "availableToWorkOn": "You're marked as available to work",
+    "availableToWorkOff": "You're not looking right now"
   },
   "chats": {
     "noMatchesYet": "No matches yet",
@@ -474,6 +501,9 @@
   "employerPost": {
     "choosePackage": "Choose your package",
     "packageReady": "Your vacancy is ready. Select a package to publish it. Valid for 1 year.",
+    "vacancySavedTitle": "Vacancy saved",
+    "vacancySavedMessage": "Your vacancy has been saved. Choose a package below to publish it and start matching with candidates.",
+    "vacancySavedContinue": "Continue to choose package",
     "postAsMany": "Post as many vacancies as you need",
     "vacancySlots": "{count} vacancy slots",
     "packageExpires": "Package expires in 1 year",
@@ -491,7 +521,8 @@
     "backToPackages": "← Back to packages",
     "postVacancy": "Post a vacancy",
     "fromRegistrationIntro": "Fill in the job details below. Candidates swipe to match — you'll be notified of mutual matches.",
-    "noRegIntro": "No registration needed. Fill in the job details. Candidates swipe to match — you'll be notified of mutual matches.",
+    "vacancyIntro": "Fill in the job details below. Candidates swipe to match — you'll be notified of mutual matches.",
+    "registerToPost": "Register your company to post a vacancy.",
     "youRegistered": "You're registered!",
     "addFirstVacancy": "Add your first vacancy to start matching with candidates.",
     "jobTitle": "Job title",
@@ -529,6 +560,9 @@
     "moveToRequired": "Move to Required",
     "salaryMin": "Salary min (GEL)",
     "salaryMax": "Salary max (GEL)",
+    "salaryRecommendation": "Recommended for this role: ~{amount} GEL/month",
+    "salaryRecommendationGeneric": "Typical range: ~{amount} GEL/month",
+    "useRecommendation": "Use this",
     "description": "Description",
     "descriptionHint": "Auto-generated. Edit if needed. Two sentences max.",
     "descriptionPlaceholder": "Brief description of the role...",
@@ -543,7 +577,14 @@
     "validEmail": "Please enter a valid email.",
     "validPhone": "Please enter a valid phone number.",
     "registerCompany": "Register your company",
-    "wantManageMultiple": "Want to manage multiple vacancies?"
+    "wantManageMultiple": "Want to manage multiple vacancies?",
+    "vacancyPhoto": "Vacancy photo",
+    "vacancyPhotoHint": "Choose a stock image or add your own. Shown on the job card.",
+    "useMyOwnImage": "Use my own image",
+    "useMyOwnImagePlaceholder": "https://example.com/your-image.jpg",
+    "deckPreviewTitle": "How it looks in the swipe deck",
+    "deckPreviewJobPlaceholder": "Job title",
+    "deckPreviewCompany": "Your company"
   },
   "employerRegister": {
     "validEmail": "Please enter a valid email.",
@@ -597,6 +638,7 @@
     "jobPlaceholder": "e.g. Barista, Cashier",
     "locationCity": "Location (city)",
     "locationPlaceholder": "e.g. Tbilisi, Batumi",
+    "willingToRelocate": "Willing to relocate for a job",
     "workType": "Work type",
     "expectedSalary": "Expected salary (GEL / month)",
     "salaryPlaceholder": "e.g. 1200",
@@ -660,6 +702,7 @@
   "employerCabinetPage": {
     "chooseVacancy": "Choose a vacancy",
     "chooseVacancyHint": "Select which vacancy you want to see candidates for.",
+    "recommendedSalary": "Recommended: ~{amount} GEL",
     "addAnotherVacancy": "+ Add another vacancy",
     "candidates": "Candidates",
     "candidatesFor": "for",
@@ -671,7 +714,10 @@
     "noMoreCandidates": "No more candidates for this vacancy right now.",
     "allCaughtUp": "You're all caught up!",
     "likedPassed": "{liked} liked · {passed} passed",
-    "viewAnotherVacancy": "View another vacancy"
+    "viewAnotherVacancy": "View another vacancy",
+    "deleteVacancy": "Delete vacancy",
+    "deleteVacancyConfirm": "Delete this vacancy? This cannot be undone.",
+    "deleteVacancyError": "Could not delete vacancy. Try again."
   },
   "userFlowExtras": {
     "loadingJobs": "Loading jobs…",

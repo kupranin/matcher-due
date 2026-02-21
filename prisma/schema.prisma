@@ -6,13 +6,16 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ——— Users & Auth ———
+// User: candidates and employers. Optional authUserId links to Supabase Auth (auth.users.id).
 model User {
   id           String   @id @default(cuid())
+  authUserId   String?  @unique @map("auth_user_id") // Supabase Auth UUID when using Supabase Auth
   email        String   @unique
   passwordHash String   @map("password_hash")
   role         UserRole @default(CANDIDATE)
@@ -21,11 +24,24 @@ model User {
 
   candidateProfile CandidateProfile?
   company          Company?
+  sessions         Session[]
 }
 
 enum UserRole {
   CANDIDATE
   EMPLOYER
+}
+
+// Server-side sessions (token in HTTP-only cookie).
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("sessions")
 }
 
 // ——— Companies (Employers) ———
@@ -37,6 +53,12 @@ model Company {
   companyId     String   @map("company_id") // Tax / identification number
   contactEmail  String   @map("contact_email")
   contactPhone  String   @map("contact_phone")
+  bio           String?  @db.Text
+  website       String?
+  industry      String?
+  employeeCount String?  @map("employee_count")
+  address       String?
+  linkedIn      String?
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
@@ -61,6 +83,7 @@ model CandidateProfile {
   workTypes          String[]       @map("work_types") // ["Full-time", "Part-time", "Remote"]
   photo              String?        // URL
   jobTitle           String?        @map("job_title") // Preferred job
+  availableToWork    Boolean        @default(true) @map("available_to_work")
   createdAt          DateTime       @default(now()) @map("created_at")
   updatedAt          DateTime       @updatedAt @map("updated_at")
 
@@ -167,6 +190,15 @@ model JobSkill {
   @@map("job_skills")
 }
 
+// ——— Global skills (user-added; merged with template skills for autocomplete) ———
+model GlobalSkill {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("global_skills")
+}
+
 // ——— Job Role Templates (EN + KA) ———
 model JobRoleTemplate {
   id          String   @id @default(uuid())
@@ -202,8 +234,24 @@ model Match {
   candidateProfile   CandidateProfile @relation(fields: [candidateProfileId], references: [id], onDelete: Cascade)
   employerLiked      Boolean          @default(false) @map("employer_liked")
   candidateLiked     Boolean          @default(false) @map("candidate_liked")
+  candidatePitch     String?          @map("candidate_pitch") @db.Text
+  matchScore         Int?             @map("match_score") // 0-100 from weighted scoring
   createdAt          DateTime         @default(now()) @map("created_at")
+
+  chatMessages ChatMessage[]
 
   @@unique([vacancyId, candidateProfileId])
   @@map("matches")
+}
+
+// ——— Chat (per mutual match) ———
+model ChatMessage {
+  id        String   @id @default(cuid())
+  matchId   String   @map("match_id")
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  sender    String   // "candidate" | "employer"
+  text      String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("chat_messages")
 }

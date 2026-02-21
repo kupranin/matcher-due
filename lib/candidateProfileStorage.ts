@@ -9,6 +9,18 @@ import { GEORGIAN_CITIES } from "./georgianLocations";
 import { MOCK_CANDIDATE_PROFILE } from "./matchMockData";
 
 export const CANDIDATE_PROFILE_KEY = "matcher_candidate_profile";
+export const CANDIDATE_USER_ID_KEY = "matcher_candidate_user_id";
+export const CANDIDATE_PROFILE_ID_KEY = "matcher_candidate_profile_id";
+
+export function getCandidateUserId(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(CANDIDATE_USER_ID_KEY);
+}
+
+export function getCandidateProfileId(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(CANDIDATE_PROFILE_ID_KEY);
+}
 
 export interface StoredCandidateProfile {
   /** For match calculation */
@@ -27,7 +39,7 @@ export interface StoredCandidateProfile {
 type SkillLevel = "Beginner" | "Intermediate" | "Advanced";
 
 /** Parse experience text (e.g. "1 year", "6 months") to months */
-function parseExperienceMonths(text: string): number {
+export function parseExperienceMonths(text: string): number {
   const t = text.trim().toLowerCase();
   const yearMatch = t.match(/(\d+)\s*(year|yr)/);
   const monthMatch = t.match(/(\d+)\s*(month|mo)/);
@@ -64,6 +76,7 @@ export function buildProfileFromUserFlow(params: {
   workType: string | null;
   skills: { name: string; level?: SkillLevel }[];
   locationCityId: string | null;
+  willingToRelocate?: boolean;
   salary: string;
   education?: EducationLevel;
 }): CandidateProfile {
@@ -73,19 +86,18 @@ export function buildProfileFromUserFlow(params: {
     workType,
     skills,
     locationCityId,
+    willingToRelocate = false,
     salary,
     education,
   } = params;
 
-  const city = locationCityId ? GEORGIAN_CITIES.find((c) => c.id === locationCityId) : null;
-  const locationCity = city?.nameEn ?? "Tbilisi";
   const salaryMin = Math.max(0, parseInt(salary.replace(/\s/g, ""), 10) || 0) || 800;
   const experienceMonths = experience === "yes" ? parseExperienceMonths(experienceText) : 0;
 
   return {
-    locationCity,
+    locationCityId: locationCityId ?? "tbilisi",
     salaryMin,
-    willingToRelocate: true, // MVP default
+    willingToRelocate,
     experienceMonths,
     educationLevel: education ?? "High School",
     skills: mapSkills(skills),
@@ -125,17 +137,26 @@ export function getCandidateProfileForMatch(): CandidateProfile {
 /** Build CandidateProfile from profile page form data */
 export function buildProfileFromProfilePage(params: {
   location: string;
+  locationCityId?: string;
   salary: string;
   experience: string;
   skills: { name: string; level?: SkillLevel }[];
   workTypes: string[];
+  willingToRelocate?: boolean;
 }): CandidateProfile {
-  const { location, salary, experience, skills, workTypes } = params;
+  const { location, locationCityId, salary, experience, skills, workTypes, willingToRelocate } = params;
   const profile = loadCandidateProfile()?.profile;
+  const resolvedCityId =
+    locationCityId ??
+    (profile && "locationCityId" in profile ? profile.locationCityId : undefined) ??
+    (location.trim()
+      ? GEORGIAN_CITIES.find((c) => c.nameEn.toLowerCase().includes(location.trim().toLowerCase()))?.id
+      : undefined) ??
+    "tbilisi";
   return {
-    locationCity: (location.trim() || profile?.locationCity) ?? "Tbilisi",
+    locationCityId: resolvedCityId,
     salaryMin: Math.max(0, parseInt(salary.replace(/\s/g, ""), 10) || 0) || (profile?.salaryMin ?? 800),
-    willingToRelocate: profile?.willingToRelocate ?? true,
+    willingToRelocate: willingToRelocate ?? profile?.willingToRelocate ?? false,
     experienceMonths: experience.trim() ? parseExperienceMonths(experience) : (profile?.experienceMonths ?? 0),
     educationLevel: profile?.educationLevel ?? "High School",
     skills: mapSkills(skills),
