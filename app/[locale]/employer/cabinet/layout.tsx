@@ -25,6 +25,7 @@ export default function EmployerCabinetLayout({
   const router = useRouter();
   const [hasSubscription, setHasSubscription] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionDisplay | null>(null);
+  const [availableSlots, setAvailableSlots] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [companyName, setCompanyName] = useState<string | null>(null);
@@ -70,13 +71,15 @@ export default function EmployerCabinetLayout({
     if (!authChecked) return;
     fetch("/api/subscriptions", { credentials: "include" })
       .then((r) => r.json())
-      .then((data: { subscription: SubscriptionDisplay }) => {
+      .then((data: { subscription: SubscriptionDisplay; availableSlots?: number | null }) => {
         const sub = data.subscription ?? null;
         setSubscription(sub);
-        setHasSubscription(!!sub);
+        setHasSubscription(!!sub || (typeof data.availableSlots === "number" && data.availableSlots > 0));
+        setAvailableSlots(typeof data.availableSlots === "number" ? data.availableSlots : null);
       })
       .catch(() => {
         setSubscription(null);
+        setAvailableSlots(null);
         setHasSubscription(false);
       });
   }, [authChecked, pathname]);
@@ -167,16 +170,31 @@ export default function EmployerCabinetLayout({
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 {tCabinet("subscription")}
               </p>
-              <p className="mt-1 text-sm font-medium text-gray-700">{tCabinet("noSubscriptionYet")}</p>
-              <p className="mt-1 text-xs text-gray-500">
-                {companyName ? tCabinet("postVacancyToStart") : tCabinet("registerCompanyToStart")}
-              </p>
-              <Link
-                href={companyName ? "/employer/post?from=cabinet" : "/employer/register"}
-                className="mt-3 block rounded-lg bg-matcher px-3 py-2 text-center text-sm font-medium text-white hover:bg-matcher-dark"
-              >
-                {companyName ? tCommon("postVacancy") : tCommon("registerCompany")}
-              </Link>
+              {typeof availableSlots === "number" && availableSlots > 0 ? (
+                <>
+                  <p className="mt-1 text-sm font-medium text-gray-700">{tCabinet("slotsRemaining", { count: availableSlots })}</p>
+                  <p className="mt-1 text-xs text-gray-500">{tCabinet("postVacancyToStart")}</p>
+                  <Link
+                    href="/employer/post?from=cabinet"
+                    className="mt-3 block rounded-lg bg-matcher px-3 py-2 text-center text-sm font-medium text-white hover:bg-matcher-dark"
+                  >
+                    {tCommon("postVacancy")}
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <p className="mt-1 text-sm font-medium text-gray-700">{tCabinet("noSubscriptionYet")}</p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {companyName ? tCabinet("postVacancyToStart") : tCabinet("registerCompanyToStart")}
+                  </p>
+                  <Link
+                    href={companyName ? "/employer/post?from=cabinet" : "/employer/register"}
+                    className="mt-3 block rounded-lg bg-matcher px-3 py-2 text-center text-sm font-medium text-white hover:bg-matcher-dark"
+                  >
+                    {companyName ? tCommon("postVacancy") : tCommon("registerCompany")}
+                  </Link>
+                </>
+              )}
             </div>
           )}
 
@@ -207,7 +225,22 @@ export default function EmployerCabinetLayout({
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto pb-20 md:pb-0">{children}</main>
+      <main className="flex-1 overflow-auto pb-20 md:pb-0">
+        {companyName && !pathname?.includes("/chats") && !pathname?.endsWith("/profile") && (
+          <div className="border-b border-gray-200 bg-white px-4 py-3 md:px-8">
+            <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
+              <p className="text-sm font-medium text-gray-500">{tCabinet("yourCompany")}</p>
+              <Link
+                href="/employer/cabinet/profile"
+                className="font-semibold text-matcher-dark hover:text-matcher hover:underline"
+              >
+                {companyName}
+              </Link>
+            </div>
+          </div>
+        )}
+        {children}
+      </main>
 
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-gray-200 bg-white py-2 md:hidden">

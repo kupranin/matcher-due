@@ -111,7 +111,8 @@
     "salaryConfirmMessage": "You will get fewer matches.",
     "salaryConfirmContinue": "Yes, continue",
     "salaryConfirmChange": "No, change salary",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "registerCompany": "Register company"
   },
   "footer": {
     "tagline": "Fast, structured hiring for entry-level jobs in Georgia.",
@@ -546,11 +547,13 @@
     "noSubscriptionYet": "No subscription yet",
     "postVacancyToStart": "Post a vacancy and choose a package to get started.",
     "registerCompanyToStart": "Register your company to get started.",
+    "slotsRemaining": "{count} vacancy slots remaining",
     "used": "used",
     "unlimited": "Unlimited",
     "vacanciesUsed": "vacancies used",
     "validUntil": "Valid until",
-    "overLimit": "You have published more than your plan allows."
+    "overLimit": "You have published more than your plan allows.",
+    "yourCompany": "Your company"
   },
   "cabinet": {
     "yourMatches": "Your matches",
