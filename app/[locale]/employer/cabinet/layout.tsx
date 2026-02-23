@@ -69,19 +69,25 @@ export default function EmployerCabinetLayout({
 
   useEffect(() => {
     if (!authChecked) return;
-    fetch("/api/subscriptions", { credentials: "include" })
-      .then((r) => r.json())
-      .then((data: { subscription: SubscriptionDisplay; availableSlots?: number | null }) => {
-        const sub = data.subscription ?? null;
-        setSubscription(sub);
-        setHasSubscription(!!sub || (typeof data.availableSlots === "number" && data.availableSlots > 0));
-        setAvailableSlots(typeof data.availableSlots === "number" ? data.availableSlots : null);
-      })
-      .catch(() => {
-        setSubscription(null);
-        setAvailableSlots(null);
-        setHasSubscription(false);
-      });
+    function fetchSubs() {
+      fetch("/api/subscriptions", { credentials: "include" })
+        .then((r) => r.json())
+        .then((data: { subscription: SubscriptionDisplay; availableSlots?: number | null }) => {
+          const sub = data.subscription ?? null;
+          setSubscription(sub);
+          setHasSubscription(!!sub || (typeof data.availableSlots === "number" && data.availableSlots > 0));
+          setAvailableSlots(typeof data.availableSlots === "number" ? data.availableSlots : null);
+        })
+        .catch(() => {
+          setSubscription(null);
+          setAvailableSlots(null);
+          setHasSubscription(false);
+        });
+    }
+    fetchSubs();
+    const handler = () => fetchSubs();
+    window.addEventListener("employer-company-ready", handler);
+    return () => window.removeEventListener("employer-company-ready", handler);
   }, [authChecked, pathname]);
 
   async function handleLogout() {
@@ -184,14 +190,12 @@ export default function EmployerCabinetLayout({
               ) : (
                 <>
                   <p className="mt-1 text-sm font-medium text-gray-700">{tCabinet("noSubscriptionYet")}</p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    {companyName ? tCabinet("postVacancyToStart") : tCabinet("registerCompanyToStart")}
-                  </p>
+                  <p className="mt-1 text-xs text-gray-500">{tCabinet("purchaseSlotsHint")}</p>
                   <Link
-                    href={companyName ? "/employer/post?from=cabinet" : "/employer/register"}
+                    href="/employer/post?from=cabinet"
                     className="mt-3 block rounded-lg bg-matcher px-3 py-2 text-center text-sm font-medium text-white hover:bg-matcher-dark"
                   >
-                    {companyName ? tCommon("postVacancy") : tCommon("registerCompany")}
+                    {tCommon("purchaseMoreVacancies")}
                   </Link>
                 </>
               )}

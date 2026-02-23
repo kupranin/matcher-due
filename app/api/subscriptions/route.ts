@@ -39,6 +39,12 @@ export async function GET() {
       return NextResponse.json({ subscription: null, availableSlots: null }, { status: 200 });
     }
 
+    // Default to 10 if column is missing (e.g. DB not migrated yet)
+    const availableSlotsValue =
+      typeof (company as { availableSlots?: number }).availableSlots === "number"
+        ? (company as { availableSlots: number }).availableSlots
+        : 10;
+
     const [latest, vacancyCount] = await Promise.all([
       prisma.subscription.findFirst({
         where: { companyId: company.id },
@@ -50,7 +56,7 @@ export async function GET() {
     if (!latest) {
       return NextResponse.json({
         subscription: null,
-        availableSlots: company.availableSlots,
+        availableSlots: availableSlotsValue,
       }, { status: 200 });
     }
 
@@ -63,7 +69,7 @@ export async function GET() {
         vacanciesUsed,
         vacanciesTotal: latest.vacanciesTotal,
       },
-      availableSlots: company.availableSlots,
+      availableSlots: availableSlotsValue,
     });
   } catch (e) {
     console.error("Subscription get error:", e);

@@ -12,6 +12,8 @@ If you see **"Database unavailable"** or **"MaxClientsInSessionMode: max clients
 
 After any `.env` change, restart the dev server and re-run Prisma commands if needed (`npx prisma db push`).
 
+**Subscription / vacancy slots:** The employer cabinet shows "X vacancy slots remaining" using the `Company.available_slots` column. If you see "No subscription yet" and no slots count for an employer who has a company, ensure the database has the column: run `npx prisma db push`, or run the SQL in `prisma/sql/add-available-slots-and-purchases.sql` in your database (e.g. Supabase SQL Editor).
+
 ## Getting Started
 
 First, run the development server:

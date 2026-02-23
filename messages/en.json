@@ -112,7 +112,8 @@
     "salaryConfirmContinue": "Yes, continue",
     "salaryConfirmChange": "No, change salary",
     "saving": "Saving…",
-    "registerCompany": "Register company"
+    "registerCompany": "Register company",
+    "purchaseMoreVacancies": "Purchase more vacancies"
   },
   "footer": {
     "tagline": "Fast, structured hiring for entry-level jobs in Georgia.",
@@ -547,6 +548,7 @@
     "noSubscriptionYet": "No subscription yet",
     "postVacancyToStart": "Post a vacancy and choose a package to get started.",
     "registerCompanyToStart": "Register your company to get started.",
+    "purchaseSlotsHint": "Purchase more vacancy slots to post vacancies.",
     "slotsRemaining": "{count} vacancy slots remaining",
     "used": "used",
     "unlimited": "Unlimited",
@@ -584,7 +586,8 @@
     "yourMatches": "Your matches",
     "chatHint": "Chat with employers to schedule interviews and next steps.",
     "chatHintEmployer": "Chat with candidates to schedule interviews and next steps.",
-    "chat": "Chat →"
+    "chat": "Chat →",
+    "loadingMatches": "Loading matches…"
   },
   "likedJobs": {
     "title": "Liked jobs",
