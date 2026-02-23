@@ -121,9 +121,29 @@ export default function EmployerCabinetPage() {
   }, []);
 
   function loadVacanciesAndCandidates() {
-    let companyId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_id") : null;
+    // Always resolve company from current session so we never use a stale sessionStorage
+    // companyId from a previous login (e.g. wrong company / "no vacancies" for the current user).
+    fetch("/api/auth/session", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data: { user: { id?: string; role: string } | null }) => {
+        if (!data?.user?.id || data.user.role !== "EMPLOYER") {
+          setOpportunitiesLoading(false);
+          return;
+        }
+        return fetch(`/api/companies?userId=${encodeURIComponent(data.user.id)}`)
+          .then((r) => r.json())
+          .then((company: { id?: string } | null) => {
+            const cid = company?.id ?? null;
+            if (cid && typeof window !== "undefined") {
+              window.sessionStorage.setItem("matcher_employer_company_id", cid);
+            }
+            doLoad(cid);
+          })
+          .catch(() => doLoad(null));
+      })
+      .catch(() => setOpportunitiesLoading(false));
 
-    const doLoad = (cid: string | null) => {
+    function doLoad(cid: string | null) {
       if (!cid) {
         setOpportunitiesLoading(false);
         return;
@@ -160,32 +180,7 @@ export default function EmployerCabinetPage() {
           setCompanyMatches(Array.isArray(list) ? list : [])
         )
         .catch(() => setCompanyMatches([]));
-    };
-
-    if (companyId) {
-      doLoad(companyId);
-      return;
     }
-    // Resolve company from session so we don't show "No vacancies" before layout has set companyId
-    fetch("/api/auth/session", { credentials: "include" })
-      .then((r) => r.json())
-      .then((data: { user: { id?: string; role: string } | null }) => {
-        if (!data?.user?.id || data.user.role !== "EMPLOYER") {
-          setOpportunitiesLoading(false);
-          return;
-        }
-        return fetch(`/api/companies?userId=${encodeURIComponent(data.user.id)}`)
-          .then((r) => r.json())
-          .then((company: { id?: string } | null) => {
-            const cid = company?.id ?? null;
-            if (cid && typeof window !== "undefined") {
-              window.sessionStorage.setItem("matcher_employer_company_id", cid);
-            }
-            doLoad(cid);
-          })
-          .catch(() => doLoad(null));
-      })
-      .catch(() => setOpportunitiesLoading(false));
   }
 
   const likedCountByVacancyId = useMemo(() => {

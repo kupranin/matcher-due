@@ -190,7 +190,7 @@ export function getRecommendedSalaryForTitle(title: string | null | undefined): 
   return getRecommendedSalaryForSlug(title ? titleToSlug(title) : null);
 }
 
-/** Get recommended salary (GEL/month) for a job title, using candidate averages when available. */
+/** Get recommended salary (GEL/month) for a job title, using candidate averages when available. Never returns negative. */
 export function getRecommendedSalaryForTitleWithAverages(
   title: string | null | undefined,
   averagesBySlug: Record<string, number> | null | undefined
@@ -199,9 +199,11 @@ export function getRecommendedSalaryForTitleWithAverages(
   const slug = titleToSlug(title);
   if (slug && averagesBySlug && typeof averagesBySlug[slug] === "number") {
     const n = Math.round(averagesBySlug[slug]);
-    return n >= 0 ? n : getRecommendedSalaryForTitle(title);
+    const fallback = getRecommendedSalaryForTitle(title);
+    return n >= 0 ? n : fallback;
   }
-  return getRecommendedSalaryForTitle(title);
+  const value = getRecommendedSalaryForTitle(title);
+  return value >= 0 ? value : DEFAULT_RECOMMENDED_SALARY;
 }
 
 /**
