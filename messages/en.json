@@ -567,7 +567,8 @@
     "availableToWorkOff": "You're not looking right now",
     "interestSentTitle": "Interest sent!",
     "interestSentMessage": "Your interest in {vacancy} at {company} has been sent. The employer will see it and may like you back — check Chats when you match.",
-    "keepSwiping": "Keep swiping"
+    "keepSwiping": "Keep swiping",
+    "loadingOpportunities": "Loading opportunities…"
   },
   "chats": {
     "noMatchesYet": "No matches yet",

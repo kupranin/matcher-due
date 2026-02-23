@@ -8,7 +8,7 @@ import MatchChatWindow from "@/components/MatchChatWindow";
 
 export default function EmployerChatsPage() {
   const t = useTranslations("chats");
-  const [matches, setMatches] = useState<MutualMatch[]>([]);
+  const [matches, setMatches] = useState<(MutualMatch & { candidateJobTitle?: string | null })[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<MutualMatch | null>(null);
 
   useEffect(() => {
@@ -16,7 +16,7 @@ export default function EmployerChatsPage() {
     if (!companyId) return;
     fetch(`/api/matches?companyId=${encodeURIComponent(companyId)}`)
       .then((r) => r.json())
-      .then((list: Array<{ id: string; vacancyId: string; candidateProfileId: string; candidateLiked: boolean; employerLiked: boolean; vacancyTitle: string; company: string; candidateName: string; createdAt: string }>) => {
+      .then((list: Array<{ id: string; vacancyId: string; candidateProfileId: string; candidateLiked: boolean; employerLiked: boolean; vacancyTitle: string; company: string; candidateName: string; candidateJobTitle?: string | null; createdAt: string }>) => {
         const mutual = list
           .filter((m) => m.candidateLiked && m.employerLiked)
           .map((m) => ({
@@ -24,6 +24,7 @@ export default function EmployerChatsPage() {
             vacancyId: m.vacancyId,
             candidateId: m.candidateProfileId,
             candidateName: m.candidateName ?? "Candidate",
+            candidateJobTitle: m.candidateJobTitle ?? null,
             vacancyTitle: m.vacancyTitle,
             company: m.company,
             createdAt: new Date(m.createdAt).getTime(),
@@ -86,7 +87,9 @@ export default function EmployerChatsPage() {
               👤
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-semibold text-gray-900">{match.candidateName}</p>
+              <p className="font-semibold text-gray-900">
+                {match.candidateJobTitle ? `${match.candidateName} · ${match.candidateJobTitle}` : match.candidateName}
+              </p>
               <p className="text-sm text-gray-600">{match.vacancyTitle} · {match.company}</p>
             </div>
             <span className="text-matcher">{t("chat")}</span>

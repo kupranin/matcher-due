@@ -150,6 +150,7 @@ export default function CabinetPage() {
   const t = useTranslations("cabinet");
   const router = useRouter();
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
+  const [opportunitiesLoading, setOpportunitiesLoading] = useState(true);
 
   const [availableToWork, setAvailableToWork] = useState(true);
   const [availableToWorkLoading, setAvailableToWorkLoading] = useState(false);
@@ -184,11 +185,13 @@ export default function CabinetPage() {
       preferredJob: string | undefined,
       profileId?: string | null
     ) => {
+      setOpportunitiesLoading(true);
       const vacancyListPromise = fetch("/api/vacancies").then((r) => r.json());
       const matchesPromise =
         profileId ? fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`).then((r) => r.json()) : Promise.resolve([]);
       Promise.all([vacancyListPromise, matchesPromise])
         .then(([list, matches]: [unknown, Array<{ vacancyId: string; employerLiked?: boolean }>]) => {
+          setOpportunitiesLoading(false);
           if (!Array.isArray(list) || list.length === 0) return;
           const cards = buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob);
           const employerLikedVacancyIds = new Set(
@@ -202,7 +205,7 @@ export default function CabinetPage() {
           });
           setVacancies(cards);
         })
-        .catch(() => {});
+        .catch(() => setOpportunitiesLoading(false));
     };
     if (profileUserId) {
       fetch(`/api/candidates/profile?userId=${encodeURIComponent(profileUserId)}`)
@@ -324,6 +327,13 @@ export default function CabinetPage() {
       {/* Fun gradient background */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-matcher-pale via-matcher-mint/50 to-matcher-amber/30" />
 
+      {opportunitiesLoading ? (
+        <div className="flex min-h-[50vh] flex-col items-center justify-center py-16">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-matcher border-t-transparent" aria-hidden />
+          <p className="mt-5 text-gray-600">{t("loadingOpportunities")}</p>
+        </div>
+      ) : (
+        <>
       {/* Available to work toggle */}
       {getCandidateUserId() && (
         <div className="mb-4 flex items-center justify-between rounded-2xl border border-matcher/20 bg-white/80 px-4 py-3 shadow-sm backdrop-blur sm:px-5">
@@ -460,6 +470,8 @@ export default function CabinetPage() {
         onClose={() => setNewMatch(null)}
         onOpenChat={handleOpenChat}
       />
+        </>
+      )}
     </div>
   );
 }

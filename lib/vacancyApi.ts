@@ -59,6 +59,16 @@ function normalizeJobTitleForMatch(title: string): string {
   return t;
 }
 
+/** Same-job match: candidate's preferred job must equal the vacancy title or be a more specific version of it (e.g. "Senior Cashier" for "Cashier"). No cross-role matches (e.g. "Customer Service Rep" for "Cashier"). */
+function candidateJobMatchesVacancyStrict(candidateJobTitle: string | null | undefined, vacancyTitle: string): boolean {
+  if (!vacancyTitle || !candidateJobTitle || typeof candidateJobTitle !== "string" || !candidateJobTitle.trim())
+    return false;
+  const vacancyNorm = normalizeJobTitleForMatch(vacancyTitle);
+  const jobNorm = normalizeJobTitleForMatch(candidateJobTitle);
+  if (!vacancyNorm || !jobNorm) return false;
+  return vacancyNorm === jobNorm || (vacancyNorm.length >= 3 && jobNorm.includes(vacancyNorm));
+}
+
 /** True if vacancy title matches candidate's preferred job (for sorting — relevant first). */
 function vacancyTitleMatchesPreferredJob(vacancyTitle: string, preferredJob: string | null | undefined): boolean {
   if (!preferredJob || typeof preferredJob !== "string") return true;
@@ -120,11 +130,10 @@ export function buildVacancyCardsWithMatch(
   });
 }
 
-/** True if candidate's preferred job matches the vacancy title (so employer only sees candidates looking for this role). When filtering by vacancy, candidate must have a job title that matches. */
+/** True if candidate's preferred job matches the vacancy title (so employer only sees candidates looking for this role). Uses strict same-job matching. */
 export function candidateJobMatchesVacancy(candidateJobTitle: string | null | undefined, vacancyTitle: string): boolean {
   if (!vacancyTitle) return true;
-  if (!candidateJobTitle || typeof candidateJobTitle !== "string" || !candidateJobTitle.trim()) return false;
-  return vacancyTitleMatchesPreferredJob(vacancyTitle, candidateJobTitle);
+  return candidateJobMatchesVacancyStrict(candidateJobTitle, vacancyTitle);
 }
 
 /** Build candidate cards with match % from API list and vacancy profile (for employer cabinet). Only includes candidates whose preferred job matches the vacancy when vacancyTitle is provided. */

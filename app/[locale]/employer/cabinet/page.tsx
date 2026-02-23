@@ -70,8 +70,10 @@ function SwipeCard({
               <span className="flex h-full w-full items-center justify-center text-3xl">👤</span>
             )}
           </div>
-          <h2 className="text-xl font-bold text-gray-900">{candidate.name}</h2>
-          <p className="text-gray-600">{candidate.job}</p>
+          <h2 className="text-xl font-bold text-gray-900">
+            {candidate.name}
+            {candidate.job && candidate.job !== "Candidate" ? ` · ${candidate.job}` : ""}
+          </h2>
           <p className="text-sm text-gray-500">{candidate.location} · {candidate.workType}</p>
           {candidate.skills && (
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -101,7 +103,7 @@ export default function EmployerCabinetPage() {
   const [apiCandidates, setApiCandidates] = useState<Array<{ id: string; fullName: string; jobTitle: string | null; locationCityId: string; salaryMin: number; workTypes: string[]; experienceMonths: number; educationLevel: string; willingToRelocate: boolean; skills: Array<{ name: string; level: string }> }>>([]);
   const [salaryAveragesFromCandidates, setSalaryAveragesFromCandidates] = useState<Record<string, number> | null>(null);
   const [companyMatches, setCompanyMatches] = useState<
-    Array<{ vacancyId: string; candidateProfileId: string; candidateLiked: boolean; candidateName?: string; vacancyTitle?: string }>
+    Array<{ vacancyId: string; candidateProfileId: string; candidateLiked: boolean; candidateName?: string; candidateJobTitle?: string | null; vacancyTitle?: string }>
   >([]);
   const [opportunitiesLoading, setOpportunitiesLoading] = useState(true);
 
@@ -152,7 +154,7 @@ export default function EmployerCabinetPage() {
       .catch(() => {});
     fetch(`/api/matches?companyId=${encodeURIComponent(companyId)}`)
       .then((r) => r.json())
-      .then((list: Array<{ vacancyId: string; candidateProfileId: string; candidateLiked: boolean; candidateName?: string; vacancyTitle?: string }>) =>
+      .then((list: Array<{ vacancyId: string; candidateProfileId: string; candidateLiked: boolean; candidateName?: string; candidateJobTitle?: string | null; vacancyTitle?: string }>) =>
         setCompanyMatches(Array.isArray(list) ? list : [])
       )
       .catch(() => setCompanyMatches([]));
@@ -168,11 +170,15 @@ export default function EmployerCabinetPage() {
   }, [companyMatches]);
 
   const likedCandidatesByVacancyId = useMemo(() => {
-    const map: Record<string, Array<{ id: string; name: string }>> = {};
+    const map: Record<string, Array<{ id: string; name: string; jobTitle?: string | null }>> = {};
     for (const m of companyMatches) {
       if (!m.candidateLiked) continue;
       if (!map[m.vacancyId]) map[m.vacancyId] = [];
-      map[m.vacancyId].push({ id: m.candidateProfileId, name: m.candidateName ?? "Candidate" });
+      map[m.vacancyId].push({
+        id: m.candidateProfileId,
+        name: m.candidateName ?? "Candidate",
+        jobTitle: m.candidateJobTitle ?? null,
+      });
     }
     return map;
   }, [companyMatches]);
@@ -345,7 +351,7 @@ export default function EmployerCabinetPage() {
                   .filter((v) => (likedCountByVacancyId[v.id] ?? 0) > 0)
                   .map((v) => {
                     const count = likedCountByVacancyId[v.id] ?? 0;
-                    const names = (likedCandidatesByVacancyId[v.id] ?? []).map((c) => c.name).slice(0, 3);
+                    const names = (likedCandidatesByVacancyId[v.id] ?? []).map((c) => (c.jobTitle ? `${c.name} · ${c.jobTitle}` : c.name)).slice(0, 3);
                     return (
                       <li key={v.id}>
                         <button

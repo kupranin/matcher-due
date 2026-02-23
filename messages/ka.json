@@ -678,7 +678,8 @@
     "availableToWorkOff": "ამჟამად არ ვეძებ სამსახურის",
     "interestSentTitle": "ინტერესი გაიგზავნა!",
     "interestSentMessage": "შენი ინტერესი {vacancy} — {company}-ში გაიგზავნა. დამსაქმებელი ნახავს და შეიძლება მოგიწონოთ — შეხვედრისას შეამოწმე ჩატები.",
-    "keepSwiping": "განაგრძე გადაფურცვლა"
+    "keepSwiping": "განაგრძე გადაფურცვლა",
+    "loadingOpportunities": "შესაძლებლობები იტვირთება…"
   },
   "chats": {
     "noMatchesYet": "ჯერ შესაბამისობები არ არის",
