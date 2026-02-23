@@ -169,13 +169,13 @@ export default function EmployerCabinetLayout({
               </p>
               <p className="mt-1 text-sm font-medium text-gray-700">{tCabinet("noSubscriptionYet")}</p>
               <p className="mt-1 text-xs text-gray-500">
-                {tCabinet("postVacancyToStart")}
+                {companyName ? tCabinet("postVacancyToStart") : tCabinet("registerCompanyToStart")}
               </p>
               <Link
-                href="/employer/post?from=cabinet"
+                href={companyName ? "/employer/post?from=cabinet" : "/employer/register"}
                 className="mt-3 block rounded-lg bg-matcher px-3 py-2 text-center text-sm font-medium text-white hover:bg-matcher-dark"
               >
-                {tCommon("postVacancy")}
+                {companyName ? tCommon("postVacancy") : tCommon("registerCompany")}
               </Link>
             </div>
           )}

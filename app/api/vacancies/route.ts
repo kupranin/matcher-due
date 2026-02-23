@@ -4,16 +4,17 @@ import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
 import { SESSION_COOKIE_NAME } from "@/lib/session";
 import { getStockPhotosForJob } from "@/lib/vacancyStockPhotos";
+import { deductSlotInTx, STRICT_PAYWALL_ERROR } from "@/lib/vacancyManager";
 
 const SKILL_LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
 
-/** GET /api/vacancies — list published vacancies. ?companyId= for employer's vacancies. */
+/** GET /api/vacancies — list published vacancies. ?companyId= for employer's vacancies (returns all statuses for employer). */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get("companyId");
     const list = await prisma.vacancy.findMany({
-      where: companyId ? { companyId, status: "PUBLISHED" } : { status: "PUBLISHED" },
+      where: companyId ? { companyId } : { status: "PUBLISHED" },
       orderBy: { createdAt: "desc" },
       include: {
         company: { select: { name: true } },
@@ -197,39 +198,42 @@ export async function POST(request: Request) {
     const contactEmailForVacancy = company.contactEmail || contactEmail || "";
     const contactPhoneForVacancy = company.contactPhone ?? contactPhone;
 
-    const vacancy = await prisma.vacancy.create({
-      data: {
-        companyId: company.id,
-        title,
-        locationCityId,
-        locationDistrictId,
-        salaryMin: salaryMin ?? undefined,
-        salaryMax,
-        workType,
-        isRemote,
-        requiredExperienceMonths,
-        requiredEducationLevel,
-        description,
-        status: "PUBLISHED",
-        contactName: contactName || null,
-        contactEmail: contactEmailForVacancy,
-        contactPhone: contactPhoneForVacancy,
-        photo: photo ?? undefined,
-      },
-    });
-
-    if (skills.length > 0) {
-      await prisma.vacancySkill.createMany({
-        data: skills.map((s) => ({
-          vacancyId: vacancy.id,
-          name: s.name,
-          level: s.level,
-          weight: s.weight,
-          isRequired: s.isRequired,
-        })),
-        skipDuplicates: true,
+    const vacancy = await prisma.$transaction(async (tx) => {
+      await deductSlotInTx(tx, company.id);
+      const v = await tx.vacancy.create({
+        data: {
+          companyId: company.id,
+          title,
+          locationCityId,
+          locationDistrictId,
+          salaryMin: salaryMin ?? undefined,
+          salaryMax,
+          workType,
+          isRemote,
+          requiredExperienceMonths,
+          requiredEducationLevel,
+          description,
+          status: "PUBLISHED",
+          contactName: contactName || null,
+          contactEmail: contactEmailForVacancy,
+          contactPhone: contactPhoneForVacancy,
+          photo: photo ?? undefined,
+        },
       });
-    }
+      if (skills.length > 0) {
+        await tx.vacancySkill.createMany({
+          data: skills.map((s) => ({
+            vacancyId: v.id,
+            name: s.name,
+            level: s.level,
+            weight: s.weight,
+            isRequired: s.isRequired,
+          })),
+          skipDuplicates: true,
+        });
+      }
+      return v;
+    });
 
     return NextResponse.json({
       vacancyId: vacancy.id,
@@ -237,6 +241,13 @@ export async function POST(request: Request) {
       ...(user && { userId: user.id }),
     });
   } catch (e) {
+    const err = e as Error;
+    if (err.message === STRICT_PAYWALL_ERROR) {
+      return NextResponse.json(
+        { error: "No vacancy slots left. Choose a package to post.", code: STRICT_PAYWALL_ERROR },
+        { status: 402 }
+      );
+    }
     console.error("Vacancy create error:", e);
     return NextResponse.json({ error: "Failed to create vacancy" }, { status: 500 });
   }

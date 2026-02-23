@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { SESSION_COOKIE_NAME } from "@/lib/session";
+import { processPurchase, PACKAGE_PRICING } from "@/lib/vacancyManager";
 
 const PACKAGE_TYPES = ["1", "5", "10", "unlimited"] as const;
 const VALIDITY_YEARS = 1;
@@ -13,13 +14,13 @@ const PACKAGE_LABELS: Record<string, string> = {
   unlimited: "Unlimited",
 };
 
-/** GET /api/subscriptions — current employer's subscription (from session) + vacancy count as used. */
+/** GET /api/subscriptions — current employer's subscription + available_slots from Company. */
 export async function GET() {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
     if (!token) {
-      return NextResponse.json({ subscription: null }, { status: 200 });
+      return NextResponse.json({ subscription: null, availableSlots: null }, { status: 200 });
     }
 
     const session = await prisma.session.findUnique({
@@ -27,15 +28,15 @@ export async function GET() {
       include: { user: { select: { id: true, role: true } } },
     });
     if (!session || session.expiresAt < new Date() || session.user.role !== "EMPLOYER") {
-      return NextResponse.json({ subscription: null }, { status: 200 });
+      return NextResponse.json({ subscription: null, availableSlots: null }, { status: 200 });
     }
 
     const company = await prisma.company.findUnique({
       where: { userId: session.user.id },
-      select: { id: true },
+      select: { id: true, availableSlots: true },
     });
     if (!company) {
-      return NextResponse.json({ subscription: null }, { status: 200 });
+      return NextResponse.json({ subscription: null, availableSlots: null }, { status: 200 });
     }
 
     const [latest, vacancyCount] = await Promise.all([
@@ -47,10 +48,12 @@ export async function GET() {
     ]);
 
     if (!latest) {
-      return NextResponse.json({ subscription: null }, { status: 200 });
+      return NextResponse.json({
+        subscription: null,
+        availableSlots: company.availableSlots,
+      }, { status: 200 });
     }
 
-    // vacanciesUsed = actual count of published vacancies (so UI shows truth; may exceed plan)
     const vacanciesUsed = vacancyCount;
     return NextResponse.json({
       subscription: {
@@ -60,14 +63,15 @@ export async function GET() {
         vacanciesUsed,
         vacanciesTotal: latest.vacanciesTotal,
       },
+      availableSlots: company.availableSlots,
     });
   } catch (e) {
     console.error("Subscription get error:", e);
-    return NextResponse.json({ subscription: null }, { status: 200 });
+    return NextResponse.json({ subscription: null, availableSlots: null }, { status: 200 });
   }
 }
 
-/** POST /api/subscriptions — create a subscription for the current employer (session). */
+/** POST /api/subscriptions — record purchase and add vacancy slots (VacancyManager.processPurchase). */
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();
@@ -96,34 +100,23 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    // Support both packageType and packageId so frontend package selection is recorded correctly
-    const packageTypeRaw =
+    const packageIdRaw =
       (typeof body?.packageType === "string" && body.packageType.trim()) ||
       (typeof body?.packageId === "string" && body.packageId.trim()) ||
       "1";
-    const packageType = PACKAGE_TYPES.includes(packageTypeRaw as (typeof PACKAGE_TYPES)[number])
-      ? (packageTypeRaw as (typeof PACKAGE_TYPES)[number])
+    const packageId = PACKAGE_TYPES.includes(packageIdRaw as (typeof PACKAGE_TYPES)[number])
+      ? (packageIdRaw as (typeof PACKAGE_TYPES)[number])
       : "1";
-    const pricePaid = typeof body?.pricePaid === "number" ? Math.max(0, body.pricePaid) : body?.price ?? 40;
-    const vacanciesTotal = packageType === "unlimited" ? -1 : parseInt(packageType, 10) || 1;
+    const pricing = PACKAGE_PRICING[packageId];
+    const amountPaid = typeof body?.pricePaid === "number" ? body.pricePaid : (typeof body?.price === "number" ? body.price : pricing.price);
 
-    const validUntil = new Date();
-    validUntil.setFullYear(validUntil.getFullYear() + VALIDITY_YEARS);
-
-    const subscription = await prisma.subscription.create({
-      data: {
-        companyId: company.id,
-        packageType,
-        pricePaid,
-        validUntil,
-        vacanciesTotal,
-      },
-    });
+    const result = await processPurchase(company.id, packageId, amountPaid);
 
     return NextResponse.json({
-      subscriptionId: subscription.id,
+      subscriptionId: result.subscriptionId,
       companyId: company.id,
-      validUntil: subscription.validUntil.toISOString(),
+      validUntil: result.validUntil,
+      slotsAdded: result.slotsAdded,
     });
   } catch (e) {
     console.error("Subscription create error:", e);

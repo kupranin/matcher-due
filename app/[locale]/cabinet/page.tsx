@@ -7,7 +7,7 @@ import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence, animate
 import { buildVacancyCardsWithMatch } from "@/lib/vacancyApi";
 import { GEORGIAN_CITIES } from "@/lib/georgianLocations";
 import { getCandidateProfileForMatch, loadCandidateProfile, getCandidateProfileId, getCandidateUserId, saveCandidateProfile } from "@/lib/candidateProfileStorage";
-import { addCandidateLike, setCandidatePitch, type MutualMatch } from "@/lib/matchStorage";
+import { addCandidateLike, getCandidateLikes, setCandidatePitch, type MutualMatch } from "@/lib/matchStorage";
 import MatchCongratulationsModal from "@/components/MatchCongratulationsModal";
 import MatchProgressRing from "@/components/MatchProgressRing";
 import PitchModal from "@/components/PitchModal";
@@ -108,6 +108,7 @@ function SwipeCard({
         {/* Dark info block – title, company, vibe row, location */}
         <div className="flex flex-1 flex-col justify-between p-5 text-white">
           <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-white/70">{t("jobLabel")}</p>
             <h2 className="font-heading text-2xl font-bold">{vacancy.title}</h2>
             <p className="mt-0.5 text-lg font-medium text-white/90">{vacancy.company}</p>
             {/* Vibe row: icons for No CV, Flexible Hours, Weekly Pay */}
@@ -194,16 +195,18 @@ export default function CabinetPage() {
           setOpportunitiesLoading(false);
           if (!Array.isArray(list) || list.length === 0) return;
           const cards = buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob);
+          const likedIds = getCandidateLikes();
+          const notYetLiked = cards.filter((c) => !likedIds.includes(c.id));
           const employerLikedVacancyIds = new Set(
             (matches || []).filter((m) => m.employerLiked).map((m) => m.vacancyId)
           );
-          cards.sort((a, b) => {
+          notYetLiked.sort((a, b) => {
             const aLiked = employerLikedVacancyIds.has(a.id);
             const bLiked = employerLikedVacancyIds.has(b.id);
             if (aLiked !== bLiked) return aLiked ? -1 : 1;
             return b.match - a.match;
           });
-          setVacancies(cards);
+          setVacancies(notYetLiked);
         })
         .catch(() => setOpportunitiesLoading(false));
     };

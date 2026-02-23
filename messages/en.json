@@ -545,6 +545,7 @@
     "subscription": "Subscription",
     "noSubscriptionYet": "No subscription yet",
     "postVacancyToStart": "Post a vacancy and choose a package to get started.",
+    "registerCompanyToStart": "Register your company to get started.",
     "used": "used",
     "unlimited": "Unlimited",
     "vacanciesUsed": "vacancies used",
@@ -554,6 +555,7 @@
   "cabinet": {
     "yourMatches": "Your matches",
     "yourOpportunities": "Opportunities",
+    "jobLabel": "Job",
     "swipeHint": "Swipe right to like, left to pass. Find your dream job! 🚀",
     "like": "Like!",
     "nope": "Nope",
@@ -596,6 +598,7 @@
   "employerPost": {
     "choosePackage": "Choose your package",
     "packageReady": "Your vacancy is ready. Select a package to publish it. Valid for 1 year.",
+    "noSlotsLeft": "You're out of vacancy slots. Choose a package below to post.",
     "vacancySavedTitle": "Vacancy saved",
     "vacancySavedMessage": "Your vacancy has been saved. Choose a package below to publish it and start matching with candidates.",
     "vacancySavedContinue": "Continue to choose package",

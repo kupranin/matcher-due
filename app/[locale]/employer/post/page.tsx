@@ -12,7 +12,7 @@ import { addSkillToDb, createJobRoleInDb } from "@/lib/userContentApi";
 import { ALL_SKILLS } from "@/lib/allSkills";
 
 const PACKAGES = [
-  { id: "1", vacancies: 1, price: 40, label: "1 vacancy" },
+  { id: "1", vacancies: 1, price: 65, label: "1 vacancy" },
   { id: "5", vacancies: 5, price: 170, label: "5 vacancies" },
   { id: "10", vacancies: 10, price: 400, label: "10 vacancies" },
   { id: "unlimited", vacancies: -1, price: 1000, label: "Unlimited" },
@@ -43,6 +43,7 @@ export default function EmployerPostPage() {
   const fromCabinet = searchParams.get("from") === "cabinet";
 
   const [step, setStep] = useState<Step>("vacancy");
+  const [paywallRedirect, setPaywallRedirect] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<(typeof PACKAGES)[number] | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"invoice" | "card" | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -349,6 +350,11 @@ export default function EmployerPostPage() {
       if (!res.ok) {
         const msg = typeof data?.error === "string" ? data.error : "Could not save vacancy. Please try again.";
         setSaveError(msg);
+        if (res.status === 402 && data?.code === "STRICT_PAYWALL_ERROR") {
+          setStep("package");
+          setPaywallRedirect(true);
+          setSaveError(null);
+        }
         if (res.status === 401 && typeof window !== "undefined") {
           window.sessionStorage.removeItem("employerLoggedIn");
           window.sessionStorage.removeItem("matcher_employer_user_id");
@@ -386,6 +392,7 @@ export default function EmployerPostPage() {
   }
 
   function handlePackageSelect(pkg: (typeof PACKAGES)[number]) {
+    setPaywallRedirect(false);
     setSelectedPackage(pkg);
     setStep("payment");
   }
@@ -469,7 +476,12 @@ export default function EmployerPostPage() {
         {/* Step: Package selection */}
         {step === "package" && (
           <div className="rounded-3xl border bg-white p-8 shadow-sm">
-            {saveError && (
+            {paywallRedirect && (
+              <div className="mb-6 rounded-xl border border-matcher/40 bg-matcher-pale/60 px-4 py-3 text-sm font-medium text-matcher-dark">
+                {t("noSlotsLeft")}
+              </div>
+            )}
+            {saveError && !paywallRedirect && (
               <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                 {saveError}
               </div>
@@ -503,7 +515,7 @@ export default function EmployerPostPage() {
             </p>
             <button
               type="button"
-              onClick={() => { setSaveError(null); setStep("vacancy"); }}
+              onClick={() => { setPaywallRedirect(false); setSaveError(null); setStep("vacancy"); }}
               className="mt-6 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               {t("backToVacancy")}
