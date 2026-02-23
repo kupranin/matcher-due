@@ -50,30 +50,46 @@ export default function CabinetProfilePage() {
 
   useEffect(() => {
     const stored = loadCandidateProfile();
-    if (!stored) return;
-    setFullName(stored.fullName ?? "");
-    setEmail(stored.email ?? "");
-    setPhone(stored.phone ?? "");
-    setBio(stored.bio ?? "");
-    setJob(stored.job ?? "");
-    setLinkedIn(stored.linkedIn ?? "");
-    setLanguages(stored.languages ?? "");
-    const p = stored.profile;
-    if (p) {
-      setLocation("locationCityId" in p && p.locationCityId ? (GEORGIAN_CITIES.find((c) => c.id === p.locationCityId)?.nameEn ?? p.locationCityId) : "");
-      setWillingToRelocate("willingToRelocate" in p ? Boolean(p.willingToRelocate) : false);
-      setSalary(String(p.salaryMin || ""));
-      setExperience(p.experienceMonths ? String(p.experienceMonths) + " months" : "");
-      setWorkTypes(p.workTypes ?? []);
-      setSkills(
-        (p.skills ?? []).map((s) => ({ name: s.name, level: s.level ?? "Intermediate" }))
-      );
+    if (stored) {
+      setFullName(stored.fullName ?? "");
+      setEmail(stored.email ?? "");
+      setPhone(stored.phone ?? "");
+      setBio(stored.bio ?? "");
+      setJob(stored.job ?? "");
+      setLinkedIn(stored.linkedIn ?? "");
+      setLanguages(stored.languages ?? "");
+      const p = stored.profile;
+      if (p) {
+        setLocation("locationCityId" in p && p.locationCityId ? (GEORGIAN_CITIES.find((c) => c.id === p.locationCityId)?.nameEn ?? p.locationCityId) : "");
+        setWillingToRelocate("willingToRelocate" in p ? Boolean(p.willingToRelocate) : false);
+        setSalary(String(p.salaryMin || ""));
+        setExperience(p.experienceMonths ? String(p.experienceMonths) + " months" : "");
+        setWorkTypes(p.workTypes ?? []);
+        setSkills(
+          (p.skills ?? []).map((s) => ({ name: s.name, level: s.level ?? "Intermediate" }))
+        );
+      }
+    }
+    const userId = getCandidateUserId();
+    if (userId) {
+      fetch(`/api/candidates/profile?userId=${encodeURIComponent(userId)}`, { credentials: "include" })
+        .then((r) => r.json())
+        .then((data: { photo?: string | null }) => {
+          if (data?.photo) setPhotoUrl(data.photo);
+        })
+        .catch(() => {});
     }
   }, []);
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) setPhotoUrl(URL.createObjectURL(file));
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === "string" ? reader.result : null;
+      if (dataUrl) setPhotoUrl(dataUrl);
+    };
+    reader.readAsDataURL(file);
   }
 
   function addSkill() {
@@ -284,6 +300,7 @@ export default function CabinetProfilePage() {
                     workTypes: workTypes.length ? workTypes : undefined,
                     skills: profile.skills.map((s) => ({ name: s.name, level: s.level })),
                     jobTitle: job.trim() || undefined,
+                    photo: photoUrl === null ? null : (photoUrl && !photoUrl.startsWith("blob:") ? photoUrl : undefined),
                   }),
                 });
               } catch {

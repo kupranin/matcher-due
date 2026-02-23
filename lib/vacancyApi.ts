@@ -120,9 +120,10 @@ export function buildVacancyCardsWithMatch(
   });
 }
 
-/** True if candidate's preferred job matches the vacancy title (so employer only sees candidates looking for this role). */
+/** True if candidate's preferred job matches the vacancy title (so employer only sees candidates looking for this role). When filtering by vacancy, candidate must have a job title that matches. */
 export function candidateJobMatchesVacancy(candidateJobTitle: string | null | undefined, vacancyTitle: string): boolean {
-  if (!vacancyTitle || !candidateJobTitle) return true;
+  if (!vacancyTitle) return true;
+  if (!candidateJobTitle || typeof candidateJobTitle !== "string" || !candidateJobTitle.trim()) return false;
   return vacancyTitleMatchesPreferredJob(vacancyTitle, candidateJobTitle);
 }
 
@@ -153,7 +154,7 @@ export function buildCandidateCardsWithMatch(
   };
   return apiCandidates
     .filter((c) => c.availableToWork !== false)
-    .filter((c) => !vacancyTitle || vacancyTitleMatchesPreferredJob(vacancyTitle, c.jobTitle))
+    .filter((c) => !vacancyTitle || candidateJobMatchesVacancy(c.jobTitle, vacancyTitle))
     .map((c) => {
       const skills = safeSkills(c);
       const profile: CandidateProfile = {

@@ -31,12 +31,13 @@ export default function EmployerCabinetProfilePage() {
     if (userId) {
       fetch(`/api/companies?userId=${encodeURIComponent(userId)}`)
         .then((r) => r.json())
-        .then((company: { name?: string; contactEmail?: string; contactPhone?: string; bio?: string; website?: string; industry?: string; employeeCount?: string; address?: string; linkedIn?: string } | null) => {
+        .then((company: { name?: string; contactEmail?: string; contactPhone?: string; bio?: string; logo?: string | null; website?: string; industry?: string; employeeCount?: string; address?: string; linkedIn?: string } | null) => {
           if (company) {
             setCompanyName(company.name ?? "");
             setEmail(company.contactEmail ?? "");
             setPhone(company.contactPhone ?? "");
             setBio(company.bio ?? "");
+            setLogoUrl(company.logo ?? null);
             setWebsite(company.website ?? "");
             setIndustry(company.industry ?? "");
             setEmployeeCount(company.employeeCount ?? "");
@@ -67,7 +68,13 @@ export default function EmployerCabinetProfilePage() {
 
   function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) setLogoUrl(URL.createObjectURL(file));
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === "string" ? reader.result : null;
+      if (dataUrl) setLogoUrl(dataUrl);
+    };
+    reader.readAsDataURL(file);
   }
 
   return (
@@ -197,6 +204,7 @@ export default function EmployerCabinetProfilePage() {
                     contactEmail: email.trim(),
                     contactPhone: phone.trim(),
                     bio: bio.trim() || undefined,
+                    logo: logoUrl && !logoUrl.startsWith("blob:") ? logoUrl : logoUrl === null ? null : undefined,
                     website: website.trim() || undefined,
                     industry: industry || undefined,
                     employeeCount: employeeCount || undefined,

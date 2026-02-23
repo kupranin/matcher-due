@@ -19,6 +19,7 @@ export async function GET(request: Request) {
       contactEmail: company.contactEmail,
       contactPhone: company.contactPhone,
       bio: company.bio,
+      logo: company.logo ?? null,
       website: company.website,
       industry: company.industry,
       employeeCount: company.employeeCount,
@@ -74,6 +75,7 @@ export async function PATCH(request: Request) {
     if (typeof body?.employeeCount === "string") update.employeeCount = body.employeeCount.trim() || null;
     if (typeof body?.address === "string") update.address = body.address.trim() || null;
     if (typeof body?.linkedIn === "string") update.linkedIn = body.linkedIn.trim() || null;
+    if (body?.logo !== undefined) update.logo = typeof body.logo === "string" && body.logo.trim() ? body.logo.trim() : null;
     await prisma.company.update({ where: { userId }, data: update as never });
     return NextResponse.json({ ok: true });
   } catch (e) {

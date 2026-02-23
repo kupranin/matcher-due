@@ -69,6 +69,7 @@ model Company {
   contactEmail  String   @map("contact_email")
   contactPhone  String   @map("contact_phone")
   bio           String?  @db.Text
+  logo          String?  // URL or data URL
   website       String?
   industry      String?
   employeeCount String?  @map("employee_count")
