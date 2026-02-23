@@ -132,7 +132,10 @@ export function candidateJobMatchesVacancy(candidateJobTitle: string | null | un
   return candidateJobMatchesVacancyStrict(candidateJobTitle, vacancyTitle);
 }
 
-/** Build candidate cards with match % from API list and vacancy profile (for employer cabinet). Only includes candidates whose preferred job matches the vacancy when vacancyTitle is provided. */
+/** Minimum match % to show a candidate to employer (lower = more candidates shown). */
+const EMPLOYER_MATCH_THRESHOLD = 50;
+
+/** Build candidate cards with match % from API list and vacancy profile (for employer cabinet). Only includes candidates whose preferred job matches the vacancy when vacancyTitle is provided; candidates with no preferred job are shown for any vacancy. */
 export function buildCandidateCardsWithMatch(
   apiCandidates: Array<{
     id: string;
@@ -148,7 +151,7 @@ export function buildCandidateCardsWithMatch(
     skills: Array<{ name: string; level: string }>;
   }>,
   vacancyProfile: VacancyProfile,
-  /** When set, only candidates whose job title matches this vacancy are shown. */
+  /** When set, only candidates whose job title matches this vacancy (or who have no preferred job) are shown. */
   vacancyTitle?: string | null
 ): Array<CandidateCard & { match: number }> {
   const safeSkills = (c: (typeof apiCandidates)[0]) => Array.isArray(c.skills) ? c.skills : [];
@@ -159,7 +162,7 @@ export function buildCandidateCardsWithMatch(
   };
   return apiCandidates
     .filter((c) => c.availableToWork !== false)
-    .filter((c) => !vacancyTitle || candidateJobMatchesVacancy(c.jobTitle, vacancyTitle))
+    .filter((c) => !vacancyTitle || !c.jobTitle?.trim() || candidateJobMatchesVacancy(c.jobTitle, vacancyTitle))
     .map((c) => {
       const skills = safeSkills(c);
       const profile: CandidateProfile = {
@@ -184,6 +187,6 @@ export function buildCandidateCardsWithMatch(
         match,
       };
     })
-    .filter((c) => c.match >= 70)
+    .filter((c) => c.match >= EMPLOYER_MATCH_THRESHOLD)
     .sort((a, b) => b.match - a.match);
 }

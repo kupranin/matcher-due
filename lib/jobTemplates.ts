@@ -197,8 +197,10 @@ export function getRecommendedSalaryForTitleWithAverages(
 ): number {
   if (!title) return getRecommendedSalaryForSlug(null);
   const slug = titleToSlug(title);
-  if (slug && averagesBySlug && typeof averagesBySlug[slug] === "number")
-    return Math.round(averagesBySlug[slug]);
+  if (slug && averagesBySlug && typeof averagesBySlug[slug] === "number") {
+    const n = Math.round(averagesBySlug[slug]);
+    return n >= 0 ? n : getRecommendedSalaryForTitle(title);
+  }
   return getRecommendedSalaryForTitle(title);
 }
 
