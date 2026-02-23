@@ -204,7 +204,13 @@ export default function UserFlow1Page() {
   const displayJobTitle = job === "other" ? customJobTitle.trim() : (selectedRole?.title ?? job ?? "");
   const skillLabel = (s: string) => (ALL_SKILLS.includes(s) ? (tSkillNames(s) as string) : s);
   const workTypeLabel = (key: string) => t(`workTypeLabels.${key}` as any);
-  const workTypeDesc = (key: string) => t(`step3.${key}Desc` as any);
+  const step3DescKey: Record<string, string> = {
+    "full-time": "fullTimeDesc",
+    "part-time": "partTimeDesc",
+    "temp": "tempDesc",
+    "remote": "remoteDesc",
+  };
+  const workTypeDesc = (key: string) => t(`step3.${step3DescKey[key] ?? key + "Desc"}` as any);
   const skillLevelLabel = (level: string) => t(`skillLevels.${level}` as any);
   const cityName = (c: { nameEn: string; nameKa?: string }) => (apiLocale === "ka" && c.nameKa ? c.nameKa : c.nameEn);
 

@@ -217,14 +217,19 @@ export function getSkillsForRoleSlug(slug: string): string[] {
 }
 
 export async function fetchJobTemplates(locale: "en" | "ka" = "en"): Promise<JobTemplateRole[]> {
+  const fallback = FALLBACK_TEMPLATES[locale];
   try {
     const res = await fetch(`/api/job-templates?locale=${locale}`);
     if (!res.ok) throw new Error("API error");
     const data = await res.json();
-    // Use API/DB data whenever we have any roles (seeded job_role_templates)
-    if (Array.isArray(data) && data.length > 0) return data;
+    if (!Array.isArray(data) || data.length === 0) return fallback;
+    const apiSlugs = new Set(data.map((r: JobTemplateRole) => r.slug?.toLowerCase()).filter(Boolean));
+    const missingFromApi = fallback.filter((r) => !apiSlugs.has(r.slug?.toLowerCase()));
+    if (missingFromApi.length === 0) return data;
+    const merged = [...data, ...missingFromApi];
+    merged.sort((a, b) => (a.title ?? "").localeCompare(b.title ?? "", "en"));
+    return merged;
   } catch {
-    // Fallback when DB/API unavailable
+    return fallback;
   }
-  return FALLBACK_TEMPLATES[locale];
 }
