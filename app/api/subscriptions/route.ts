@@ -39,11 +39,18 @@ export async function GET() {
       return NextResponse.json({ subscription: null, availableSlots: null }, { status: 200 });
     }
 
-    // Default to 10 if column is missing (e.g. DB not migrated yet)
-    const availableSlotsValue =
+    // All companies start with 10 slots. If DB has 0 or missing, backfill and use 10.
+    let availableSlotsValue: number =
       typeof (company as { availableSlots?: number }).availableSlots === "number"
         ? (company as { availableSlots: number }).availableSlots
         : 10;
+    if (availableSlotsValue < 10) {
+      await prisma.company.update({
+        where: { id: company.id },
+        data: { availableSlots: 10 },
+      }).catch(() => {});
+      availableSlotsValue = 10;
+    }
 
     const [latest, vacancyCount] = await Promise.all([
       prisma.subscription.findFirst({

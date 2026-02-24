@@ -195,7 +195,7 @@ export default function EmployerCabinetLayout({
                     href="/employer/post?from=cabinet"
                     className="mt-3 block rounded-lg bg-matcher px-3 py-2 text-center text-sm font-medium text-white hover:bg-matcher-dark"
                   >
-                    {tCommon("purchaseMoreVacancies")}
+                    {tCommon("purchaseMoreVacancies") || "Purchase more vacancies"}
                   </Link>
                 </>
               )}
