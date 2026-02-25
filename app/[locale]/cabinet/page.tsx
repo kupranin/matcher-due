@@ -158,8 +158,6 @@ export default function CabinetPage() {
   const [availableToWorkLoading, setAvailableToWorkLoading] = useState(false);
 
   useEffect(() => {
-    const profileUserId = getCandidateUserId();
-    const profileId = getCandidateProfileId();
     type ProfilePayload = {
       fullName?: string;
       email?: string;
@@ -174,6 +172,7 @@ export default function CabinetPage() {
       jobTitle?: string;
       availableToWork?: boolean;
     } | null;
+
     const buildProfileFromApi = (data: ProfilePayload): import("@/lib/matchCalculation").CandidateProfile => ({
       locationCityId: data?.locationCityId ?? "tbilisi",
       salaryMin: data?.salaryMin ?? 800,
@@ -184,7 +183,11 @@ export default function CabinetPage() {
       skills: (data?.skills ?? []).map((s) => ({ name: s.name, level: (s.level as "Intermediate") ?? "Intermediate" })),
     });
 
+    const profileUserId = getCandidateUserId();
+    const profileId = getCandidateProfileId();
+
     setOpportunitiesLoading(true);
+
     const profilePromise = profileUserId
       ? fetch(`/api/candidates/profile?userId=${encodeURIComponent(profileUserId)}`).then((r) => r.json())
       : Promise.resolve(null);
@@ -197,6 +200,7 @@ export default function CabinetPage() {
       .then(([profileData, list, matches]: [ProfilePayload | null, unknown, Array<{ vacancyId: string; employerLiked?: boolean }>]) => {
         let profile: import("@/lib/matchCalculation").CandidateProfile;
         let preferredJob: string | undefined;
+
         if (profileData?.fullName) {
           setAvailableToWork(profileData.availableToWork !== false);
           profile = buildProfileFromApi(profileData);
@@ -214,10 +218,11 @@ export default function CabinetPage() {
           profile = stored?.profile ?? fallback;
           preferredJob = stored?.job;
         }
+
         if (!Array.isArray(list) || list.length === 0) {
-          setOpportunitiesLoading(false);
           return;
         }
+
         const cards = buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob);
         const likedIds = getCandidateLikes();
         const notYetLiked = cards.filter((c) => !likedIds.includes(c.id));

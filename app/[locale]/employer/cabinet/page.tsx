@@ -103,7 +103,7 @@ export default function EmployerCabinetPage() {
   const [apiCandidates, setApiCandidates] = useState<Array<{ id: string; fullName: string; jobTitle: string | null; locationCityId: string; salaryMin: number; workTypes: string[]; experienceMonths: number; educationLevel: string; willingToRelocate: boolean; skills: Array<{ name: string; level: string }> }>>([]);
   const [salaryAveragesFromCandidates, setSalaryAveragesFromCandidates] = useState<Record<string, number> | null>(null);
   const [companyMatches, setCompanyMatches] = useState<
-    Array<{ vacancyId: string; candidateProfileId: string; candidateLiked: boolean; candidateName?: string; candidateJobTitle?: string | null; vacancyTitle?: string }>
+    Array<{ id?: string; vacancyId: string; candidateProfileId: string; candidateLiked: boolean; employerLiked?: boolean; candidateName?: string; candidateJobTitle?: string | null; vacancyTitle?: string }>
   >([]);
   const [opportunitiesLoading, setOpportunitiesLoading] = useState(true);
 
@@ -279,6 +279,21 @@ export default function EmployerCabinetPage() {
           }),
         });
         const data = await res.json().catch(() => ({}));
+        if (res.ok && data.id) {
+          setCompanyMatches((prev) => [
+            ...prev,
+            {
+              id: data.id,
+              vacancyId: selectedVacancy.id,
+              candidateProfileId: current.id,
+              candidateLiked: data.candidateLiked === true,
+              employerLiked: true,
+              candidateName: current.name,
+              candidateJobTitle: current.job ?? null,
+              vacancyTitle: selectedVacancy.title,
+            },
+          ]);
+        }
         const isMutual = data.candidateLiked === true && data.employerLiked === true;
         if (isMutual) {
           setNewMatch({

@@ -39,8 +39,9 @@ export default function MatchChatWindow({
 
   useEffect(() => {
     const matchId = match.id;
+    const credentials = { credentials: "include" as RequestCredentials };
     function poll() {
-      fetch(`/api/chat?matchId=${encodeURIComponent(matchId)}`)
+      fetch(`/api/chat?matchId=${encodeURIComponent(matchId)}`, credentials)
         .then((r) => r.json())
         .then((list: Array<{ id: string; matchId: string; sender: string; text: string; createdAt: number }>) => {
           if (Array.isArray(list)) {
@@ -66,6 +67,7 @@ export default function MatchChatWindow({
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ matchId: match.id, sender, text }),
       });
       const msg = await res.json();
@@ -84,6 +86,7 @@ export default function MatchChatWindow({
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ matchId: match.id, sender, text: msg }),
       });
       const message = await res.json();
