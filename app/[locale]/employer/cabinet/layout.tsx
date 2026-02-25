@@ -55,10 +55,16 @@ export default function EmployerCabinetLayout({
                 }
                 window.dispatchEvent(new CustomEvent("employer-company-ready"));
               }
-              setCompanyName(company?.name ?? null);
+              // Prefer API name; fallback to name stored after registration (cabinet load can race with session).
+              const name = company?.name ?? (typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_name") : null);
+              if (company?.name && typeof window !== "undefined") window.sessionStorage.removeItem("matcher_employer_company_name");
+              setCompanyName(name ?? null);
               setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
             })
-            .catch(() => setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription")));
+            .catch(() => {
+              setCompanyName(typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_name") : null);
+              setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
+            });
         }
       })
       .catch(() => {

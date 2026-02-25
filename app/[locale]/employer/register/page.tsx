@@ -107,6 +107,8 @@ export default function EmployerRegisterPage() {
         window.sessionStorage.setItem("employerLoggedIn", "1");
         const companyData = await companyRes.json().catch(() => null);
         if (companyData?.id) window.sessionStorage.setItem("matcher_employer_company_id", companyData.id);
+        // Pass company name to cabinet so it shows immediately after registration (layout may load before API returns it).
+        window.sessionStorage.setItem("matcher_employer_company_name", companyName.trim());
       }
       router.push("/employer/cabinet");
     } catch {
