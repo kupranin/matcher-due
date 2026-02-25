@@ -38,12 +38,20 @@ export default function MatchChatWindow({
   const defaultTitle = `Interview: ${match.vacancyTitle} with ${otherName}`;
 
   useEffect(() => {
-    fetch(`/api/chat?matchId=${encodeURIComponent(match.id)}`)
-      .then((r) => r.json())
-      .then((list: Array<{ id: string; matchId: string; sender: string; text: string; createdAt: number }>) => {
-        setMessages(list.map((m) => ({ id: m.id, matchId: m.matchId, sender: m.sender as "candidate" | "employer", text: m.text, createdAt: m.createdAt })));
-      })
-      .catch(() => setMessages([]));
+    const matchId = match.id;
+    function poll() {
+      fetch(`/api/chat?matchId=${encodeURIComponent(matchId)}`)
+        .then((r) => r.json())
+        .then((list: Array<{ id: string; matchId: string; sender: string; text: string; createdAt: number }>) => {
+          if (Array.isArray(list)) {
+            setMessages(list.map((m) => ({ id: m.id, matchId: m.matchId, sender: m.sender as "candidate" | "employer", text: m.text, createdAt: typeof m.createdAt === "number" ? m.createdAt : new Date(m.createdAt).getTime() })));
+          }
+        })
+        .catch(() => {});
+    }
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => clearInterval(interval);
   }, [match.id]);
 
   useEffect(() => {

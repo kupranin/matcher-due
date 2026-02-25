@@ -587,7 +587,8 @@
     "chatHint": "Chat with employers to schedule interviews and next steps.",
     "chatHintEmployer": "Chat with candidates to schedule interviews and next steps.",
     "chat": "Chat →",
-    "loadingMatches": "Loading matches…"
+    "loadingMatches": "Loading matches…",
+    "browseCandidates": "View candidates"
   },
   "likedJobs": {
     "title": "Liked jobs",

@@ -56,6 +56,7 @@ export default function CabinetLayout({
 
   const navLinks = [
     { href: "/cabinet", label: tCommon("opportunities"), active: pathname === "/cabinet" },
+    { href: "/cabinet/matches", label: tCommon("matches"), active: pathname === "/cabinet/matches" },
     { href: "/cabinet/liked", label: tCommon("likedJobs"), active: pathname === "/cabinet/liked" },
     { href: "/cabinet/chats", label: tCommon("chats"), active: pathname?.includes("/chats") },
     { href: "/cabinet/profile", label: tCommon("profile"), active: pathname === "/cabinet/profile" },
@@ -149,7 +150,7 @@ export default function CabinetLayout({
               active ? "text-matcher-dark" : "text-gray-500"
             }`}
           >
-            <span>{label === tCommon("opportunities") ? "✨" : label === tCommon("likedJobs") ? "♥" : label === tCommon("chats") ? "💬" : "👤"}</span>
+            <span>{label === tCommon("opportunities") ? "✨" : label === tCommon("matches") ? "🤝" : label === tCommon("likedJobs") ? "♥" : label === tCommon("chats") ? "💬" : "👤"}</span>
             <span>{label}</span>
           </Link>
         ))}

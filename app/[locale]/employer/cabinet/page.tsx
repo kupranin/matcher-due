@@ -276,6 +276,7 @@ export default function EmployerCabinetPage() {
         const res = await fetch("/api/matches", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({
             vacancyId: selectedVacancy.id,
             candidateProfileId: current.id,
@@ -283,7 +284,8 @@ export default function EmployerCabinetPage() {
           }),
         });
         const data = await res.json().catch(() => ({}));
-        if (data.candidateLiked) {
+        const isMutual = data.candidateLiked === true && data.employerLiked === true;
+        if (isMutual) {
           setNewMatch({
             id: data.id,
             vacancyId: selectedVacancy.id,

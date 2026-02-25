@@ -2,26 +2,28 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import type { MutualMatch } from "@/lib/matchStorage";
 import MatchChatWindow from "@/components/MatchChatWindow";
 
 export default function EmployerChatsPage() {
   const t = useTranslations("chats");
+  const searchParams = useSearchParams();
+  const matchIdFromUrl = searchParams.get("matchId");
   const [matches, setMatches] = useState<(MutualMatch & { candidateJobTitle?: string | null })[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<MutualMatch | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    // Server resolves company from session cookie
-    fetch("/api/matches", { credentials: "include" })
-      .then((res) => res.json())
-      .then((list: Array<{ id: string; vacancyId: string; candidateProfileId: string; candidateLiked: boolean; employerLiked: boolean; vacancyTitle: string; company: string; candidateName: string; candidateJobTitle?: string | null; createdAt: string }>) => {
-        if (cancelled) return;
-        const mutual = (Array.isArray(list) ? list : [])
-          .filter((m) => m.candidateLiked && m.employerLiked)
+  function fetchMatches() {
+    const companyId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_id") : null;
+    const url = companyId ? `/api/matches?companyId=${encodeURIComponent(companyId)}` : "/api/matches";
+    return fetch(url, { credentials: "include" })
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+      .then(({ ok, data: list }: { ok: boolean; data: unknown }) => {
+        const arr = ok && Array.isArray(list) ? list as Array<{ id: string; vacancyId: string; candidateProfileId: string; candidateLiked: boolean; employerLiked: boolean; vacancyTitle: string; company: string; candidateName: string; candidateJobTitle?: string | null; createdAt: string }> : [];
+        const mutual = arr
+          .filter((m) => m.candidateLiked === true && m.employerLiked === true)
           .map((m) => ({
             id: m.id,
             vacancyId: m.vacancyId,
@@ -34,10 +36,26 @@ export default function EmployerChatsPage() {
           }));
         setMatches(mutual);
       })
-      .catch(() => { if (!cancelled) setMatches([]); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .catch(() => setMatches([]));
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetchMatches().finally(() => { if (!cancelled) setLoading(false); });
+    const onReady = () => fetchMatches();
+    window.addEventListener("employer-company-ready", onReady);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("employer-company-ready", onReady);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!matchIdFromUrl || matches.length === 0) return;
+    const match = matches.find((m) => m.id === matchIdFromUrl);
+    if (match) setSelectedMatch(match);
+  }, [matchIdFromUrl, matches]);
 
   if (loading) {
     return (

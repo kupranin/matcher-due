@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const match = await prisma.match.upsert({
+    await prisma.match.upsert({
       where: {
         vacancyId_candidateProfileId: { vacancyId, candidateProfileId },
       },
@@ -72,6 +72,14 @@ export async function POST(request: Request) {
         matchScore: matchScore ?? undefined,
       },
     });
+
+    // Re-fetch so we return the exact DB state (both likes); fixes mutual match not showing when employer likes after candidate
+    const match = await prisma.match.findUnique({
+      where: { vacancyId_candidateProfileId: { vacancyId, candidateProfileId } },
+    });
+    if (!match) {
+      return NextResponse.json({ error: "Failed to save like" }, { status: 500 });
+    }
     return NextResponse.json({
       id: match.id,
       candidateLiked: match.candidateLiked,
@@ -147,19 +155,20 @@ export async function GET(request: Request) {
           id: m.id,
           vacancyId: m.vacancyId,
           candidateProfileId: m.candidateProfileId,
-          candidateLiked: m.candidateLiked,
-          employerLiked: m.employerLiked,
+          candidateLiked: Boolean(m.candidateLiked),
+          employerLiked: Boolean(m.employerLiked),
           candidatePitch: m.candidatePitch,
           matchScore: m.matchScore ?? undefined,
           createdAt: m.createdAt.toISOString(),
-          vacancyTitle: m.vacancy.title,
-          company: m.vacancy.company.name,
-          candidateName: m.candidateProfile.fullName,
-          candidateJobTitle: m.candidateProfile.jobTitle,
+          vacancyTitle: m.vacancy?.title ?? "",
+          company: m.vacancy?.company?.name ?? "",
+          candidateName: m.candidateProfile?.fullName ?? "Candidate",
+          candidateJobTitle: m.candidateProfile?.jobTitle ?? null,
         }))
       );
     }
-    return NextResponse.json({ error: "candidateProfileId or companyId required" }, { status: 400 });
+    // No companyId (e.g. session not sent or no company): return empty array so UI shows "No matches" instead of error
+    return NextResponse.json([]);
   } catch (e) {
     console.error("Matches list error:", e);
     return NextResponse.json({ error: "Failed to list matches" }, { status: 500 });

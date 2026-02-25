@@ -71,12 +71,19 @@ export default function EmployerCabinetLayout({
     if (!authChecked) return;
     function fetchSubs() {
       fetch("/api/subscriptions", { credentials: "include" })
-        .then((r) => r.json())
-        .then((data: { subscription: SubscriptionDisplay; availableSlots?: number | null }) => {
+        .then(async (r) => {
+          const data = (await r.json()) as { subscription: SubscriptionDisplay; availableSlots?: number | null };
+          if (!r.ok) {
+            setSubscription(null);
+            setAvailableSlots(null);
+            setHasSubscription(false);
+            return;
+          }
           const sub = data.subscription ?? null;
+          const slots = typeof data.availableSlots === "number" ? data.availableSlots : null;
           setSubscription(sub);
-          setHasSubscription(!!sub || (typeof data.availableSlots === "number" && data.availableSlots > 0));
-          setAvailableSlots(typeof data.availableSlots === "number" ? data.availableSlots : null);
+          setAvailableSlots(slots);
+          setHasSubscription(!!sub || (typeof slots === "number" && slots > 0));
         })
         .catch(() => {
           setSubscription(null);
@@ -105,9 +112,17 @@ export default function EmployerCabinetLayout({
   }
 
   const sub = subscription;
+  // When we have a company but API returned no slots (e.g. race or error), show 10 so employer sees "X slots remaining" and can post
+  const displaySlots =
+    typeof availableSlots === "number"
+      ? availableSlots
+      : companyName
+        ? 10
+        : null;
 
   const navLinks = [
-    { href: "/employer/cabinet", label: tCommon("candidates"), active: pathname?.endsWith("/employer/cabinet") && !pathname?.includes("/chats") },
+    { href: "/employer/cabinet", label: tCommon("candidates"), active: pathname?.endsWith("/employer/cabinet") && !pathname?.includes("/chats") && pathname !== "/employer/cabinet/matches" },
+    { href: "/employer/cabinet/matches", label: tCommon("matches"), active: pathname === "/employer/cabinet/matches" },
     { href: "/employer/cabinet/chats", label: tCommon("chats"), active: pathname?.includes("/chats") },
     { href: "/employer/post?from=cabinet", label: tCommon("postVacancy"), active: false },
     { href: "/employer/cabinet/profile", label: tCommon("company"), active: pathname === "/employer/cabinet/profile" },
@@ -143,7 +158,7 @@ export default function EmployerCabinetLayout({
         }`}
       >
         <div className="flex h-full flex-col overflow-y-auto p-4 pt-14 md:pt-4">
-          <div className="mb-8 flex flex-col items-center justify-center rounded-xl border border-matcher/20 bg-matcher-pale/50 px-4 py-5">
+          <div className="mb-6 hidden flex-col items-center justify-center rounded-xl border border-matcher/20 bg-matcher-pale/50 px-4 py-4 md:flex md:mb-8 md:py-5">
             <Logo height={72} />
             {companyName && (
               <p className="mt-3 w-full truncate text-center text-sm font-medium text-matcher-dark" title={companyName}>
@@ -176,9 +191,9 @@ export default function EmployerCabinetLayout({
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 {tCabinet("subscription")}
               </p>
-              {typeof availableSlots === "number" && availableSlots > 0 ? (
+              {typeof displaySlots === "number" && displaySlots > 0 ? (
                 <>
-                  <p className="mt-1 text-sm font-medium text-gray-700">{tCabinet("slotsRemaining", { count: availableSlots })}</p>
+                  <p className="mt-1 text-sm font-medium text-gray-700">{tCabinet("slotsRemaining", { count: displaySlots })}</p>
                   <p className="mt-1 text-xs text-gray-500">{tCabinet("postVacancyToStart")}</p>
                   <Link
                     href="/employer/post?from=cabinet"
@@ -254,7 +269,7 @@ export default function EmployerCabinetLayout({
             href={href}
             className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${active ? "text-matcher-dark" : "text-gray-500"}`}
           >
-            <span>{label === tCommon("candidates") ? "👥" : label === tCommon("chats") ? "💬" : "➕"}</span>
+            <span>{label === tCommon("candidates") ? "👥" : label === tCommon("matches") ? "🤝" : label === tCommon("chats") ? "💬" : "➕"}</span>
             <span className="truncate max-w-[80px]">{label}</span>
           </Link>
         ))}
