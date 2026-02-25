@@ -159,6 +159,7 @@ export default function CabinetPage() {
 
   useEffect(() => {
     const profileUserId = getCandidateUserId();
+    const profileId = getCandidateProfileId();
     type ProfilePayload = {
       fullName?: string;
       email?: string;
@@ -182,67 +183,58 @@ export default function CabinetPage() {
       workTypes: data?.workTypes?.length ? data.workTypes : ["Full-time"],
       skills: (data?.skills ?? []).map((s) => ({ name: s.name, level: (s.level as "Intermediate") ?? "Intermediate" })),
     });
-    const loadVacanciesAndBuild = (
-      profile: import("@/lib/matchCalculation").CandidateProfile,
-      preferredJob: string | undefined,
-      profileId?: string | null
-    ) => {
-      setOpportunitiesLoading(true);
-      const vacancyListPromise = fetch("/api/vacancies", { credentials: "omit" }).then((r) => r.json());
-      const matchesPromise =
-        profileId ? fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`).then((r) => r.json()) : Promise.resolve([]);
-      Promise.all([vacancyListPromise, matchesPromise])
-        .then(([list, matches]: [unknown, Array<{ vacancyId: string; employerLiked?: boolean }>]) => {
-          setOpportunitiesLoading(false);
-          if (!Array.isArray(list) || list.length === 0) return;
-          const cards = buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob);
-          const likedIds = getCandidateLikes();
-          const notYetLiked = cards.filter((c) => !likedIds.includes(c.id));
-          const employerLikedVacancyIds = new Set(
-            (matches || []).filter((m) => m.employerLiked).map((m) => m.vacancyId)
-          );
-          notYetLiked.sort((a, b) => {
-            const aLiked = employerLikedVacancyIds.has(a.id);
-            const bLiked = employerLikedVacancyIds.has(b.id);
-            if (aLiked !== bLiked) return aLiked ? -1 : 1;
-            return b.match - a.match;
+
+    setOpportunitiesLoading(true);
+    const profilePromise = profileUserId
+      ? fetch(`/api/candidates/profile?userId=${encodeURIComponent(profileUserId)}`).then((r) => r.json())
+      : Promise.resolve(null);
+    const vacancyListPromise = fetch("/api/vacancies", { credentials: "omit" }).then((r) => r.json());
+    const matchesPromise = profileId
+      ? fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`).then((r) => r.json())
+      : Promise.resolve([]);
+
+    Promise.all([profilePromise, vacancyListPromise, matchesPromise])
+      .then(([profileData, list, matches]: [ProfilePayload | null, unknown, Array<{ vacancyId: string; employerLiked?: boolean }>]) => {
+        let profile: import("@/lib/matchCalculation").CandidateProfile;
+        let preferredJob: string | undefined;
+        if (profileData?.fullName) {
+          setAvailableToWork(profileData.availableToWork !== false);
+          profile = buildProfileFromApi(profileData);
+          saveCandidateProfile({
+            profile,
+            fullName: profileData.fullName,
+            email: profileData.email ?? "",
+            phone: profileData.phone ?? "",
+            job: profileData.jobTitle ?? undefined,
           });
-          setAllPublishedVacancies(cards);
-          setVacancies(notYetLiked);
-        })
-        .catch(() => setOpportunitiesLoading(false));
-    };
-    if (profileUserId) {
-      fetch(`/api/candidates/profile?userId=${encodeURIComponent(profileUserId)}`)
-        .then((r) => r.json())
-        .then((data: ProfilePayload) => {
-          if (data?.fullName) {
-            setAvailableToWork(data.availableToWork !== false);
-            const profile = buildProfileFromApi(data);
-            saveCandidateProfile({
-              profile,
-              fullName: data.fullName,
-              email: data.email ?? "",
-              phone: data.phone ?? "",
-              job: data.jobTitle ?? undefined,
-            });
-            loadVacanciesAndBuild(profile, data.jobTitle ?? undefined, getCandidateProfileId());
-          } else {
-            const stored = loadCandidateProfile();
-            const fallback = getCandidateProfileForMatch();
-            loadVacanciesAndBuild(stored?.profile ?? fallback, stored?.job ?? undefined, getCandidateProfileId());
-          }
-        })
-        .catch(() => {
+          preferredJob = profileData.jobTitle;
+        } else {
           const stored = loadCandidateProfile();
           const fallback = getCandidateProfileForMatch();
-          loadVacanciesAndBuild(stored?.profile ?? fallback, stored?.job ?? undefined, getCandidateProfileId());
+          profile = stored?.profile ?? fallback;
+          preferredJob = stored?.job;
+        }
+        if (!Array.isArray(list) || list.length === 0) {
+          setOpportunitiesLoading(false);
+          return;
+        }
+        const cards = buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob);
+        const likedIds = getCandidateLikes();
+        const notYetLiked = cards.filter((c) => !likedIds.includes(c.id));
+        const employerLikedVacancyIds = new Set(
+          (matches || []).filter((m) => m.employerLiked).map((m) => m.vacancyId)
+        );
+        notYetLiked.sort((a, b) => {
+          const aLiked = employerLikedVacancyIds.has(a.id);
+          const bLiked = employerLikedVacancyIds.has(b.id);
+          if (aLiked !== bLiked) return aLiked ? -1 : 1;
+          return b.match - a.match;
         });
-    } else {
-      const stored = loadCandidateProfile();
-      const profile = stored?.profile ?? getCandidateProfileForMatch();
-      loadVacanciesAndBuild(profile, stored?.job ?? undefined, getCandidateProfileId());
-    }
+        setAllPublishedVacancies(cards);
+        setVacancies(notYetLiked);
+      })
+      .catch(() => {})
+      .finally(() => setOpportunitiesLoading(false));
   }, []);
   const [liked, setLiked] = useState<Vacancy[]>([]);
   const [passed, setPassed] = useState<Vacancy[]>([]);

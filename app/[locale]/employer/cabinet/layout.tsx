@@ -28,7 +28,9 @@ export default function EmployerCabinetLayout({
   const [availableSlots, setAvailableSlots] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
-  const [companyName, setCompanyName] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string | null>(() =>
+    typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_name") : null
+  );
 
   useEffect(() => {
     fetch("/api/auth/session", { credentials: "include" })

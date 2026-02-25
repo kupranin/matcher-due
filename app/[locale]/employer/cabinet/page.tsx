@@ -121,12 +121,25 @@ export default function EmployerCabinetPage() {
   }, []);
 
   function loadVacanciesAndCandidates() {
-    // Server resolves company + vacancies from session cookie (no client-side userId/companyId).
     setOpportunitiesLoading(true);
-    fetch("/api/vacancies", { credentials: "include" })
-      .then((r) => r.json())
-      .then((list: Array<{ id: string; title: string; company: string; locationCityId: string; salaryMin?: number | null; salaryMax: number; workType: string; isRemote?: boolean; requiredExperienceMonths?: number; requiredEducationLevel?: string; skills?: Array<{ name: string; level?: string; weight?: number }> }>) => {
-        const mapped: EmployerVacancy[] = (Array.isArray(list) ? list : []).map((v) => {
+    const credentials = { credentials: "include" as RequestCredentials };
+    const vacancyListPromise = fetch("/api/vacancies", credentials).then((r) => r.json());
+    const candidatesPromise = fetch("/api/candidates").then((r) => r.json());
+    const matchesPromise = fetch("/api/matches", credentials).then((r) => r.json());
+    const companiesPromise = fetch("/api/companies", credentials).then((r) => r.json());
+
+    Promise.all([vacancyListPromise, candidatesPromise, matchesPromise, companiesPromise])
+      .then(([list, apiCandidates, matchList, company]) => {
+        const hasCompany = company?.id && typeof company === "object" && !("error" in company);
+        if (hasCompany && typeof window !== "undefined") {
+          window.sessionStorage.setItem("matcher_employer_company_id", company.id);
+          if (company.name) window.sessionStorage.setItem("matcher_employer_company_name", company.name);
+        }
+        // If we have no company from API but got a large list, we likely got all published vacancies (no session). Don't show them; refetch when employer-company-ready fires.
+        const rawList = Array.isArray(list) ? list : [];
+        const alreadyHadCompany = typeof window !== "undefined" && window.sessionStorage.getItem("matcher_employer_company_id");
+        const useList = hasCompany || alreadyHadCompany || rawList.length <= 8;
+        const mapped: EmployerVacancy[] = (useList ? rawList : []).map((v: { id: string; title: string; company: string; locationCityId?: string; salaryMin?: number | null; salaryMax: number; workType: string; isRemote?: boolean; requiredExperienceMonths?: number; requiredEducationLevel?: string; skills?: Array<{ name: string; level?: string; weight?: number }> }) => {
           const locationCityId = v.locationCityId ?? "";
           const loc = locationCityId === "tbilisi" ? "Tbilisi" : locationCityId;
           const salaryStr = v.salaryMin != null ? `${v.salaryMin}–${v.salaryMax} GEL` : `${v.salaryMax} GEL`;
@@ -141,29 +154,11 @@ export default function EmployerCabinetPage() {
           };
         });
         setVacancies(mapped);
-        setOpportunitiesLoading(false);
+        setApiCandidates(Array.isArray(apiCandidates) ? apiCandidates : []);
+        setCompanyMatches(Array.isArray(matchList) ? matchList : []);
       })
-      .catch(() => setOpportunitiesLoading(false));
-    fetch("/api/candidates")
-      .then((r) => r.json())
-      .then(setApiCandidates)
-      .catch(() => {});
-    // Matches: server resolves company from session
-    fetch("/api/matches", { credentials: "include" })
-      .then((r) => r.json())
-      .then((list: Array<{ vacancyId: string; candidateProfileId: string; candidateLiked: boolean; candidateName?: string; candidateJobTitle?: string | null; vacancyTitle?: string }>) =>
-        setCompanyMatches(Array.isArray(list) ? list : [])
-      )
-      .catch(() => setCompanyMatches([]));
-    // Keep sessionStorage in sync for chats etc.
-    fetch("/api/companies", { credentials: "include" })
-      .then((r) => r.json())
-      .then((company: { id?: string } | null) => {
-        if (company?.id && typeof window !== "undefined") {
-          window.sessionStorage.setItem("matcher_employer_company_id", company.id);
-        }
-      })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setOpportunitiesLoading(false));
   }
 
   const likedCountByVacancyId = useMemo(() => {
