@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     let companyId = searchParams.get("companyId");
 
-    // Resolve company from session when no companyId (so employer cabinet always gets their vacancies)
+    // Resolve company from session only when no companyId and session is EMPLOYER (candidate gets all published)
     if (!companyId) {
       const cookieStore = await cookies();
       const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -28,9 +28,9 @@ export async function GET(request: Request) {
             where: { userId: session.user.id },
             select: { id: true },
           });
-          // Use company id so they get their vacancies; if no company, force empty list (use non-existent id)
           companyId = company?.id ?? "";
         }
+        // CANDIDATE or other: leave companyId null so we return all PUBLISHED vacancies
       }
     }
 

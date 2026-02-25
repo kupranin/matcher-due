@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { hasLocale } from "next-intl";
 import { routing } from "@/i18n/routing";
 import { Geist, Geist_Mono, Noto_Sans_Georgian, Manrope } from "next/font/google";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import "../globals.css";
 
 const geistSans = Geist({
@@ -52,6 +53,9 @@ export default async function LocaleLayout({ children, params }: Props) {
         lang={displayLocale}
         data-locale={locale}
       >
+        <div className="fixed right-4 top-4 z-[100] md:right-6 md:top-6">
+          <LanguageSwitcher />
+        </div>
         {children}
       </div>
     </NextIntlClientProvider>

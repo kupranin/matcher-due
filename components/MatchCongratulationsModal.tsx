@@ -9,10 +9,13 @@ export default function MatchCongratulationsModal({
   match,
   onClose,
   onOpenChat,
+  userRole = "candidate",
 }: {
   match: MutualMatch | null;
   onClose: () => void;
   onOpenChat: () => void;
+  /** "candidate" = company liked you; "employer" = candidate liked you (your vacancy) */
+  userRole?: "candidate" | "employer";
 }) {
   return (
     <AnimatePresence>
@@ -79,8 +82,17 @@ export default function MatchCongratulationsModal({
               </motion.span>
               <h2 className="font-heading mt-4 text-2xl font-bold tracking-tight text-gray-900">It&apos;s a match!</h2>
               <p className="mt-2 text-gray-600">
-                <span className="font-semibold text-matcher-dark">{match.company}</span> liked you for{" "}
-                <span className="font-semibold">{match.vacancyTitle}</span>. Time to schedule next steps!
+                {userRole === "employer" ? (
+                  <>
+                    <span className="font-semibold text-matcher-dark">{match.candidateName}</span> liked you for{" "}
+                    <span className="font-semibold">{match.vacancyTitle}</span>. Time to schedule next steps!
+                  </>
+                ) : (
+                  <>
+                    <span className="font-semibold text-matcher-dark">{match.company}</span> liked you for{" "}
+                    <span className="font-semibold">{match.vacancyTitle}</span>. Time to schedule next steps!
+                  </>
+                )}
               </p>
 
               <div className="mt-8 flex flex-col gap-3">

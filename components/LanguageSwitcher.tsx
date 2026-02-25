@@ -9,19 +9,41 @@ export default function LanguageSwitcher() {
   const pathname = usePathname();
   const effectiveLocale = locale === "local" ? "en" : locale;
 
-  function switchLocale() {
-    const next = effectiveLocale === "en" ? "ka" : "en";
+  function switchTo(next: "en" | "ka") {
+    if (next === effectiveLocale) return;
     router.replace(pathname, { locale: next });
   }
 
   return (
-    <button
-      type="button"
-      onClick={switchLocale}
-      className="min-w-[3.25rem] rounded-full border border-gray-200 px-3 py-1.5 text-center text-sm font-medium text-gray-600 transition-colors hover:border-matcher hover:bg-matcher-pale/50 hover:text-matcher-dark"
-      title={effectiveLocale === "en" ? "ქართულად" : "In English"}
+    <div
+      className="flex rounded-full border border-gray-200 bg-white/95 shadow-sm backdrop-blur"
+      role="group"
+      aria-label="Language"
     >
-      {effectiveLocale === "en" ? "KA" : "EN"}
-    </button>
+      <button
+        type="button"
+        onClick={() => switchTo("en")}
+        className={`rounded-l-full px-3 py-1.5 text-sm font-medium transition-colors ${
+          effectiveLocale === "en"
+            ? "bg-matcher text-white"
+            : "text-gray-600 hover:bg-gray-100 hover:text-matcher-dark"
+        }`}
+        title="English"
+      >
+        EN
+      </button>
+      <button
+        type="button"
+        onClick={() => switchTo("ka")}
+        className={`rounded-r-full border-l border-gray-200 px-3 py-1.5 text-sm font-medium transition-colors ${
+          effectiveLocale === "ka"
+            ? "bg-matcher text-white"
+            : "text-gray-600 hover:bg-gray-100 hover:text-matcher-dark"
+        }`}
+        title="ქართული"
+      >
+        KA
+      </button>
+    </div>
   );
 }

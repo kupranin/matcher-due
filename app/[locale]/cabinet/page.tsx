@@ -151,6 +151,7 @@ export default function CabinetPage() {
   const t = useTranslations("cabinet");
   const router = useRouter();
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
+  const [allPublishedVacancies, setAllPublishedVacancies] = useState<Vacancy[]>([]);
   const [opportunitiesLoading, setOpportunitiesLoading] = useState(true);
 
   const [availableToWork, setAvailableToWork] = useState(true);
@@ -187,7 +188,7 @@ export default function CabinetPage() {
       profileId?: string | null
     ) => {
       setOpportunitiesLoading(true);
-      const vacancyListPromise = fetch("/api/vacancies").then((r) => r.json());
+      const vacancyListPromise = fetch("/api/vacancies", { credentials: "omit" }).then((r) => r.json());
       const matchesPromise =
         profileId ? fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`).then((r) => r.json()) : Promise.resolve([]);
       Promise.all([vacancyListPromise, matchesPromise])
@@ -206,6 +207,7 @@ export default function CabinetPage() {
             if (aLiked !== bLiked) return aLiked ? -1 : 1;
             return b.match - a.match;
           });
+          setAllPublishedVacancies(cards);
           setVacancies(notYetLiked);
         })
         .catch(() => setOpportunitiesLoading(false));
@@ -353,6 +355,34 @@ export default function CabinetPage() {
               className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${availableToWork ? "translate-x-7" : "translate-x-1"} mt-1`}
             />
           </button>
+        </div>
+      )}
+
+      {/* Published vacancies at the top */}
+      {allPublishedVacancies.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-matcher/20 bg-white/90 px-4 py-4 shadow-sm backdrop-blur sm:px-5">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-matcher-dark">
+            {t("publishedOpportunities")}
+          </h2>
+          <p className="mt-0.5 text-xs text-gray-500">
+            {t("publishedOpportunitiesCount", { count: allPublishedVacancies.length })}
+          </p>
+          <ul className="mt-3 space-y-2 max-h-48 overflow-y-auto">
+            {allPublishedVacancies.slice(0, 20).map((v) => (
+              <li key={v.id} className="flex items-center justify-between gap-2 rounded-xl border border-gray-100 bg-gray-50/80 px-3 py-2 text-left">
+                <div className="min-w-0 flex-1">
+                  <span className="font-medium text-gray-900">{v.title}</span>
+                  <span className="ml-2 text-sm text-gray-500">· {v.company}</span>
+                </div>
+                <span className="shrink-0 rounded-full bg-matcher/15 px-2 py-0.5 text-xs font-semibold text-matcher-dark">
+                  {v.match}%
+                </span>
+              </li>
+            ))}
+          </ul>
+          {allPublishedVacancies.length > 20 && (
+            <p className="mt-2 text-xs text-gray-500">{t("andMore", { count: allPublishedVacancies.length - 20 })}</p>
+          )}
         </div>
       )}
 

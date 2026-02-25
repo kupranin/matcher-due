@@ -686,7 +686,10 @@
     "interestSentTitle": "ინტერესი გაიგზავნა!",
     "interestSentMessage": "შენი ინტერესი {vacancy} — {company}-ში გაიგზავნა. დამსაქმებელი ნახავს და შეიძლება მოგიწონოთ — შეხვედრისას შეამოწმე ჩატები.",
     "keepSwiping": "განაგრძე გადაფურცვლა",
-    "loadingOpportunities": "შესაძლებლობები იტვირთება…"
+    "loadingOpportunities": "შესაძლებლობები იტვირთება…",
+    "publishedOpportunities": "გამოქვეყნებული ვაკანსიები",
+    "publishedOpportunitiesCount": "{count} ვაკანსია შენთვის",
+    "andMore": "+ {count} სხვა"
   },
   "chats": {
     "noMatchesYet": "ჯერ შესაბამისობები არ არის",

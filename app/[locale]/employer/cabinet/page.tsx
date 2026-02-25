@@ -560,6 +560,7 @@ export default function EmployerCabinetPage() {
         match={newMatch}
         onClose={() => setNewMatch(null)}
         onOpenChat={handleOpenChat}
+        userRole="employer"
       />
     </div>
   );

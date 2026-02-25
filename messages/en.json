@@ -575,7 +575,10 @@
     "interestSentTitle": "Interest sent!",
     "interestSentMessage": "Your interest in {vacancy} at {company} has been sent. The employer will see it and may like you back — check Chats when you match.",
     "keepSwiping": "Keep swiping",
-    "loadingOpportunities": "Loading opportunities…"
+    "loadingOpportunities": "Loading opportunities…",
+    "publishedOpportunities": "Published opportunities",
+    "publishedOpportunitiesCount": "{count} vacancies for you",
+    "andMore": "+ {count} more"
   },
   "chats": {
     "noMatchesYet": "No matches yet",

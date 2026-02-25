@@ -45,6 +45,8 @@ export async function GET() {
       companyId = company.id;
       const raw = (company as { availableSlots?: number }).availableSlots;
       if (typeof raw === "number" && raw >= 0) availableSlotsValue = raw;
+      // Everyone gets at least 10 vacancy slots
+      if (availableSlotsValue < 10) availableSlotsValue = 10;
     } catch (colErr) {
       const byId = await prisma.company.findUnique({
         where: { userId: session.user.id },
@@ -54,7 +56,7 @@ export async function GET() {
       companyId = byId.id;
     }
 
-    // Ensure at least 10 slots for existing companies (backfill)
+    // Ensure at least 10 slots: backfill this company and ALL companies with < 10 (so everyone in DB has 10)
     if (availableSlotsValue < 10) {
       await prisma.company.update({
         where: { id: companyId },
@@ -62,6 +64,10 @@ export async function GET() {
       }).catch(() => {});
       availableSlotsValue = 10;
     }
+    await prisma.company.updateMany({
+      where: { availableSlots: { lt: 10 } },
+      data: { availableSlots: 10 },
+    }).catch(() => {});
 
     const [latest, vacancyCount] = await Promise.all([
       prisma.subscription.findFirst({

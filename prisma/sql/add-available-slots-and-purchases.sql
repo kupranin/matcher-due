@@ -31,10 +31,9 @@ CREATE TABLE IF NOT EXISTS "purchases" (
   CONSTRAINT "purchases_pkey" PRIMARY KEY ("id")
 );
 
--- 4) All current users start with 10 vacancy slots (backfill existing companies)
+-- 4) EVERYONE in the database gets 10 vacancy slots (backfill ALL companies)
 UPDATE "Company"
-SET "available_slots" = 10
-WHERE "available_slots" IS NULL OR "available_slots" < 10;
+SET "available_slots" = 10;
 
 -- If your companies table has a different name (e.g. "companies"), use that in ALTER TABLE.
 -- Prisma default for model Company is table "Company".
