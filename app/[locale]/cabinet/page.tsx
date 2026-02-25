@@ -303,9 +303,10 @@ export default function CabinetPage() {
     setTimeout(() => setExitDir(null), 50);
   }
 
-  function handleOpenChat() {
+  function handleOpenChat(m?: MutualMatch | null) {
+    const id = (m ?? newMatch)?.id;
     setNewMatch(null);
-    router.push("/cabinet/chats");
+    router.push(id ? `/cabinet/chats?matchId=${encodeURIComponent(id)}` : "/cabinet/chats");
   }
 
   async function toggleAvailableToWork() {
@@ -501,7 +502,7 @@ export default function CabinetPage() {
       <MatchCongratulationsModal
         match={newMatch}
         onClose={() => setNewMatch(null)}
-        onOpenChat={handleOpenChat}
+        onOpenChat={(match) => handleOpenChat(match)}
       />
         </>
       )}

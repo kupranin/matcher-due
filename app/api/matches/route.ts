@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
-import { SESSION_COOKIE_NAME } from "@/lib/session";
+import { getEmployerCompanyFromSession, vacancyBelongsToEmployerCompany } from "@/lib/employerAuth";
 import { computeMatchScore } from "@/lib/matchScore";
 
-/** POST /api/matches — record a like (candidate or employer). Creates or updates Match. */
+/**
+ * POST /api/matches — record a like (candidate or employer).
+ * - Candidate: sends candidateLiked: true; no auth required (match is by vacancyId + candidateProfileId).
+ * - Employer: sends employerLiked: true; vacancy must belong to employer's company (company matches vacancy).
+ */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const vacancyId = typeof body?.vacancyId === "string" ? body.vacancyId.trim() : "";
     const candidateProfileId = typeof body?.candidateProfileId === "string" ? body.candidateProfileId.trim() : "";
     const candidateLiked = Boolean(body?.candidateLiked);
@@ -16,6 +19,17 @@ export async function POST(request: Request) {
 
     if (!vacancyId || !candidateProfileId) {
       return NextResponse.json({ error: "vacancyId and candidateProfileId required" }, { status: 400 });
+    }
+
+    if (employerLiked) {
+      const ctx = await getEmployerCompanyFromSession();
+      if (!ctx) {
+        return NextResponse.json({ error: "Sign in as employer to like a candidate" }, { status: 401 });
+      }
+      const allowed = await vacancyBelongsToEmployerCompany(vacancyId, ctx.companyId);
+      if (!allowed) {
+        return NextResponse.json({ error: "Vacancy does not belong to your company" }, { status: 403 });
+      }
     }
 
     const [candidate, vacancy] = await Promise.all([
@@ -73,7 +87,6 @@ export async function POST(request: Request) {
       },
     });
 
-    // Re-fetch so we return the exact DB state (both likes); fixes mutual match not showing when employer likes after candidate
     const match = await prisma.match.findUnique({
       where: { vacancyId_candidateProfileId: { vacancyId, candidateProfileId } },
     });
@@ -92,31 +105,15 @@ export async function POST(request: Request) {
   }
 }
 
-/** GET /api/matches — ?candidateProfileId= for candidate; ?companyId= or session for employer. */
+/**
+ * GET /api/matches
+ * - ?candidateProfileId= : candidate's matches (all vacancies they liked / were liked by).
+ * - No param + employer session: matches for that company's vacancies only (company matches vacancy).
+ */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const candidateProfileId = searchParams.get("candidateProfileId");
-    let companyId = searchParams.get("companyId");
-
-    // Resolve employer company from session when no companyId
-    if (!companyId && !candidateProfileId) {
-      const cookieStore = await cookies();
-      const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-      if (token) {
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { id: true, role: true } } },
-        });
-        if (session && session.expiresAt >= new Date() && session.user.role === "EMPLOYER") {
-          const company = await prisma.company.findUnique({
-            where: { userId: session.user.id },
-            select: { id: true },
-          });
-          if (company) companyId = company.id;
-        }
-      }
-    }
 
     if (candidateProfileId) {
       const list = await prisma.match.findMany({
@@ -141,34 +138,36 @@ export async function GET(request: Request) {
         }))
       );
     }
-    if (companyId) {
-      const list = await prisma.match.findMany({
-        where: { vacancy: { companyId } },
-        include: {
-          vacancy: { select: { title: true }, include: { company: { select: { name: true } } } },
-          candidateProfile: { select: { id: true, fullName: true, jobTitle: true } },
-        },
-        orderBy: { createdAt: "desc" },
-      });
-      return NextResponse.json(
-        list.map((m) => ({
-          id: m.id,
-          vacancyId: m.vacancyId,
-          candidateProfileId: m.candidateProfileId,
-          candidateLiked: Boolean(m.candidateLiked),
-          employerLiked: Boolean(m.employerLiked),
-          candidatePitch: m.candidatePitch,
-          matchScore: m.matchScore ?? undefined,
-          createdAt: m.createdAt.toISOString(),
-          vacancyTitle: m.vacancy?.title ?? "",
-          company: m.vacancy?.company?.name ?? "",
-          candidateName: m.candidateProfile?.fullName ?? "Candidate",
-          candidateJobTitle: m.candidateProfile?.jobTitle ?? null,
-        }))
-      );
+
+    const ctx = await getEmployerCompanyFromSession();
+    if (!ctx) {
+      return NextResponse.json([]);
     }
-    // No companyId (e.g. session not sent or no company): return empty array so UI shows "No matches" instead of error
-    return NextResponse.json([]);
+
+    const list = await prisma.match.findMany({
+      where: { vacancy: { companyId: ctx.companyId } },
+      include: {
+        vacancy: { select: { title: true }, include: { company: { select: { name: true } } } },
+        candidateProfile: { select: { id: true, fullName: true, jobTitle: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    return NextResponse.json(
+      list.map((m) => ({
+        id: m.id,
+        vacancyId: m.vacancyId,
+        candidateProfileId: m.candidateProfileId,
+        candidateLiked: Boolean(m.candidateLiked),
+        employerLiked: Boolean(m.employerLiked),
+        candidatePitch: m.candidatePitch,
+        matchScore: m.matchScore ?? undefined,
+        createdAt: m.createdAt.toISOString(),
+        vacancyTitle: m.vacancy?.title ?? "",
+        company: m.vacancy?.company?.name ?? "",
+        candidateName: m.candidateProfile?.fullName ?? "Candidate",
+        candidateJobTitle: m.candidateProfile?.jobTitle ?? null,
+      }))
+    );
   } catch (e) {
     console.error("Matches list error:", e);
     return NextResponse.json({ error: "Failed to list matches" }, { status: 500 });

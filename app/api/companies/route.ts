@@ -1,34 +1,24 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
-import { SESSION_COOKIE_NAME } from "@/lib/session";
+import { getEmployerCompanyFromSession } from "@/lib/employerAuth";
 
-/** GET /api/companies — get company for employer. Use ?userId= or session cookie (session wins for mapping). */
-export async function GET(request: Request) {
+/**
+ * GET /api/companies
+ * Returns the company for the current employer (session). User must match company: 1:1.
+ * No query params needed when called with credentials—company is resolved from session.
+ */
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    let userId = searchParams.get("userId");
-
-    // Resolve userId from session if not provided (so cabinet always gets correct company)
-    if (!userId) {
-      const cookieStore = await cookies();
-      const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-      if (token) {
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { id: true, role: true } } },
-        });
-        if (session && session.expiresAt >= new Date() && session.user.role === "EMPLOYER") {
-          userId = session.user.id;
-        }
-      }
+    const ctx = await getEmployerCompanyFromSession();
+    if (!ctx) {
+      return NextResponse.json({ error: "Sign in as employer to view your company" }, { status: 401 });
     }
-    if (!userId) return NextResponse.json({ error: "userId required or sign in as employer" }, { status: 400 });
 
     const company = await prisma.company.findUnique({
-      where: { userId },
+      where: { id: ctx.companyId },
     });
     if (!company) return NextResponse.json(null);
+
     return NextResponse.json({
       id: company.id,
       userId: company.userId,
@@ -50,22 +40,41 @@ export async function GET(request: Request) {
   }
 }
 
-/** POST /api/companies — create company for user (e.g. after employer register). Body: userId, name, companyId, contactEmail, contactPhone. */
+/**
+ * POST /api/companies
+ * Create company for the current employer (session). User must match company.
+ * Body: name, companyId, contactEmail, contactPhone (optional: bio, website, etc.)
+ */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const userId = typeof body?.userId === "string" ? body.userId.trim() : "";
+    const ctx = await getEmployerCompanyFromSession();
+    if (!ctx) {
+      return NextResponse.json({ error: "Sign in as employer to create a company" }, { status: 401 });
+    }
+
+    const body = await request.json().catch(() => ({}));
     const name = typeof body?.name === "string" ? body.name.trim() : "";
     const companyId = typeof body?.companyId === "string" ? body.companyId.trim() : "N/A";
     const contactEmail = typeof body?.contactEmail === "string" ? body.contactEmail.trim().toLowerCase() : "";
     const contactPhone = typeof body?.contactPhone === "string" ? body.contactPhone.trim() : "";
-    if (!userId || !name || !contactEmail) {
-      return NextResponse.json({ error: "userId, name, and contactEmail required" }, { status: 400 });
+
+    if (!name || !contactEmail) {
+      return NextResponse.json({ error: "name and contactEmail required" }, { status: 400 });
     }
-    const existing = await prisma.company.findUnique({ where: { userId } });
-    if (existing) return NextResponse.json({ id: existing.id, userId: existing.userId });
+
+    const existing = await prisma.company.findUnique({ where: { userId: ctx.userId } });
+    if (existing) {
+      return NextResponse.json({ id: existing.id, userId: existing.userId });
+    }
+
     const company = await prisma.company.create({
-      data: { userId, name, companyId, contactEmail, contactPhone },
+      data: {
+        userId: ctx.userId,
+        name,
+        companyId,
+        contactEmail,
+        contactPhone,
+      },
     });
     return NextResponse.json({ id: company.id, userId: company.userId });
   } catch (e) {
@@ -74,14 +83,22 @@ export async function POST(request: Request) {
   }
 }
 
-/** PATCH /api/companies — update company. Body: userId + fields. */
+/**
+ * PATCH /api/companies
+ * Update the current employer's company only. User must match company.
+ * Body: name, companyId, contactEmail, contactPhone, bio, website, etc.
+ */
 export async function PATCH(request: Request) {
   try {
-    const body = await request.json();
-    const userId = typeof body?.userId === "string" ? body.userId.trim() : "";
-    if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
-    const company = await prisma.company.findUnique({ where: { userId } });
+    const ctx = await getEmployerCompanyFromSession();
+    if (!ctx) {
+      return NextResponse.json({ error: "Sign in as employer to update your company" }, { status: 401 });
+    }
+
+    const company = await prisma.company.findUnique({ where: { id: ctx.companyId } });
     if (!company) return NextResponse.json({ error: "Company not found" }, { status: 404 });
+
+    const body = await request.json().catch(() => ({}));
     const update: Record<string, unknown> = {};
     if (typeof body?.name === "string") update.name = body.name.trim();
     if (typeof body?.companyId === "string") update.companyId = body.companyId.trim();
@@ -94,7 +111,8 @@ export async function PATCH(request: Request) {
     if (typeof body?.address === "string") update.address = body.address.trim() || null;
     if (typeof body?.linkedIn === "string") update.linkedIn = body.linkedIn.trim() || null;
     if (body?.logo !== undefined) update.logo = typeof body.logo === "string" && body.logo.trim() ? body.logo.trim() : null;
-    await prisma.company.update({ where: { userId }, data: update as never });
+
+    await prisma.company.update({ where: { id: ctx.companyId }, data: update as never });
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("Company patch error:", e);

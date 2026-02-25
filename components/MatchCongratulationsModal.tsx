@@ -13,7 +13,8 @@ export default function MatchCongratulationsModal({
 }: {
   match: MutualMatch | null;
   onClose: () => void;
-  onOpenChat: () => void;
+  /** Called with the match so the parent can navigate with matchId (e.g. /chats?matchId=...) */
+  onOpenChat: (match: MutualMatch) => void;
   /** "candidate" = company liked you; "employer" = candidate liked you (your vacancy) */
   userRole?: "candidate" | "employer";
 }) {
@@ -98,7 +99,7 @@ export default function MatchCongratulationsModal({
               <div className="mt-8 flex flex-col gap-3">
                 <button
                   type="button"
-                  onClick={onOpenChat}
+                  onClick={() => onOpenChat(match)}
                   className="rounded-xl bg-matcher px-6 py-3 font-semibold text-white shadow-lg hover:bg-matcher-dark"
                 >
                   Open chat to schedule

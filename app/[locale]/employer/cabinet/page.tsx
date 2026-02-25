@@ -302,9 +302,10 @@ export default function EmployerCabinetPage() {
     } else setPassed((prev) => [...prev, current]);
   }
 
-  function handleOpenChat() {
+  function handleOpenChat(m?: MutualMatch | null) {
+    const id = (m ?? newMatch)?.id;
     setNewMatch(null);
-    router.push("/employer/cabinet/chats");
+    router.push(id ? `/employer/cabinet/chats?matchId=${encodeURIComponent(id)}` : "/employer/cabinet/chats");
   }
 
   if (opportunitiesLoading) {
@@ -559,7 +560,7 @@ export default function EmployerCabinetPage() {
       <MatchCongratulationsModal
         match={newMatch}
         onClose={() => setNewMatch(null)}
-        onOpenChat={handleOpenChat}
+        onOpenChat={(match) => handleOpenChat(match)}
         userRole="employer"
       />
     </div>

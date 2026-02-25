@@ -71,20 +71,11 @@ export default function EmployerRegisterPage() {
         setRegisterError(regData.error || "Registration failed");
         return;
       }
-      await fetch("/api/companies", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          name: companyName.trim(),
-          companyId: companyId.trim() || "N/A",
-          contactEmail: email.trim().toLowerCase(),
-          contactPhone: phone.trim(),
-        }),
-      });
+      // Log in first so the session cookie is set; then create company (API requires employer session).
       const loginRes = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           password,
@@ -97,11 +88,23 @@ export default function EmployerRegisterPage() {
         return;
       }
       const loginData = await loginRes.json().catch(() => ({}));
+      const sessionUserId = loginData.userId || userId;
+      // Create company (backend uses session; no userId in body).
+      const companyRes = await fetch("/api/companies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: companyName.trim(),
+          companyId: companyId.trim() || "N/A",
+          contactEmail: email.trim().toLowerCase(),
+          contactPhone: phone.trim(),
+        }),
+      });
       if (typeof window !== "undefined") {
         window.sessionStorage.removeItem("employerHasSubscription");
-        window.sessionStorage.setItem("matcher_employer_user_id", loginData.userId || userId);
+        window.sessionStorage.setItem("matcher_employer_user_id", sessionUserId);
         window.sessionStorage.setItem("employerLoggedIn", "1");
-        const companyRes = await fetch(`/api/companies?userId=${encodeURIComponent(loginData.userId || userId)}`);
         const companyData = await companyRes.json().catch(() => null);
         if (companyData?.id) window.sessionStorage.setItem("matcher_employer_company_id", companyData.id);
       }

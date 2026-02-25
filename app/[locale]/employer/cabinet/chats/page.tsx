@@ -1,39 +1,56 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import type { MutualMatch } from "@/lib/matchStorage";
 import MatchChatWindow from "@/components/MatchChatWindow";
 
+type MatchRow = MutualMatch & { candidateJobTitle?: string | null };
+
+function toMutualMatch(m: {
+  id: string;
+  vacancyId: string;
+  candidateProfileId: string;
+  candidateLiked: boolean;
+  employerLiked: boolean;
+  vacancyTitle: string;
+  company: string;
+  candidateName: string;
+  candidateJobTitle?: string | null;
+  createdAt: string;
+}): MatchRow {
+  return {
+    id: m.id,
+    vacancyId: m.vacancyId,
+    candidateId: m.candidateProfileId,
+    candidateName: m.candidateName ?? "Candidate",
+    candidateJobTitle: m.candidateJobTitle ?? null,
+    vacancyTitle: m.vacancyTitle,
+    company: m.company,
+    createdAt: new Date(m.createdAt).getTime(),
+  };
+}
+
 export default function EmployerChatsPage() {
   const t = useTranslations("chats");
   const searchParams = useSearchParams();
   const matchIdFromUrl = searchParams.get("matchId");
-  const [matches, setMatches] = useState<(MutualMatch & { candidateJobTitle?: string | null })[]>([]);
+  const [matches, setMatches] = useState<MatchRow[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<MutualMatch | null>(null);
   const [loading, setLoading] = useState(true);
+  const [singleMatchLoading, setSingleMatchLoading] = useState(false);
+  const singleMatchFetchedForId = useRef<string | null>(null);
 
   function fetchMatches() {
-    const companyId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_id") : null;
-    const url = companyId ? `/api/matches?companyId=${encodeURIComponent(companyId)}` : "/api/matches";
-    return fetch(url, { credentials: "include" })
+    return fetch("/api/matches", { credentials: "include" })
       .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
       .then(({ ok, data: list }: { ok: boolean; data: unknown }) => {
         const arr = ok && Array.isArray(list) ? list as Array<{ id: string; vacancyId: string; candidateProfileId: string; candidateLiked: boolean; employerLiked: boolean; vacancyTitle: string; company: string; candidateName: string; candidateJobTitle?: string | null; createdAt: string }> : [];
         const mutual = arr
           .filter((m) => m.candidateLiked === true && m.employerLiked === true)
-          .map((m) => ({
-            id: m.id,
-            vacancyId: m.vacancyId,
-            candidateId: m.candidateProfileId,
-            candidateName: m.candidateName ?? "Candidate",
-            candidateJobTitle: m.candidateJobTitle ?? null,
-            vacancyTitle: m.vacancyTitle,
-            company: m.company,
-            createdAt: new Date(m.createdAt).getTime(),
-          }));
+          .map(toMutualMatch);
         setMatches(mutual);
       })
       .catch(() => setMatches([]));
@@ -57,7 +74,35 @@ export default function EmployerChatsPage() {
     if (match) setSelectedMatch(match);
   }, [matchIdFromUrl, matches]);
 
-  if (loading) {
+  // When list is empty but we have matchId in URL, try to load that single match (e.g. just created, list not synced yet).
+  useEffect(() => {
+    if (loading || matches.length > 0 || !matchIdFromUrl || singleMatchFetchedForId.current === matchIdFromUrl) return;
+    singleMatchFetchedForId.current = matchIdFromUrl;
+    setSingleMatchLoading(true);
+    fetch(`/api/matches/${encodeURIComponent(matchIdFromUrl)}`, { credentials: "include" })
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (ok && data?.id) {
+          const row = toMutualMatch({
+            id: data.id,
+            vacancyId: data.vacancyId,
+            candidateProfileId: data.candidateProfileId,
+            candidateLiked: data.candidateLiked,
+            employerLiked: data.employerLiked,
+            vacancyTitle: data.vacancyTitle,
+            company: data.company,
+            candidateName: data.candidateName,
+            candidateJobTitle: data.candidateJobTitle,
+            createdAt: data.createdAt,
+          });
+          setMatches([row]);
+          setSelectedMatch(row);
+        }
+      })
+      .finally(() => setSingleMatchLoading(false));
+  }, [loading, matches.length, matchIdFromUrl]);
+
+  if (loading || singleMatchLoading) {
     return (
       <div className="mx-auto max-w-md px-4 py-16">
         <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-white p-12 text-center">

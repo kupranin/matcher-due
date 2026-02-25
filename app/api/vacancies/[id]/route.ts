@@ -1,51 +1,34 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
-import { SESSION_COOKIE_NAME } from "@/lib/session";
+import { getEmployerCompanyFromSession } from "@/lib/employerAuth";
 
 type Params = { params: Promise<{ id: string }> };
 
-/** DELETE /api/vacancies/[id] — delete vacancy. Must belong to current employer (session or companyId). */
-export async function DELETE(
-  request: Request,
-  { params }: Params
-) {
+/**
+ * DELETE /api/vacancies/[id]
+ * Company must match vacancy: only the current employer's company can delete its vacancies.
+ */
+export async function DELETE(request: Request, { params }: Params) {
   try {
     const { id: vacancyId } = await params;
     if (!vacancyId) {
       return NextResponse.json({ error: "Vacancy ID required" }, { status: 400 });
     }
 
+    const ctx = await getEmployerCompanyFromSession();
+    if (!ctx) {
+      return NextResponse.json({ error: "Sign in as employer to delete a vacancy" }, { status: 401 });
+    }
+
     const vacancy = await prisma.vacancy.findUnique({
       where: { id: vacancyId },
-      include: { company: { select: { id: true, userId: true } } },
+      select: { id: true, companyId: true },
     });
     if (!vacancy) {
       return NextResponse.json({ error: "Vacancy not found" }, { status: 404 });
     }
 
-    let allowed = false;
-    const { searchParams } = new URL(request.url);
-    const companyId = searchParams.get("companyId");
-
-    if (companyId && vacancy.companyId === companyId) {
-      allowed = true;
-    }
-    if (!allowed) {
-      const cookieStore = await cookies();
-      const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-      if (token) {
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { id: true, role: true } } },
-        });
-        if (session?.user?.role === "EMPLOYER" && session.expiresAt >= new Date() && vacancy.company.userId === session.user.id) {
-          allowed = true;
-        }
-      }
-    }
-
-    if (!allowed) {
+    if (vacancy.companyId !== ctx.companyId) {
       return NextResponse.json({ error: "Not allowed to delete this vacancy" }, { status: 403 });
     }
 
