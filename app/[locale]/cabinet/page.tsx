@@ -173,34 +173,30 @@ export default function CabinetPage() {
       availableToWork?: boolean;
     } | null;
 
-    const buildProfileFromApi = (data: ProfilePayload): import("@/lib/matchCalculation").CandidateProfile => ({
-      locationCityId: data?.locationCityId ?? "tbilisi",
-      salaryMin: data?.salaryMin ?? 800,
-      willingToRelocate: data?.willingToRelocate ?? false,
-      experienceMonths: data?.experienceMonths ?? 0,
-      educationLevel: (data?.educationLevel as "High School") ?? "High School",
-      workTypes: data?.workTypes?.length ? data.workTypes : ["Full-time"],
-      skills: (data?.skills ?? []).map((s) => ({ name: s.name, level: (s.level as "Intermediate") ?? "Intermediate" })),
-    });
-
-    const profileUserId = getCandidateUserId();
-    const profileId = getCandidateProfileId();
+    function buildProfileFromApi(data: ProfilePayload): import("@/lib/matchCalculation").CandidateProfile {
+      return {
+        locationCityId: data?.locationCityId ?? "tbilisi",
+        salaryMin: data?.salaryMin ?? 800,
+        willingToRelocate: data?.willingToRelocate ?? false,
+        experienceMonths: data?.experienceMonths ?? 0,
+        educationLevel: (data?.educationLevel as "High School") ?? "High School",
+        workTypes: data?.workTypes?.length ? data.workTypes : ["Full-time"],
+        skills: (data?.skills ?? []).map((s) => ({ name: s.name, level: (s.level as "Intermediate") ?? "Intermediate" })),
+      };
+    }
 
     setOpportunitiesLoading(true);
+    const uid = getCandidateUserId();
+    const pid = getCandidateProfileId();
 
-    const profilePromise = profileUserId
-      ? fetch(`/api/candidates/profile?userId=${encodeURIComponent(profileUserId)}`).then((r) => r.json())
-      : Promise.resolve(null);
-    const vacancyListPromise = fetch("/api/vacancies", { credentials: "omit" }).then((r) => r.json());
-    const matchesPromise = profileId
-      ? fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`).then((r) => r.json())
-      : Promise.resolve([]);
+    const p1 = uid ? fetch(`/api/candidates/profile?userId=${encodeURIComponent(uid)}`).then((r) => r.json()) : Promise.resolve(null);
+    const p2 = fetch("/api/vacancies", { credentials: "omit" }).then((r) => r.json());
+    const p3 = pid ? fetch(`/api/matches?candidateProfileId=${encodeURIComponent(pid)}`).then((r) => r.json()) : Promise.resolve([]);
 
-    Promise.all([profilePromise, vacancyListPromise, matchesPromise])
+    Promise.all([p1, p2, p3])
       .then(([profileData, list, matches]: [ProfilePayload | null, unknown, Array<{ vacancyId: string; employerLiked?: boolean }>]) => {
         let profile: import("@/lib/matchCalculation").CandidateProfile;
         let preferredJob: string | undefined;
-
         if (profileData?.fullName) {
           setAvailableToWork(profileData.availableToWork !== false);
           profile = buildProfileFromApi(profileData);
@@ -219,19 +215,15 @@ export default function CabinetPage() {
           preferredJob = stored?.job;
         }
 
-        if (!Array.isArray(list) || list.length === 0) {
-          return;
-        }
+        if (!Array.isArray(list) || list.length === 0) return;
 
         const cards = buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob);
         const likedIds = getCandidateLikes();
         const notYetLiked = cards.filter((c) => !likedIds.includes(c.id));
-        const employerLikedVacancyIds = new Set(
-          (matches || []).filter((m) => m.employerLiked).map((m) => m.vacancyId)
-        );
+        const employerLikedIds = new Set((matches || []).filter((m) => m.employerLiked).map((m) => m.vacancyId));
         notYetLiked.sort((a, b) => {
-          const aLiked = employerLikedVacancyIds.has(a.id);
-          const bLiked = employerLikedVacancyIds.has(b.id);
+          const aLiked = employerLikedIds.has(a.id);
+          const bLiked = employerLikedIds.has(b.id);
           if (aLiked !== bLiked) return aLiked ? -1 : 1;
           return b.match - a.match;
         });
