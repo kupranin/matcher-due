@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
+import { SESSION_COOKIE_NAME } from "@/lib/session";
 import { computeMatchScore } from "@/lib/matchScore";
 
 /** POST /api/matches — record a like (candidate or employer). Creates or updates Match. */
@@ -82,12 +84,31 @@ export async function POST(request: Request) {
   }
 }
 
-/** GET /api/matches?candidateProfileId= — matches for candidate. GET /api/matches?companyId= — matches for employer's company. */
+/** GET /api/matches — ?candidateProfileId= for candidate; ?companyId= or session for employer. */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const candidateProfileId = searchParams.get("candidateProfileId");
-    const companyId = searchParams.get("companyId");
+    let companyId = searchParams.get("companyId");
+
+    // Resolve employer company from session when no companyId
+    if (!companyId && !candidateProfileId) {
+      const cookieStore = await cookies();
+      const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+      if (token) {
+        const session = await prisma.session.findUnique({
+          where: { token },
+          include: { user: { select: { id: true, role: true } } },
+        });
+        if (session && session.expiresAt >= new Date() && session.user.role === "EMPLOYER") {
+          const company = await prisma.company.findUnique({
+            where: { userId: session.user.id },
+            select: { id: true },
+          });
+          if (company) companyId = company.id;
+        }
+      }
+    }
 
     if (candidateProfileId) {
       const list = await prisma.match.findMany({

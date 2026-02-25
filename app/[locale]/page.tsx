@@ -6,7 +6,6 @@ import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo, animate
 import { Link } from "@/i18n/navigation";
 import Logo from "@/components/Logo";
 import Footer from "@/components/Footer";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 import MatchProgressRing from "@/components/MatchProgressRing";
 
 function SwipeCard({
@@ -306,7 +305,6 @@ export default function Home() {
       <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
         <Logo height={108} />
         <div className="flex items-center gap-3">
-          <LanguageSwitcher />
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Link
               href="/login"

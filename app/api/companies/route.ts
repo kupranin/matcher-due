@@ -1,12 +1,30 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
+import { SESSION_COOKIE_NAME } from "@/lib/session";
 
-/** GET /api/companies?userId= — get company for employer (for cabinet profile). */
+/** GET /api/companies — get company for employer. Use ?userId= or session cookie (session wins for mapping). */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-    if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+    let userId = searchParams.get("userId");
+
+    // Resolve userId from session if not provided (so cabinet always gets correct company)
+    if (!userId) {
+      const cookieStore = await cookies();
+      const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+      if (token) {
+        const session = await prisma.session.findUnique({
+          where: { token },
+          include: { user: { select: { id: true, role: true } } },
+        });
+        if (session && session.expiresAt >= new Date() && session.user.role === "EMPLOYER") {
+          userId = session.user.id;
+        }
+      }
+    }
+    if (!userId) return NextResponse.json({ error: "userId required or sign in as employer" }, { status: 400 });
+
     const company = await prisma.company.findUnique({
       where: { userId },
     });

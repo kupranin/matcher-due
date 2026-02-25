@@ -121,66 +121,49 @@ export default function EmployerCabinetPage() {
   }, []);
 
   function loadVacanciesAndCandidates() {
-    // Always resolve company from current session so we never use a stale sessionStorage
-    // companyId from a previous login (e.g. wrong company / "no vacancies" for the current user).
-    fetch("/api/auth/session", { credentials: "include" })
+    // Server resolves company + vacancies from session cookie (no client-side userId/companyId).
+    setOpportunitiesLoading(true);
+    fetch("/api/vacancies", { credentials: "include" })
       .then((r) => r.json())
-      .then((data: { user: { id?: string; role: string } | null }) => {
-        if (!data?.user?.id || data.user.role !== "EMPLOYER") {
-          setOpportunitiesLoading(false);
-          return;
-        }
-        return fetch(`/api/companies?userId=${encodeURIComponent(data.user.id)}`)
-          .then((r) => r.json())
-          .then((company: { id?: string } | null) => {
-            const cid = company?.id ?? null;
-            if (cid && typeof window !== "undefined") {
-              window.sessionStorage.setItem("matcher_employer_company_id", cid);
-            }
-            doLoad(cid);
-          })
-          .catch(() => doLoad(null));
+      .then((list: Array<{ id: string; title: string; company: string; locationCityId: string; salaryMin?: number | null; salaryMax: number; workType: string; isRemote?: boolean; requiredExperienceMonths?: number; requiredEducationLevel?: string; skills?: Array<{ name: string; level?: string; weight?: number }> }>) => {
+        const mapped: EmployerVacancy[] = (Array.isArray(list) ? list : []).map((v) => {
+          const locationCityId = v.locationCityId ?? "";
+          const loc = locationCityId === "tbilisi" ? "Tbilisi" : locationCityId;
+          const salaryStr = v.salaryMin != null ? `${v.salaryMin}–${v.salaryMax} GEL` : `${v.salaryMax} GEL`;
+          return {
+            id: v.id,
+            title: v.title,
+            company: v.company ?? v.title,
+            location: loc,
+            workType: v.workType,
+            salary: salaryStr,
+            profile: apiVacancyToProfile(v),
+          };
+        });
+        setVacancies(mapped);
+        setOpportunitiesLoading(false);
       })
       .catch(() => setOpportunitiesLoading(false));
-
-    function doLoad(cid: string | null) {
-      if (!cid) {
-        setOpportunitiesLoading(false);
-        return;
-      }
-      setOpportunitiesLoading(true);
-      fetch(`/api/vacancies?companyId=${encodeURIComponent(cid)}`)
-        .then((r) => r.json())
-        .then((list: Array<{ id: string; title: string; company: string; locationCityId: string; salaryMin?: number | null; salaryMax: number; workType: string; isRemote?: boolean; requiredExperienceMonths?: number; requiredEducationLevel?: string; skills?: Array<{ name: string; level?: string; weight?: number }> }>) => {
-          const mapped: EmployerVacancy[] = (Array.isArray(list) ? list : []).map((v) => {
-            const locationCityId = v.locationCityId ?? "";
-            const loc = locationCityId === "tbilisi" ? "Tbilisi" : locationCityId;
-            const salaryStr = v.salaryMin != null ? `${v.salaryMin}–${v.salaryMax} GEL` : `${v.salaryMax} GEL`;
-            return {
-              id: v.id,
-              title: v.title,
-              company: v.company ?? v.title,
-              location: loc,
-              workType: v.workType,
-              salary: salaryStr,
-              profile: apiVacancyToProfile(v),
-            };
-          });
-          setVacancies(mapped);
-          setOpportunitiesLoading(false);
-        })
-        .catch(() => setOpportunitiesLoading(false));
-      fetch("/api/candidates")
-        .then((r) => r.json())
-        .then(setApiCandidates)
-        .catch(() => {});
-      fetch(`/api/matches?companyId=${encodeURIComponent(cid)}`)
-        .then((r) => r.json())
-        .then((list: Array<{ vacancyId: string; candidateProfileId: string; candidateLiked: boolean; candidateName?: string; candidateJobTitle?: string | null; vacancyTitle?: string }>) =>
-          setCompanyMatches(Array.isArray(list) ? list : [])
-        )
-        .catch(() => setCompanyMatches([]));
-    }
+    fetch("/api/candidates")
+      .then((r) => r.json())
+      .then(setApiCandidates)
+      .catch(() => {});
+    // Matches: server resolves company from session
+    fetch("/api/matches", { credentials: "include" })
+      .then((r) => r.json())
+      .then((list: Array<{ vacancyId: string; candidateProfileId: string; candidateLiked: boolean; candidateName?: string; candidateJobTitle?: string | null; vacancyTitle?: string }>) =>
+        setCompanyMatches(Array.isArray(list) ? list : [])
+      )
+      .catch(() => setCompanyMatches([]));
+    // Keep sessionStorage in sync for chats etc.
+    fetch("/api/companies", { credentials: "include" })
+      .then((r) => r.json())
+      .then((company: { id?: string } | null) => {
+        if (company?.id && typeof window !== "undefined") {
+          window.sessionStorage.setItem("matcher_employer_company_id", company.id);
+        }
+      })
+      .catch(() => {});
   }
 
   const likedCountByVacancyId = useMemo(() => {

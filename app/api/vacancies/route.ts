@@ -8,11 +8,32 @@ import { deductSlotInTx, STRICT_PAYWALL_ERROR } from "@/lib/vacancyManager";
 
 const SKILL_LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
 
-/** GET /api/vacancies — list published vacancies. ?companyId= for employer's vacancies (returns all statuses for employer). */
+/** GET /api/vacancies — list published vacancies. ?companyId= for employer; or use session (employer's company). */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const companyId = searchParams.get("companyId");
+    let companyId = searchParams.get("companyId");
+
+    // Resolve company from session when no companyId (so employer cabinet always gets their vacancies)
+    if (!companyId) {
+      const cookieStore = await cookies();
+      const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+      if (token) {
+        const session = await prisma.session.findUnique({
+          where: { token },
+          include: { user: { select: { id: true, role: true } } },
+        });
+        if (session && session.expiresAt >= new Date() && session.user.role === "EMPLOYER") {
+          const company = await prisma.company.findUnique({
+            where: { userId: session.user.id },
+            select: { id: true },
+          });
+          // Use company id so they get their vacancies; if no company, force empty list (use non-existent id)
+          companyId = company?.id ?? "";
+        }
+      }
+    }
+
     const list = await prisma.vacancy.findMany({
       where: companyId ? { companyId } : { status: "PUBLISHED" },
       orderBy: { createdAt: "desc" },

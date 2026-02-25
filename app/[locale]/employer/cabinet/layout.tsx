@@ -43,22 +43,22 @@ export default function EmployerCabinetLayout({
           window.sessionStorage.setItem("employerLoggedIn", "1");
           if (data.user.id) {
             window.sessionStorage.setItem("matcher_employer_user_id", data.user.id);
-            return fetch(`/api/companies?userId=${encodeURIComponent(data.user.id)}`)
-              .then((r) => r.json())
-              .then((company: { id?: string; name?: string } | null) => {
-                if (company?.id) {
-                  window.sessionStorage.setItem("matcher_employer_company_id", company.id);
-                  if (!window.sessionStorage.getItem("employerHasSubscription")) {
-                    window.sessionStorage.setItem("employerHasSubscription", "1");
-                  }
-                  window.dispatchEvent(new CustomEvent("employer-company-ready"));
-                }
-                setCompanyName(company?.name ?? null);
-                setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
-              })
-              .catch(() => setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription")));
           }
-          setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
+          // Server resolves company from session cookie (same user → company mapping)
+          return fetch("/api/companies", { credentials: "include" })
+            .then((r) => r.json())
+            .then((company: { id?: string; name?: string } | null) => {
+              if (company?.id) {
+                window.sessionStorage.setItem("matcher_employer_company_id", company.id);
+                if (!window.sessionStorage.getItem("employerHasSubscription")) {
+                  window.sessionStorage.setItem("employerHasSubscription", "1");
+                }
+                window.dispatchEvent(new CustomEvent("employer-company-ready"));
+              }
+              setCompanyName(company?.name ?? null);
+              setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
+            })
+            .catch(() => setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription")));
         }
       })
       .catch(() => {
@@ -192,7 +192,7 @@ export default function EmployerCabinetLayout({
                   <p className="mt-1 text-sm font-medium text-gray-700">{tCabinet("noSubscriptionYet")}</p>
                   <p className="mt-1 text-xs text-gray-500">{tCabinet("purchaseSlotsHint")}</p>
                   <Link
-                    href="/employer/post?from=cabinet"
+                    href="/employer/post?from=cabinet&step=package"
                     className="mt-3 block rounded-lg bg-matcher px-3 py-2 text-center text-sm font-medium text-white hover:bg-matcher-dark"
                   >
                     {tCommon("purchaseMoreVacancies") || "Purchase more vacancies"}

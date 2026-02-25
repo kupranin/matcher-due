@@ -41,6 +41,7 @@ export default function EmployerPostPage() {
   const router = useRouter();
   const fromRegistration = searchParams.get("registered") === "1";
   const fromCabinet = searchParams.get("from") === "cabinet";
+  const openToPurchase = searchParams.get("step") === "package" || searchParams.get("purchase") === "1";
 
   const [step, setStep] = useState<Step>("vacancy");
   const [paywallRedirect, setPaywallRedirect] = useState(false);
@@ -48,6 +49,10 @@ export default function EmployerPostPage() {
   const [paymentMethod, setPaymentMethod] = useState<"invoice" | "card" | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [jobRoles, setJobRoles] = useState<JobTemplateRole[]>([]);
+
+  useEffect(() => {
+    if (openToPurchase) setStep("package");
+  }, [openToPurchase]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
