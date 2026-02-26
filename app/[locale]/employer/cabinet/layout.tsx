@@ -35,13 +35,14 @@ export default function EmployerCabinetLayout({
   useEffect(() => {
     fetch("/api/auth/session", { credentials: "include" })
       .then((r) => r.json())
-      .then((data: { user: { id?: string; role: string } | null }) => {
+      .then((data: { user: { id?: string; role: string } | null; token?: string }) => {
         setAuthChecked(true);
         if (!data?.user || data.user.role !== "EMPLOYER") {
           router.replace("/login");
           return;
         }
         if (typeof window !== "undefined") {
+          if (data.token) window.sessionStorage.setItem("matcher_employer_token", data.token);
           // Avoid showing a previous user's company name until API confirms current company
           window.sessionStorage.removeItem("matcher_employer_company_name");
           window.sessionStorage.setItem("employerLoggedIn", "1");

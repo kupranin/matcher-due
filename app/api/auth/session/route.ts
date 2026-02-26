@@ -22,14 +22,16 @@ export async function GET() {
       return NextResponse.json({ userId: null, user: null }, { status: 200 });
     }
 
-    return NextResponse.json({
+    const payload: { userId: string; user: { id: string; email: string; role: string }; token?: string } = {
       userId: session.user.id,
       user: {
         id: session.user.id,
         email: session.user.email,
         role: session.user.role,
       },
-    });
+    };
+    if (session.user.role === "EMPLOYER") payload.token = token;
+    return NextResponse.json(payload);
   } catch (e) {
     console.error("Session get error:", e);
     return NextResponse.json({ userId: null, user: null }, { status: 200 });

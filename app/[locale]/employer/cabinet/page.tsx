@@ -158,7 +158,7 @@ export default function EmployerCabinetPage() {
             location: loc,
             workType: v.workType,
             salary: salaryStr,
-            profile: apiVacancyToProfile({ ...v, locationCityId: v.locationCityId ?? "" }),
+            profile: apiVacancyToProfile({ ...v, locationCityId }),
           };
         });
         setVacancies(mapped);

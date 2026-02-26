@@ -63,8 +63,9 @@ export default function EmployerPostPage() {
       if (userId && companyId) return;
       fetch("/api/auth/session", { credentials: "include" })
         .then((r) => r.json())
-        .then((data: { user?: { id: string; role: string } | null }) => {
+        .then((data: { user?: { id: string; role: string } | null; token?: string }) => {
           if (data?.user?.role === "EMPLOYER" && data.user.id) {
+            if (data.token) window.sessionStorage.setItem("matcher_employer_token", data.token);
             window.sessionStorage.setItem("matcher_employer_user_id", data.user.id);
             if (!window.sessionStorage.getItem("matcher_employer_company_id")) {
               const token = window.sessionStorage.getItem("matcher_employer_token");
@@ -308,11 +309,12 @@ export default function EmployerPostPage() {
     if (typeof window !== "undefined" && !userId) {
       try {
         const sessionRes = await fetch("/api/auth/session", { credentials: "include" });
-        const sessionData = await sessionRes.json().catch(() => ({}));
+        const sessionData = await sessionRes.json().catch(() => ({})) as { user?: { id: string; role: string }; token?: string };
         if (sessionData?.user?.role === "EMPLOYER" && sessionData.user.id) {
           const id = String(sessionData.user.id);
           userId = id;
           window.sessionStorage.setItem("matcher_employer_user_id", id);
+          if (sessionData.token) window.sessionStorage.setItem("matcher_employer_token", sessionData.token);
         }
       } catch {
         // ignore
