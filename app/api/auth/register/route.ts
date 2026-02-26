@@ -34,9 +34,16 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Contact email required" }, { status: 400 });
       }
 
-      const existingUser = await prisma.user.findUnique({ where: { email } });
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+        include: { company: { select: { id: true } } },
+      });
       if (existingUser) {
-        return NextResponse.json({ error: "Email already registered", userId: existingUser.id }, { status: 200 });
+        return NextResponse.json({
+          error: "Email already registered",
+          userId: existingUser.id,
+          ...(existingUser.company && { companyId: existingUser.company.id }),
+        }, { status: 200 });
       }
 
       const passwordHash = hashPassword(password);
@@ -69,7 +76,17 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ userId: user.id });
   } catch (e) {
-    console.error("Register error:", e);
-    return NextResponse.json({ error: "Registration failed" }, { status: 500 });
+    const err = e as Error & { code?: string; meta?: unknown };
+    console.error("Register error:", err?.message ?? e, err?.code, err?.meta);
+    const isPrisma = err?.name === "PrismaClientKnownRequestError" || String(err?.message).includes("prisma");
+    const hint = isPrisma && err?.code === "P2002"
+      ? "Email or company may already be registered."
+      : process.env.NODE_ENV === "development" && err?.message
+        ? err.message
+        : undefined;
+    return NextResponse.json(
+      { error: "Registration failed", ...(hint && { hint }) },
+      { status: 500 }
+    );
   }
 }

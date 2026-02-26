@@ -53,7 +53,6 @@ export default function EmployerRegisterPage() {
   async function fakeVerifyOtp() {
     const digits = otp.replace(/[^\d]/g, "");
     if (digits.length < 4) return;
-    setOtpOpen(false);
     setRegisterError("");
     try {
       // Register creates both User and Company in one transaction so the company is always in the DB.
@@ -72,9 +71,11 @@ export default function EmployerRegisterPage() {
       });
       const regData = await regRes.json().catch(() => ({}));
       const userId = regData.userId;
-      const companyIdFromReg = regData.companyId;
+      let companyIdFromReg = regData.companyId;
       if (!userId) {
-        setRegisterError(regData.error || "Registration failed");
+        const msg = regData.error || "Registration failed. Try again or log in if you already have an account.";
+        const hint = regData.hint ? ` ${regData.hint}` : "";
+        setRegisterError(msg + hint);
         return;
       }
       // Log in to set session cookie and get token.
@@ -90,6 +91,7 @@ export default function EmployerRegisterPage() {
       });
       if (!loginRes.ok) {
         setRegisterError("Account created. Please sign in on the login page.");
+        setOtpOpen(false);
         router.push("/login");
         return;
       }
@@ -101,9 +103,22 @@ export default function EmployerRegisterPage() {
         window.sessionStorage.removeItem("employerHasSubscription");
         window.sessionStorage.setItem("matcher_employer_user_id", sessionUserId);
         window.sessionStorage.setItem("employerLoggedIn", "1");
-        if (companyIdFromReg) window.sessionStorage.setItem("matcher_employer_company_id", companyIdFromReg);
-        window.sessionStorage.setItem("matcher_employer_company_name", companyName.trim());
+        if (companyIdFromReg) {
+          window.sessionStorage.setItem("matcher_employer_company_id", companyIdFromReg);
+          window.sessionStorage.setItem("matcher_employer_company_name", companyName.trim());
+        } else {
+          // Existing user: fetch company so we have companyId and name
+          const companyRes = await fetch("/api/companies", { credentials: "include", ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}) });
+          const companyData = await companyRes.json().catch(() => null);
+          if (companyData?.id) {
+            window.sessionStorage.setItem("matcher_employer_company_id", companyData.id);
+            window.sessionStorage.setItem("matcher_employer_company_name", companyData.name ?? companyName.trim());
+          } else {
+            window.sessionStorage.setItem("matcher_employer_company_name", companyName.trim());
+          }
+        }
       }
+      setOtpOpen(false);
       router.push("/employer/cabinet");
     } catch {
       setRegisterError("Something went wrong. Please try again.");
