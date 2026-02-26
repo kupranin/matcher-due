@@ -92,6 +92,7 @@ export default function EmployerPostPage() {
   const [selectedPackage, setSelectedPackage] = useState<(typeof PACKAGES)[number] | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"invoice" | "card" | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const [jobRoles, setJobRoles] = useState<JobTemplateRole[]>([]);
 
   useEffect(() => {
@@ -105,30 +106,39 @@ export default function EmployerPostPage() {
     const companyId = window.sessionStorage.getItem("matcher_employer_company_id");
     if (hasStorage && userId && companyId) {
       setIsLoggedIn(true);
+      setAuthLoading(false);
       return;
     }
-    // Always confirm with session API so we recognize employer after register in another tab or if storage was cleared
+    // Confirm with session API so we recognize employer after register or if storage was cleared
     fetch("/api/auth/session", { credentials: "include" })
       .then((r) => r.json())
       .then((data: { user?: { id: string; role: string } | null; token?: string }) => {
         if (data?.user?.role === "EMPLOYER" && data.user.id) {
-          setIsLoggedIn(true);
-          if (data.token) window.sessionStorage.setItem("matcher_employer_token", data.token);
+          const token = typeof data.token === "string" ? data.token : null;
+          if (token) window.sessionStorage.setItem("matcher_employer_token", token);
           window.sessionStorage.setItem("matcher_employer_user_id", data.user.id);
           window.sessionStorage.setItem("employerLoggedIn", "1");
-          if (!window.sessionStorage.getItem("matcher_employer_company_id")) {
-            const token = window.sessionStorage.getItem("matcher_employer_token");
-            const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
-            return fetch("/api/companies", { credentials: "include", ...auth })
-              .then((res) => res.json())
-              .then((company: { id?: string } | null) => {
-                if (company?.id) window.sessionStorage.setItem("matcher_employer_company_id", company.id);
-              })
-              .catch(() => {});
+          const existingCompanyId = window.sessionStorage.getItem("matcher_employer_company_id");
+          if (existingCompanyId) {
+            setIsLoggedIn(true);
+            setAuthLoading(false);
+            return;
           }
+          const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+          return fetch("/api/companies", { credentials: "include", ...auth })
+            .then((res) => res.json())
+            .then((company: { id?: string; error?: string } | null) => {
+              if (company && typeof (company as { id?: string }).id === "string") {
+                window.sessionStorage.setItem("matcher_employer_company_id", (company as { id: string }).id);
+                setIsLoggedIn(true);
+              }
+            })
+            .catch(() => {})
+            .finally(() => setAuthLoading(false));
         }
+        setAuthLoading(false);
       })
-      .catch(() => {});
+      .catch(() => setAuthLoading(false));
   }, []);
 
   useEffect(() => {
@@ -506,7 +516,15 @@ export default function EmployerPostPage() {
       return;
     }
     try {
-      const token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
+      let token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
+      if (!token && typeof window !== "undefined") {
+        const sessionRes = await fetch("/api/auth/session", { credentials: "include" });
+        const sessionData = await sessionRes.json().catch(() => ({}));
+        if (sessionData?.token) {
+          token = sessionData.token;
+          window.sessionStorage.setItem("matcher_employer_token", token);
+        }
+      }
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers.Authorization = `Bearer ${token}`;
       const res = await fetch("/api/subscriptions", {
@@ -715,13 +733,21 @@ export default function EmployerPostPage() {
             <p className="mt-1 text-sm text-matcher-dark/90">
               {t("addFirstVacancy")}
             </p>
+            <p className="mt-1 text-xs text-matcher-dark/80">
+              {t("tenFreeSlots")}
+            </p>
           </div>
         )}
         <div className="rounded-3xl border bg-white p-8 shadow-sm">
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
             {t("postVacancy")}
           </h1>
-          {!isLoggedIn ? (
+          {authLoading ? (
+            <div className="mt-8 flex flex-col items-center justify-center gap-4 py-12">
+              <div className="h-10 w-10 animate-spin rounded-full border-2 border-matcher border-t-transparent" aria-hidden />
+              <p className="text-sm text-gray-600">{tCommon("loading") ?? "Loading…"}</p>
+            </div>
+          ) : !isLoggedIn ? (
             <div className="mt-6 rounded-2xl border border-matcher/30 bg-matcher-mint/50 p-8 text-center">
               <p className="text-gray-700">{t("registerToPost")}</p>
               <Link
@@ -790,24 +816,6 @@ export default function EmployerPostPage() {
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div className="rounded-2xl border-2 border-matcher/30 bg-matcher-mint/30 p-4">
-              <p className="text-sm font-semibold text-matcher-dark">
-                {selectedRole || jobTitle.trim()
-                  ? t("salaryRecommendation", { amount: recommendedSalary.toLocaleString() })
-                  : t("salaryRecommendationGeneric", { amount: recommendedSalary.toLocaleString() })}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setSalaryMin(String(recommendedSalary));
-                  setSalaryMax(String(Math.round(recommendedSalary * 1.2)));
-                }}
-                className="mt-2 text-sm font-medium text-matcher-dark underline hover:no-underline"
-              >
-                {t("useRecommendation")}
-              </button>
             </div>
 
             {selectedCity?.districts && selectedCity.districts.length > 0 && (
@@ -1230,6 +1238,24 @@ export default function EmployerPostPage() {
                   )}
                 </div>
               )}
+            </div>
+
+            <div className="rounded-2xl border-2 border-matcher/30 bg-matcher-mint/30 p-4">
+              <p className="text-sm font-semibold text-matcher-dark">
+                {selectedRole || jobTitle.trim()
+                  ? t("salaryRecommendation", { amount: recommendedSalary.toLocaleString() })
+                  : t("salaryRecommendationGeneric", { amount: recommendedSalary.toLocaleString() })}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSalaryMin(String(recommendedSalary));
+                  setSalaryMax(String(Math.round(recommendedSalary * 1.2)));
+                }}
+                className="mt-2 text-sm font-medium text-matcher-dark underline hover:no-underline"
+              >
+                {t("useRecommendation")}
+              </button>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">

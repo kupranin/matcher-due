@@ -28,9 +28,10 @@ export default function EmployerCabinetLayout({
   const [availableSlots, setAvailableSlots] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
-  // Always start with null so we never show a previous user's company name (e.g. "Spar").
-  // Company name is set only from GET /api/companies so it stays dynamic per logged-in employer.
-  const [companyName, setCompanyName] = useState<string | null>(null);
+  // Start with stored name so we don't show "Company" while loading; API response updates it.
+  const [companyName, setCompanyName] = useState<string | null>(() =>
+    typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_name") : null
+  );
 
   useEffect(() => {
     fetch("/api/auth/session", { credentials: "include" })
@@ -42,28 +43,29 @@ export default function EmployerCabinetLayout({
           return;
         }
         if (typeof window !== "undefined") {
-          if (data.token) window.sessionStorage.setItem("matcher_employer_token", data.token);
-          // Avoid showing a previous user's company name until API confirms current company
-          window.sessionStorage.removeItem("matcher_employer_company_name");
+          const token = typeof data.token === "string" ? data.token : null;
+          if (token) window.sessionStorage.setItem("matcher_employer_token", token);
+          // Keep previous company name in storage until API returns, so we don't flash "Company" while loading
           window.sessionStorage.setItem("employerLoggedIn", "1");
-          if (data.user.id) {
-            window.sessionStorage.setItem("matcher_employer_user_id", data.user.id);
-          }
-          const token = window.sessionStorage.getItem("matcher_employer_token");
+          if (data.user.id) window.sessionStorage.setItem("matcher_employer_user_id", data.user.id);
           const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
           return fetch("/api/companies", { credentials: "include", ...auth })
             .then((r) => r.json())
-            .then((company: { id?: string; name?: string } | null) => {
-              if (company?.id) {
-                window.sessionStorage.setItem("matcher_employer_company_id", company.id);
+            .then((company: { id?: string; name?: string; error?: string } | null) => {
+              const hasCompany = company && typeof (company as { id?: string }).id === "string";
+              if (hasCompany) {
+                const c = company as { id: string; name?: string };
+                window.sessionStorage.setItem("matcher_employer_company_id", c.id);
+                if (c.name) window.sessionStorage.setItem("matcher_employer_company_name", c.name);
+                setCompanyName(c.name ?? null);
                 if (!window.sessionStorage.getItem("employerHasSubscription")) {
                   window.sessionStorage.setItem("employerHasSubscription", "1");
                 }
                 window.dispatchEvent(new CustomEvent("employer-company-ready"));
+              } else {
+                if (typeof window !== "undefined") window.sessionStorage.removeItem("matcher_employer_company_name");
+                setCompanyName(null);
               }
-              const name = company?.name ?? null;
-              if (typeof window !== "undefined" && name) window.sessionStorage.setItem("matcher_employer_company_name", name);
-              setCompanyName(name);
               setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
             })
             .catch(() => {

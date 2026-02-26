@@ -49,6 +49,7 @@ export async function POST(request: Request) {
             companyId,
             contactEmail,
             contactPhone,
+            availableSlots: 10, // 10 free vacancy slots
           },
         });
         return NextResponse.json({
@@ -76,6 +77,7 @@ export async function POST(request: Request) {
             companyId,
             contactEmail,
             contactPhone,
+            availableSlots: 10, // 10 free vacancy slots for every new company
           },
         });
         return { userId: user.id, companyId: company.id };

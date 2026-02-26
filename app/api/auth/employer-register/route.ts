@@ -62,6 +62,7 @@ export async function POST(request: Request) {
           companyId,
           contactEmail,
           contactPhone,
+          availableSlots: 10, // 10 free vacancy slots for every new company
         },
       });
       await tx.session.create({

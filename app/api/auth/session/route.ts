@@ -17,10 +17,18 @@ function responseWithClearedSessionCookie(body: { userId: null; user: null }) {
   return res;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    let token: string | undefined;
+    const cookieHeader = request.headers.get("Cookie");
+    if (cookieHeader) {
+      const m = cookieHeader.match(new RegExp(`${SESSION_COOKIE_NAME.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}=([^;]+)`));
+      if (m?.[1]) token = m[1].trim();
+    }
+    if (!token) {
+      const cookieStore = await cookies();
+      token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    }
     if (!token) {
       return NextResponse.json({ userId: null, user: null }, { status: 200 });
     }
