@@ -21,11 +21,15 @@ function getDatasourceUrl(): string | undefined {
 
 const datasourceUrl = getDatasourceUrl();
 
-const prismaOptions: { datasources?: { db: { url: string } }; log?: ("error" | "warn")[] } = datasourceUrl
-  ? { datasources: { db: { url: datasourceUrl } }, log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"] }
-  : { log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"] };
+// Set the DATABASE_URL environment variable so Prisma reads it from the schema configuration
+if (datasourceUrl) {
+  process.env.DATABASE_URL = datasourceUrl;
+}
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- PrismaClient constructor types vary by environment (Vercel vs local)
-export const prisma = globalForPrisma.prisma ?? new PrismaClient(prismaOptions as any);
+const prismaOptions: { log?: ("error" | "warn")[] } = {
+  log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+};
+
+export const prisma = globalForPrisma.prisma ?? new PrismaClient(prismaOptions);
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
