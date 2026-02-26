@@ -56,6 +56,7 @@ export default function EmployerRegisterPage() {
     setOtpOpen(false);
     setRegisterError("");
     try {
+      // Register creates both User and Company in one transaction so the company is always in the DB.
       const regRes = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -63,15 +64,20 @@ export default function EmployerRegisterPage() {
           email: email.trim().toLowerCase(),
           password,
           role: "EMPLOYER",
+          companyName: companyName.trim(),
+          companyId: companyId.trim() || "N/A",
+          contactEmail: email.trim().toLowerCase(),
+          contactPhone: phone.trim(),
         }),
       });
       const regData = await regRes.json().catch(() => ({}));
       const userId = regData.userId;
+      const companyIdFromReg = regData.companyId;
       if (!userId) {
         setRegisterError(regData.error || "Registration failed");
         return;
       }
-      // Log in first so the session cookie is set; then create company (API requires employer session).
+      // Log in to set session cookie and get token.
       const loginRes = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -90,27 +96,12 @@ export default function EmployerRegisterPage() {
       const loginData = await loginRes.json().catch(() => ({}));
       const sessionUserId = loginData.userId || userId;
       const token = typeof loginData.token === "string" ? loginData.token : null;
-      if (token && typeof window !== "undefined") window.sessionStorage.setItem("matcher_employer_token", token);
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers.Authorization = `Bearer ${token}`;
-      const companyRes = await fetch("/api/companies", {
-        method: "POST",
-        headers,
-        credentials: "include",
-        body: JSON.stringify({
-          name: companyName.trim(),
-          companyId: companyId.trim() || "N/A",
-          contactEmail: email.trim().toLowerCase(),
-          contactPhone: phone.trim(),
-        }),
-      });
       if (typeof window !== "undefined") {
+        if (token) window.sessionStorage.setItem("matcher_employer_token", token);
         window.sessionStorage.removeItem("employerHasSubscription");
         window.sessionStorage.setItem("matcher_employer_user_id", sessionUserId);
         window.sessionStorage.setItem("employerLoggedIn", "1");
-        const companyData = await companyRes.json().catch(() => null);
-        if (companyData?.id) window.sessionStorage.setItem("matcher_employer_company_id", companyData.id);
-        // Pass company name to cabinet so it shows immediately after registration (layout may load before API returns it).
+        if (companyIdFromReg) window.sessionStorage.setItem("matcher_employer_company_id", companyIdFromReg);
         window.sessionStorage.setItem("matcher_employer_company_name", companyName.trim());
       }
       router.push("/employer/cabinet");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
@@ -20,6 +20,50 @@ const PACKAGES = [
 
 function classNames(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
+}
+
+const MAX_PHOTO_WIDTH = 1200;
+const PHOTO_JPEG_QUALITY = 0.88;
+
+function processImageFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("Not an image"));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width;
+        let h = img.height;
+        if (w > MAX_PHOTO_WIDTH) {
+          h = Math.round((h * MAX_PHOTO_WIDTH) / w);
+          w = MAX_PHOTO_WIDTH;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        try {
+          const jpeg = canvas.toDataURL("image/jpeg", PHOTO_JPEG_QUALITY);
+          resolve(jpeg);
+        } catch {
+          resolve(dataUrl);
+        }
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
 }
 
 const FALLBACK_SKILLS = ["Communication", "Teamwork", "Time management", "Customer service", "Problem solving"];
@@ -146,6 +190,9 @@ export default function EmployerPostPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [vacancyPhotoUrl, setVacancyPhotoUrl] = useState("");
   const [customPhotoUrl, setCustomPhotoUrl] = useState("");
+  const [photoDropDragging, setPhotoDropDragging] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const photoFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const stockPhotos = useMemo(
     () => getStockPhotosForJob(selectedRole?.slug ?? jobSlug ?? jobTitle ?? null),
@@ -266,6 +313,34 @@ export default function EmployerPostPage() {
       setJobSlug(null);
       setVacancyPhotoUrl("");
     }
+  }
+
+  async function handleVacancyPhotoFile(file: File | null) {
+    setPhotoError(null);
+    if (!file) return;
+    try {
+      const dataUrl = await processImageFile(file);
+      setCustomPhotoUrl(dataUrl);
+      setVacancyPhotoUrl("");
+    } catch {
+      setPhotoError(t("photoInvalidFile"));
+    }
+  }
+
+  function handlePhotoDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setPhotoDropDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleVacancyPhotoFile(file);
+  }
+
+  function handlePhotoDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setPhotoDropDragging(true);
+  }
+
+  function handlePhotoDragLeave() {
+    setPhotoDropDragging(false);
   }
 
   const canSubmit =
@@ -771,14 +846,56 @@ export default function EmployerPostPage() {
             <div>
               <label className="text-sm font-medium text-gray-900">{t("vacancyPhoto")}</label>
               <p className="mt-1 text-xs text-gray-500">{t("vacancyPhotoHint")}</p>
-              <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+              <div
+                role="button"
+                tabIndex={0}
+                onDragOver={handlePhotoDragOver}
+                onDragLeave={handlePhotoDragLeave}
+                onDrop={handlePhotoDrop}
+                onClick={() => photoFileInputRef.current?.click()}
+                onKeyDown={(e) => e.key === "Enter" && photoFileInputRef.current?.click()}
+                className={classNames(
+                  "mt-3 flex min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-8 text-center transition",
+                  photoDropDragging ? "border-matcher bg-matcher-pale/50" : "border-gray-200 bg-gray-50 hover:border-matcher/50 hover:bg-matcher-pale/30"
+                )}
+              >
+                <input
+                  ref={photoFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleVacancyPhotoFile(file);
+                    e.target.value = "";
+                  }}
+                />
+                <span className="text-3xl text-gray-400" aria-hidden>📷</span>
+                <p className="mt-2 text-sm font-medium text-gray-700">{t("photoDropHint")}</p>
+                <p className="mt-0.5 text-xs text-gray-500">{t("photoDropOrClick")}</p>
+              </div>
+              {customPhotoUrl && (
+                <div className="mt-2 flex items-center gap-2">
+                  <img src={customPhotoUrl} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setCustomPhotoUrl("")}
+                    className="text-sm text-gray-500 underline hover:text-gray-700"
+                  >
+                    {t("removePhoto")}
+                  </button>
+                </div>
+              )}
+              {photoError && <p className="mt-2 text-sm text-red-600">{photoError}</p>}
+              <p className="mt-3 text-xs font-medium text-gray-500">{t("orChooseStock")}</p>
+              <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
                 {stockPhotos.slice(0, 8).map((url) => {
                   const selected = !customPhotoUrl.trim() && (vacancyPhotoUrl === url || (vacancyPhotoUrl === "" && url === stockPhotos[0]));
                   return (
                     <button
                       key={url}
                       type="button"
-                      onClick={() => { setVacancyPhotoUrl(url); setCustomPhotoUrl(""); }}
+                      onClick={() => { setVacancyPhotoUrl(url); setCustomPhotoUrl(""); setPhotoError(null); }}
                       className={classNames(
                         "relative aspect-square overflow-hidden rounded-xl border-2 bg-gray-100 transition",
                         selected ? "border-matcher ring-2 ring-matcher/30" : "border-gray-200 hover:border-matcher/50"
@@ -792,30 +909,37 @@ export default function EmployerPostPage() {
                   );
                 })}
               </div>
-              <div className="mt-4">
-                <label className="text-xs font-medium text-gray-600">{t("useMyOwnImage")}</label>
-                <input
-                  type="url"
-                  value={customPhotoUrl}
-                  onChange={(e) => { setCustomPhotoUrl(e.target.value); if (e.target.value.trim()) setVacancyPhotoUrl(""); }}
-                  placeholder={t("useMyOwnImagePlaceholder")}
-                  className="mt-1.5 w-full rounded-2xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
-                />
-              </div>
             </div>
 
-            {/* Preview: how this vacancy looks in the candidate swipe deck */}
+            {/* Preview: how this vacancy looks in the candidate swipe deck — also a drop target */}
             <div className="rounded-2xl border-2 border-dashed border-matcher/30 bg-gray-50 p-4">
               <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-matcher-dark">
                 {t("deckPreviewTitle")}
               </p>
-              <div className="mx-auto max-w-[280px] overflow-hidden rounded-2xl bg-gray-900 shadow-lg ring-2 ring-white/20">
+              <div
+                role="button"
+                tabIndex={0}
+                onDragOver={handlePhotoDragOver}
+                onDragLeave={handlePhotoDragLeave}
+                onDrop={handlePhotoDrop}
+                onClick={() => photoFileInputRef.current?.click()}
+                onKeyDown={(e) => e.key === "Enter" && photoFileInputRef.current?.click()}
+                className={classNames(
+                  "mx-auto max-w-[280px] cursor-pointer overflow-hidden rounded-2xl bg-gray-900 shadow-lg ring-2 ring-white/20 transition",
+                  photoDropDragging && "ring-4 ring-matcher"
+                )}
+              >
                 <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden">
                   <img
                     src={effectivePhotoUrl || stockPhotos[0]}
                     alt=""
                     className="h-full w-full object-cover"
                   />
+                  {photoDropDragging && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-matcher/20 text-white">
+                      <span className="rounded-lg bg-matcher px-3 py-1.5 text-sm font-medium">{t("photoDropRelease")}</span>
+                    </div>
+                  )}
                   <div className="absolute right-2 top-2 rounded-full bg-matcher-bright px-2.5 py-1 text-xs font-bold tracking-tight text-charcoal">
                     {salaryMin.trim() && salaryMax.trim()
                       ? `${salaryMin.replace(/\D/g, "")}–${salaryMax.replace(/\D/g, "")} GEL`

@@ -200,7 +200,7 @@ export default function EmployerCabinetProfilePage() {
                 const token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
                 const headers: Record<string, string> = { "Content-Type": "application/json" };
                 if (token) headers.Authorization = `Bearer ${token}`;
-                await fetch("/api/companies", {
+                const patchRes = await fetch("/api/companies", {
                   method: "PATCH",
                   headers,
                   credentials: "include",
@@ -218,6 +218,10 @@ export default function EmployerCabinetProfilePage() {
                     linkedIn: linkedIn.trim() || undefined,
                   }),
                 });
+                if (patchRes.ok && typeof window !== "undefined") {
+                  window.sessionStorage.setItem("matcher_employer_company_name", companyName.trim());
+                  window.dispatchEvent(new CustomEvent("employer-company-updated"));
+                }
               } catch {
                 // ignore
               }

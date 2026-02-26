@@ -78,6 +78,23 @@ export default function EmployerCabinetLayout({
       });
   }, [router]);
 
+  function fetchCompany() {
+    const token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
+    const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+    return fetch("/api/companies", { credentials: "include", ...auth })
+      .then((r) => r.json())
+      .then((company: { id?: string; name?: string } | null) => {
+        const name = company?.name ?? null;
+        if (typeof window !== "undefined" && name) window.sessionStorage.setItem("matcher_employer_company_name", name);
+        setCompanyName(name);
+        return company;
+      })
+      .catch(() => {
+        setCompanyName(null);
+        return null;
+      });
+  }
+
   useEffect(() => {
     if (!authChecked) return;
     function fetchSubs() {
@@ -109,6 +126,13 @@ export default function EmployerCabinetLayout({
     window.addEventListener("employer-company-ready", handler);
     return () => window.removeEventListener("employer-company-ready", handler);
   }, [authChecked, pathname]);
+
+  useEffect(() => {
+    if (!authChecked) return;
+    const onCompanyUpdated = () => fetchCompany();
+    window.addEventListener("employer-company-updated", onCompanyUpdated);
+    return () => window.removeEventListener("employer-company-updated", onCompanyUpdated);
+  }, [authChecked]);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
@@ -146,11 +170,9 @@ export default function EmployerCabinetLayout({
       {/* Mobile header */}
       <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 md:hidden">
         <Logo height={56} />
-        {companyName && (
-          <p className="truncate px-2 text-sm font-medium text-gray-700 max-w-[140px]" title={companyName}>
-            {companyName}
-          </p>
-        )}
+        <p className="truncate px-2 text-sm font-medium text-gray-700 max-w-[140px]" title={companyName ?? undefined}>
+          {companyName || tCommon("company")}
+        </p>
         <button
           type="button"
           onClick={() => setMobileMenuOpen((o) => !o)}
@@ -173,11 +195,9 @@ export default function EmployerCabinetLayout({
         <div className="flex h-full flex-col overflow-y-auto p-4 pt-14 md:pt-4">
           <div className="mb-6 hidden flex-col items-center justify-center rounded-xl border border-matcher/20 bg-matcher-pale/50 px-4 py-4 md:flex md:mb-8 md:py-5">
             <Logo height={72} />
-            {companyName && (
-              <p className="mt-3 w-full truncate text-center text-sm font-medium text-matcher-dark" title={companyName}>
-                {companyName}
-              </p>
-            )}
+            <p className="mt-3 w-full truncate text-center text-sm font-medium text-matcher-dark" title={companyName ?? undefined}>
+              {companyName || tCommon("company")}
+            </p>
           </div>
 
           {sub ? (
@@ -258,7 +278,7 @@ export default function EmployerCabinetLayout({
       </aside>
 
       <main className="flex-1 overflow-auto pb-20 md:pb-0">
-        {companyName && !pathname?.includes("/chats") && !pathname?.endsWith("/profile") && (
+        {!pathname?.includes("/chats") && !pathname?.endsWith("/profile") && (
           <div className="border-b border-gray-200 bg-white px-4 py-3 md:px-8">
             <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
               <p className="text-sm font-medium text-gray-500">{tCabinet("yourCompany")}</p>
@@ -266,7 +286,7 @@ export default function EmployerCabinetLayout({
                 href="/employer/cabinet/profile"
                 className="font-semibold text-matcher-dark hover:text-matcher hover:underline"
               >
-                {companyName}
+                {companyName || tCommon("company")}
               </Link>
             </div>
           </div>
