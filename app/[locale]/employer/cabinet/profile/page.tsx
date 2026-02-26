@@ -198,10 +198,11 @@ export default function EmployerCabinetProfilePage() {
             if (userId) {
               try {
                 const token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
-                const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+                const headers: Record<string, string> = { "Content-Type": "application/json" };
+                if (token) headers.Authorization = `Bearer ${token}`;
                 await fetch("/api/companies", {
                   method: "PATCH",
-                  headers: { "Content-Type": "application/json", ...authHeaders },
+                  headers,
                   credentials: "include",
                   body: JSON.stringify({
                     userId,

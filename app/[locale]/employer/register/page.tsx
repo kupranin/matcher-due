@@ -91,10 +91,11 @@ export default function EmployerRegisterPage() {
       const sessionUserId = loginData.userId || userId;
       const token = typeof loginData.token === "string" ? loginData.token : null;
       if (token && typeof window !== "undefined") window.sessionStorage.setItem("matcher_employer_token", token);
-      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
       const companyRes = await fetch("/api/companies", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeader },
+        headers,
         credentials: "include",
         body: JSON.stringify({
           name: companyName.trim(),

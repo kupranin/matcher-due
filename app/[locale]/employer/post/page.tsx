@@ -336,10 +336,11 @@ export default function EmployerPostPage() {
     }
     try {
       const token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
-      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
       const res = await fetch("/api/vacancies", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders },
+        headers,
         credentials: "include",
         body: JSON.stringify({
           companyId: companyId || undefined,
@@ -420,10 +421,11 @@ export default function EmployerPostPage() {
     }
     try {
       const token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
-      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
       const res = await fetch("/api/subscriptions", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders },
+        headers,
         credentials: "include",
         body: JSON.stringify({
           packageType: selectedPackage.id,
