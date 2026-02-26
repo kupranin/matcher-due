@@ -520,9 +520,10 @@ export default function EmployerPostPage() {
       if (!token && typeof window !== "undefined") {
         const sessionRes = await fetch("/api/auth/session", { credentials: "include" });
         const sessionData = await sessionRes.json().catch(() => ({}));
-        if (sessionData?.token) {
-          token = sessionData.token;
-          window.sessionStorage.setItem("matcher_employer_token", token);
+        const sessionToken = typeof sessionData?.token === "string" ? sessionData.token : null;
+        if (sessionToken) {
+          token = sessionToken;
+          window.sessionStorage.setItem("matcher_employer_token", sessionToken);
         }
       }
       const headers: Record<string, string> = { "Content-Type": "application/json" };
