@@ -20,13 +20,18 @@ export type EmployerContext = {
 };
 
 /**
- * Resolves the current employer's company from the session cookie.
+ * Resolves the current employer's company from the session cookie or Authorization: Bearer header.
  * Returns null if not logged in, not EMPLOYER, session expired, or no company.
  * Use this for all employer-scoped APIs (companies, vacancies, matches, chat, subscriptions).
+ * Pass the request so the Bearer token can be used when the cookie is not sent.
  */
-export async function getEmployerCompanyFromSession(): Promise<EmployerContext | null> {
+export async function getEmployerCompanyFromSession(request?: Request): Promise<EmployerContext | null> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  let token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  if (!token && request) {
+    const auth = request.headers.get("Authorization");
+    if (auth?.startsWith("Bearer ")) token = auth.slice(7).trim();
+  }
   if (!token) return null;
 
   const session = await prisma.session.findUnique({

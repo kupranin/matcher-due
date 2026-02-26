@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     }
 
     if (employerLiked) {
-      const ctx = await getEmployerCompanyFromSession();
+      const ctx = await getEmployerCompanyFromSession(request);
       if (!ctx) {
         return NextResponse.json({ error: "Sign in as employer to like a candidate" }, { status: 401 });
       }
@@ -139,7 +139,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const ctx = await getEmployerCompanyFromSession();
+    const ctx = await getEmployerCompanyFromSession(request);
     if (!ctx) {
       return NextResponse.json([]);
     }

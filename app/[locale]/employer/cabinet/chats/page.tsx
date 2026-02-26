@@ -43,8 +43,15 @@ export default function EmployerChatsPage() {
   const [singleMatchLoading, setSingleMatchLoading] = useState(false);
   const singleMatchFetchedForId = useRef<string | null>(null);
 
+  function getEmployerAuthHeaders(): Record<string, string> {
+    if (typeof window === "undefined") return {};
+    const token = window.sessionStorage.getItem("matcher_employer_token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
   function fetchMatches() {
-    return fetch("/api/matches", { credentials: "include" })
+    const opts = { credentials: "include" as RequestCredentials, ...(Object.keys(getEmployerAuthHeaders()).length ? { headers: getEmployerAuthHeaders() } : {}) };
+    return fetch("/api/matches", opts)
       .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
       .then(({ ok, data: list }: { ok: boolean; data: unknown }) => {
         const arr = ok && Array.isArray(list) ? list as Array<{ id: string; vacancyId: string; candidateProfileId: string; candidateLiked: boolean; employerLiked: boolean; vacancyTitle: string; company: string; candidateName: string; candidateJobTitle?: string | null; createdAt: string }> : [];
@@ -79,7 +86,8 @@ export default function EmployerChatsPage() {
     if (loading || matches.length > 0 || !matchIdFromUrl || singleMatchFetchedForId.current === matchIdFromUrl) return;
     singleMatchFetchedForId.current = matchIdFromUrl;
     setSingleMatchLoading(true);
-    fetch(`/api/matches/${encodeURIComponent(matchIdFromUrl)}`, { credentials: "include" })
+    const auth = getEmployerAuthHeaders();
+    fetch(`/api/matches/${encodeURIComponent(matchIdFromUrl)}`, { credentials: "include", ...(Object.keys(auth).length ? { headers: auth } : {}) })
       .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
       .then(({ ok, data }) => {
         if (ok && data?.id) {

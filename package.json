@@ -17,6 +17,7 @@
     "db:import:candidates": "tsx prisma/import-candidate-profiles.ts",
     "db:ensure-candidate-users": "tsx prisma/ensure-candidate-users.ts",
     "db:seed-candidate-skills": "tsx prisma/seed-candidate-skills.ts",
+    "db:remove-vacancies-kursi-spar": "tsx prisma/remove-vacancies-by-company-name.ts",
     "db:push": "prisma db push",
     "postinstall": "prisma generate"
   },

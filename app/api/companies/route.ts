@@ -7,9 +7,9 @@ import { getEmployerCompanyFromSession } from "@/lib/employerAuth";
  * Returns the company for the current employer (session). User must match company: 1:1.
  * No query params needed when called with credentials—company is resolved from session.
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const ctx = await getEmployerCompanyFromSession();
+    const ctx = await getEmployerCompanyFromSession(request);
     if (!ctx) {
       return NextResponse.json({ error: "Sign in as employer to view your company" }, { status: 401 });
     }
@@ -47,7 +47,7 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
-    const ctx = await getEmployerCompanyFromSession();
+    const ctx = await getEmployerCompanyFromSession(request);
     if (!ctx) {
       return NextResponse.json({ error: "Sign in as employer to create a company" }, { status: 401 });
     }
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
  */
 export async function PATCH(request: Request) {
   try {
-    const ctx = await getEmployerCompanyFromSession();
+    const ctx = await getEmployerCompanyFromSession(request);
     if (!ctx) {
       return NextResponse.json({ error: "Sign in as employer to update your company" }, { status: 401 });
     }

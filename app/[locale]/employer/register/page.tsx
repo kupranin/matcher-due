@@ -89,10 +89,12 @@ export default function EmployerRegisterPage() {
       }
       const loginData = await loginRes.json().catch(() => ({}));
       const sessionUserId = loginData.userId || userId;
-      // Create company (backend uses session; no userId in body).
+      const token = typeof loginData.token === "string" ? loginData.token : null;
+      if (token && typeof window !== "undefined") window.sessionStorage.setItem("matcher_employer_token", token);
+      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
       const companyRes = await fetch("/api/companies", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeader },
         credentials: "include",
         body: JSON.stringify({
           name: companyName.trim(),

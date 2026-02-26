@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     const matchId = searchParams.get("matchId");
     if (!matchId) return NextResponse.json({ error: "matchId required" }, { status: 400 });
 
-    const ctx = await getEmployerCompanyFromSession();
+    const ctx = await getEmployerCompanyFromSession(request);
     if (ctx) {
       const allowed = await matchBelongsToEmployerCompany(matchId, ctx.companyId);
       if (!allowed) {
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     if (!text) return NextResponse.json({ error: "text required" }, { status: 400 });
 
     if (sender === "employer") {
-      const ctx = await getEmployerCompanyFromSession();
+      const ctx = await getEmployerCompanyFromSession(request);
       if (!ctx) {
         return NextResponse.json({ error: "Sign in as employer to send messages" }, { status: 401 });
       }

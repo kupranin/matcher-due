@@ -106,6 +106,7 @@ export async function POST(request: Request) {
       userId: user.id,
       email: user.email,
       role: user.role,
+      ...(roleChoice === "EMPLOYER" && { token }),
     });
     res.cookies.set(SESSION_COOKIE_NAME, token, {
       path: "/",

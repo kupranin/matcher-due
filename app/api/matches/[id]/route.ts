@@ -7,7 +7,7 @@ import { getEmployerCompanyFromSession, matchBelongsToEmployerCompany } from "@/
  * Used when the chats page has matchId in URL but the list returned empty (e.g. timing/session).
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -16,7 +16,7 @@ export async function GET(
       return NextResponse.json({ error: "match id required" }, { status: 400 });
     }
 
-    const ctx = await getEmployerCompanyFromSession();
+    const ctx = await getEmployerCompanyFromSession(request);
     if (!ctx) {
       return NextResponse.json({ error: "Sign in as employer to view this match" }, { status: 401 });
     }

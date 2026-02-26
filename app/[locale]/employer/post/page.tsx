@@ -67,7 +67,9 @@ export default function EmployerPostPage() {
           if (data?.user?.role === "EMPLOYER" && data.user.id) {
             window.sessionStorage.setItem("matcher_employer_user_id", data.user.id);
             if (!window.sessionStorage.getItem("matcher_employer_company_id")) {
-              return fetch(`/api/companies?userId=${encodeURIComponent(data.user.id)}`)
+              const token = window.sessionStorage.getItem("matcher_employer_token");
+              const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+              return fetch("/api/companies", { credentials: "include", ...auth })
                 .then((r) => r.json())
                 .then((company: { id?: string } | null) => {
                   if (company?.id) window.sessionStorage.setItem("matcher_employer_company_id", company.id);
@@ -318,7 +320,9 @@ export default function EmployerPostPage() {
     }
     if (!companyId && userId && typeof window !== "undefined") {
       try {
-        const companyRes = await fetch(`/api/companies?userId=${encodeURIComponent(userId)}`);
+        const token = window.sessionStorage.getItem("matcher_employer_token");
+        const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+        const companyRes = await fetch("/api/companies", { credentials: "include", ...auth });
         const companyData = await companyRes.json().catch(() => null);
         if (companyData?.id) {
           companyId = companyData.id;
@@ -329,9 +333,11 @@ export default function EmployerPostPage() {
       }
     }
     try {
+      const token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
       const res = await fetch("/api/vacancies", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         credentials: "include",
         body: JSON.stringify({
           companyId: companyId || undefined,
@@ -364,6 +370,7 @@ export default function EmployerPostPage() {
           window.sessionStorage.removeItem("employerLoggedIn");
           window.sessionStorage.removeItem("matcher_employer_user_id");
           window.sessionStorage.removeItem("matcher_employer_company_id");
+          window.sessionStorage.removeItem("matcher_employer_token");
           setIsLoggedIn(false);
         }
         return;
@@ -410,9 +417,11 @@ export default function EmployerPostPage() {
       return;
     }
     try {
+      const token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
       const res = await fetch("/api/subscriptions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         credentials: "include",
         body: JSON.stringify({
           packageType: selectedPackage.id,

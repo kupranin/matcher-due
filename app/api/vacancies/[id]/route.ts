@@ -15,7 +15,7 @@ export async function DELETE(request: Request, { params }: Params) {
       return NextResponse.json({ error: "Vacancy ID required" }, { status: 400 });
     }
 
-    const ctx = await getEmployerCompanyFromSession();
+    const ctx = await getEmployerCompanyFromSession(request);
     if (!ctx) {
       return NextResponse.json({ error: "Sign in as employer to delete a vacancy" }, { status: 401 });
     }

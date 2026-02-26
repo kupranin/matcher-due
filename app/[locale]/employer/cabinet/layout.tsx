@@ -42,12 +42,15 @@ export default function EmployerCabinetLayout({
           return;
         }
         if (typeof window !== "undefined") {
+          // Avoid showing a previous user's company name until API confirms current company
+          window.sessionStorage.removeItem("matcher_employer_company_name");
           window.sessionStorage.setItem("employerLoggedIn", "1");
           if (data.user.id) {
             window.sessionStorage.setItem("matcher_employer_user_id", data.user.id);
           }
-          // Server resolves company from session cookie (same user → company mapping)
-          return fetch("/api/companies", { credentials: "include" })
+          const token = window.sessionStorage.getItem("matcher_employer_token");
+          const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+          return fetch("/api/companies", { credentials: "include", ...auth })
             .then((r) => r.json())
             .then((company: { id?: string; name?: string } | null) => {
               if (company?.id) {
@@ -78,7 +81,9 @@ export default function EmployerCabinetLayout({
   useEffect(() => {
     if (!authChecked) return;
     function fetchSubs() {
-      fetch("/api/subscriptions", { credentials: "include" })
+      const token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
+      const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      fetch("/api/subscriptions", { credentials: "include", ...auth })
         .then(async (r) => {
           const data = (await r.json()) as { subscription: SubscriptionDisplay; availableSlots?: number | null };
           if (!r.ok) {

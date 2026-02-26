@@ -13,9 +13,9 @@ const PACKAGE_LABELS: Record<string, string> = {
 };
 
 /** GET /api/subscriptions — current employer's subscription + available_slots from Company. */
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const ctx = await getEmployerCompanyFromSession();
+    const ctx = await getEmployerCompanyFromSession(request);
     if (!ctx) {
       return NextResponse.json({ subscription: null, availableSlots: null }, { status: 200 });
     }
@@ -83,7 +83,7 @@ export async function GET() {
 /** POST /api/subscriptions — record purchase and add vacancy slots (VacancyManager.processPurchase). */
 export async function POST(request: Request) {
   try {
-    const ctx = await getEmployerCompanyFromSession();
+    const ctx = await getEmployerCompanyFromSession(request);
     if (!ctx) {
       return NextResponse.json({ error: "Not logged in" }, { status: 401 });
     }

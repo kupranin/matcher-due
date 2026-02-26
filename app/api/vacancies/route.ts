@@ -15,7 +15,7 @@ const EDUCATION_LEVELS = ["None", "High School", "Bachelor", "Master", "PhD"] as
  */
 export async function GET(request: Request) {
   try {
-    const ctx = await getEmployerCompanyFromSession();
+    const ctx = await getEmployerCompanyFromSession(request);
     const companyId = ctx?.companyId ?? null;
 
     const list = await prisma.vacancy.findMany({
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
-    const ctx = await getEmployerCompanyFromSession();
+    const ctx = await getEmployerCompanyFromSession(request);
     if (!ctx) {
       return NextResponse.json(
         { error: "Sign in as employer to post a vacancy" },

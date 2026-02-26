@@ -37,11 +37,18 @@ export default function MatchChatWindow({
   const otherName = userRole === "candidate" ? match.company : match.candidateName;
   const defaultTitle = `Interview: ${match.vacancyTitle} with ${otherName}`;
 
+  const employerAuthHeaders = (() => {
+    if (userRole !== "employer" || typeof window === "undefined") return {};
+    const token = window.sessionStorage.getItem("matcher_employer_token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  })();
+
   useEffect(() => {
     const matchId = match.id;
     const credentials = { credentials: "include" as RequestCredentials };
+    const opts = { ...credentials, ...(Object.keys(employerAuthHeaders).length ? { headers: employerAuthHeaders } : {}) };
     function poll() {
-      fetch(`/api/chat?matchId=${encodeURIComponent(matchId)}`, credentials)
+      fetch(`/api/chat?matchId=${encodeURIComponent(matchId)}`, opts)
         .then((r) => r.json())
         .then((list: Array<{ id: string; matchId: string; sender: string; text: string; createdAt: number }>) => {
           if (Array.isArray(list)) {
@@ -66,7 +73,7 @@ export default function MatchChatWindow({
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...employerAuthHeaders },
         credentials: "include",
         body: JSON.stringify({ matchId: match.id, sender, text }),
       });
@@ -85,7 +92,7 @@ export default function MatchChatWindow({
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...employerAuthHeaders },
         credentials: "include",
         body: JSON.stringify({ matchId: match.id, sender, text: msg }),
       });

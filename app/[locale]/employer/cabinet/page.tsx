@@ -120,12 +120,34 @@ export default function EmployerCabinetPage() {
       .catch(() => setSalaryAveragesFromCandidates(null));
   }, []);
 
+  function getEmployerAuthHeaders(): Record<string, string> {
+    if (typeof window === "undefined") return {};
+    const token = window.sessionStorage.getItem("matcher_employer_token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
   function loadVacanciesAndCandidates() {
     setOpportunitiesLoading(true);
-    fetch("/api/vacancies", { credentials: "include" })
-      .then((r) => r.json())
-      .then((list: Array<{ id: string; title: string; company: string; locationCityId: string; salaryMin?: number | null; salaryMax: number; workType: string; isRemote?: boolean; requiredExperienceMonths?: number; requiredEducationLevel?: string; skills?: Array<{ name: string; level?: string; weight?: number }> }>) => {
-        const mapped: EmployerVacancy[] = (Array.isArray(list) ? list : []).map((v) => {
+    const credentials = { credentials: "include" as RequestCredentials };
+    const auth = getEmployerAuthHeaders();
+    const opts = { ...credentials, ...(Object.keys(auth).length ? { headers: auth } : {}) };
+    const vacanciesPromise = fetch("/api/vacancies", opts).then((r) => r.json());
+    const companiesPromise = fetch("/api/companies", opts).then((r) => r.json());
+
+    Promise.all([vacanciesPromise, companiesPromise])
+      .then(([list, company]: [unknown, { id?: string; name?: string } | null]) => {
+        const hasCompany = company && typeof company === "object" && "id" in company && company.id && !("error" in company);
+        if (hasCompany && typeof window !== "undefined") {
+          window.sessionStorage.setItem("matcher_employer_company_id", company.id);
+          if (company.name) window.sessionStorage.setItem("matcher_employer_company_name", company.name);
+        }
+        if (!hasCompany) {
+          setVacancies([]);
+          setOpportunitiesLoading(false);
+          return;
+        }
+        const rawList = Array.isArray(list) ? list : [];
+        const mapped: EmployerVacancy[] = rawList.map((v: { id: string; title: string; company: string; locationCityId?: string; salaryMin?: number | null; salaryMax: number; workType: string; isRemote?: boolean; requiredExperienceMonths?: number; requiredEducationLevel?: string; skills?: Array<{ name: string; level?: string; weight?: number }> }) => {
           const locationCityId = v.locationCityId ?? "";
           const loc = locationCityId === "tbilisi" ? "Tbilisi" : locationCityId;
           const salaryStr = v.salaryMin != null ? `${v.salaryMin}–${v.salaryMax} GEL` : `${v.salaryMax} GEL`;
@@ -140,27 +162,20 @@ export default function EmployerCabinetPage() {
           };
         });
         setVacancies(mapped);
-        setOpportunitiesLoading(false);
       })
-      .catch(() => setOpportunitiesLoading(false));
+      .catch(() => setVacancies([]))
+      .finally(() => setOpportunitiesLoading(false));
+
     fetch("/api/candidates")
       .then((r) => r.json())
       .then(setApiCandidates)
       .catch(() => {});
-    fetch("/api/matches", { credentials: "include" })
+    fetch("/api/matches", opts)
       .then((r) => r.json())
       .then((list: Array<{ vacancyId: string; candidateProfileId: string; candidateLiked: boolean; candidateName?: string; candidateJobTitle?: string | null; vacancyTitle?: string }>) =>
         setCompanyMatches(Array.isArray(list) ? list : [])
       )
       .catch(() => setCompanyMatches([]));
-    fetch("/api/companies", { credentials: "include" })
-      .then((r) => r.json())
-      .then((company: { id?: string } | null) => {
-        if (company?.id && typeof window !== "undefined") {
-          window.sessionStorage.setItem("matcher_employer_company_id", company.id);
-        }
-      })
-      .catch(() => {});
   }
 
   const likedCountByVacancyId = useMemo(() => {
@@ -243,9 +258,10 @@ export default function EmployerCabinetPage() {
     if (!window.confirm(t("deleteVacancyConfirm"))) return;
     const companyId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_id") : null;
     try {
-      const res = await fetch(`/api/vacancies/${v.id}?companyId=${encodeURIComponent(companyId ?? "")}`, {
+      const res = await fetch(`/api/vacancies/${v.id}`, {
         method: "DELETE",
         credentials: "include",
+        headers: getEmployerAuthHeaders(),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -272,7 +288,7 @@ export default function EmployerCabinetPage() {
       try {
         const res = await fetch("/api/matches", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getEmployerAuthHeaders() },
           credentials: "include",
           body: JSON.stringify({
             vacancyId: selectedVacancy.id,

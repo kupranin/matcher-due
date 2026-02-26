@@ -52,6 +52,7 @@ export default function LoginPage() {
         return;
       }
       const userId = data.userId;
+      const employerToken = typeof data.token === "string" ? data.token : null;
       if (userType === "candidate" && userId && typeof window !== "undefined") {
         window.localStorage.setItem("matcher_candidate_user_id", userId);
         const profileRes = await fetch(`/api/candidates/profile?userId=${encodeURIComponent(userId)}`);
@@ -59,9 +60,20 @@ export default function LoginPage() {
         if (profileData?.profileId) window.localStorage.setItem("matcher_candidate_profile_id", profileData.profileId);
       }
       if (userType === "business" && userId && typeof window !== "undefined") {
+        // Clear previous employer session so a different user doesn't see the old company name
+        window.sessionStorage.removeItem("matcher_employer_company_name");
+        window.sessionStorage.removeItem("matcher_employer_company_id");
+        window.sessionStorage.removeItem("matcher_employer_user_id");
+        window.sessionStorage.removeItem("matcher_employer_token");
+        window.sessionStorage.removeItem("employerLoggedIn");
+        window.sessionStorage.removeItem("employerHasSubscription");
         window.sessionStorage.setItem("matcher_employer_user_id", userId);
         window.sessionStorage.setItem("employerLoggedIn", "1");
-        const companyRes = await fetch(`/api/companies?userId=${encodeURIComponent(userId)}`);
+        if (employerToken) window.sessionStorage.setItem("matcher_employer_token", employerToken);
+        const companyRes = await fetch("/api/companies", {
+          credentials: "include",
+          ...(employerToken ? { headers: { Authorization: `Bearer ${employerToken}` } } : {}),
+        });
         const companyData = await companyRes.json().catch(() => null);
         if (companyData?.id) {
           window.sessionStorage.setItem("matcher_employer_company_id", companyData.id);

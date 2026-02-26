@@ -29,7 +29,9 @@ export default function EmployerCabinetProfilePage() {
     const stored = loadEmployerProfile();
     const userId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_user_id") : null;
     if (userId) {
-      fetch(`/api/companies?userId=${encodeURIComponent(userId)}`)
+      const token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
+      const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      fetch("/api/companies", { credentials: "include", ...auth })
         .then((r) => r.json())
         .then((company: { name?: string; contactEmail?: string; contactPhone?: string; bio?: string; logo?: string | null; website?: string; industry?: string; employeeCount?: string; address?: string; linkedIn?: string } | null) => {
           if (company) {
@@ -195,9 +197,12 @@ export default function EmployerCabinetProfilePage() {
             const userId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_user_id") : null;
             if (userId) {
               try {
+                const token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
+                const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
                 await fetch("/api/companies", {
                   method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
+                  headers: { "Content-Type": "application/json", ...authHeaders },
+                  credentials: "include",
                   body: JSON.stringify({
                     userId,
                     name: companyName.trim(),
