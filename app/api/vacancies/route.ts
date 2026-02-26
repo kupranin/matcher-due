@@ -86,7 +86,9 @@ export async function POST(request: Request) {
     const requiredEducationLevel = EDUCATION_LEVELS.includes((body?.requiredEducationLevel as (typeof EDUCATION_LEVELS)[number]) ?? "High School")
       ? (body.requiredEducationLevel as (typeof EDUCATION_LEVELS)[number])
       : "High School";
-    const description = typeof body?.description === "string" ? body.description.trim() || null : null;
+    const DESCRIPTION_MAX = 200;
+    const descriptionRaw = typeof body?.description === "string" ? body.description.trim() || null : null;
+    const description = descriptionRaw ? descriptionRaw.slice(0, DESCRIPTION_MAX) : null;
     const photo = typeof body?.photo === "string" ? body.photo.trim() || null : null;
 
     const skills = Array.isArray(body?.skills)

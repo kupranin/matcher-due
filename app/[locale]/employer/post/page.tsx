@@ -56,31 +56,35 @@ export default function EmployerPostPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (window.sessionStorage.getItem("employerLoggedIn")) {
+    const hasStorage = window.sessionStorage.getItem("employerLoggedIn");
+    const userId = window.sessionStorage.getItem("matcher_employer_user_id");
+    const companyId = window.sessionStorage.getItem("matcher_employer_company_id");
+    if (hasStorage && userId && companyId) {
       setIsLoggedIn(true);
-      const userId = window.sessionStorage.getItem("matcher_employer_user_id");
-      const companyId = window.sessionStorage.getItem("matcher_employer_company_id");
-      if (userId && companyId) return;
-      fetch("/api/auth/session", { credentials: "include" })
-        .then((r) => r.json())
-        .then((data: { user?: { id: string; role: string } | null; token?: string }) => {
-          if (data?.user?.role === "EMPLOYER" && data.user.id) {
-            if (data.token) window.sessionStorage.setItem("matcher_employer_token", data.token);
-            window.sessionStorage.setItem("matcher_employer_user_id", data.user.id);
-            if (!window.sessionStorage.getItem("matcher_employer_company_id")) {
-              const token = window.sessionStorage.getItem("matcher_employer_token");
-              const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
-              return fetch("/api/companies", { credentials: "include", ...auth })
-                .then((r) => r.json())
-                .then((company: { id?: string } | null) => {
-                  if (company?.id) window.sessionStorage.setItem("matcher_employer_company_id", company.id);
-                })
-                .catch(() => {});
-            }
-          }
-        })
-        .catch(() => {});
+      return;
     }
+    // Always confirm with session API so we recognize employer after register in another tab or if storage was cleared
+    fetch("/api/auth/session", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data: { user?: { id: string; role: string } | null; token?: string }) => {
+        if (data?.user?.role === "EMPLOYER" && data.user.id) {
+          setIsLoggedIn(true);
+          if (data.token) window.sessionStorage.setItem("matcher_employer_token", data.token);
+          window.sessionStorage.setItem("matcher_employer_user_id", data.user.id);
+          window.sessionStorage.setItem("employerLoggedIn", "1");
+          if (!window.sessionStorage.getItem("matcher_employer_company_id")) {
+            const token = window.sessionStorage.getItem("matcher_employer_token");
+            const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+            return fetch("/api/companies", { credentials: "include", ...auth })
+              .then((res) => res.json())
+              .then((company: { id?: string } | null) => {
+                if (company?.id) window.sessionStorage.setItem("matcher_employer_company_id", company.id);
+              })
+              .catch(() => {});
+          }
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -238,10 +242,12 @@ export default function EmployerPostPage() {
     }
   }
 
+  const DESCRIPTION_MAX = 200;
+
   function handleJobTitleSelect(role: JobTemplateRole) {
     setJobTitle(role.title);
     setJobSlug(role.slug);
-    setDescription(role.description);
+    setDescription(role.description.slice(0, DESCRIPTION_MAX));
     setRequiredSkills([]);
     setGoodToHaveSkills([]);
     setVacancyPhotoUrl("");
@@ -252,7 +258,7 @@ export default function EmployerPostPage() {
     const match = jobRoles.find((r) => r.title === value);
     if (match) {
       setJobSlug(match.slug);
-      setDescription(match.description);
+      setDescription(match.description.slice(0, DESCRIPTION_MAX));
       setRequiredSkills([]);
       setGoodToHaveSkills([]);
       setVacancyPhotoUrl("");
@@ -267,7 +273,8 @@ export default function EmployerPostPage() {
     jobTitle.trim().length >= 2 &&
     requiredSkills.length > 0 &&
     requiredSkills.every((s) => Boolean(s.level)) &&
-    locationCityId;
+    locationCityId &&
+    description.length <= DESCRIPTION_MAX;
 
   async function proceedToPackage() {
     if (isSubmitting) return;
@@ -282,7 +289,7 @@ export default function EmployerPostPage() {
         title: jobTitle.trim(),
         locale: apiLocale,
         category: "User-added",
-        description: description.trim() || undefined,
+        description: description.trim().slice(0, DESCRIPTION_MAX) || undefined,
         skills: skillsPayload.length > 0 ? skillsPayload : undefined,
       });
     }
@@ -355,7 +362,7 @@ export default function EmployerPostPage() {
           isRemote: false,
           requiredExperienceMonths: experienceRequired === "yes" ? requiredExperienceMonths : 0,
           requiredEducationLevel,
-          description: description.trim() || undefined,
+          description: description.trim().slice(0, DESCRIPTION_MAX) || undefined,
           skills: skillsForApi,
           photo: effectivePhotoUrl || undefined,
         }),
@@ -1129,13 +1136,16 @@ export default function EmployerPostPage() {
               </p>
               <textarea
                 value={description}
-                onChange={(e) => setDescription(e.target.value.slice(0, 200))}
+                onChange={(e) => setDescription(e.target.value.slice(0, DESCRIPTION_MAX))}
                 placeholder={t("descriptionPlaceholder")}
                 rows={3}
-                maxLength={200}
+                maxLength={DESCRIPTION_MAX}
                 className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
               />
-              <p className="mt-1 text-xs text-gray-500">{t("charactersMax", { count: description.length })}</p>
+              <p className={`mt-1 text-xs ${description.length > DESCRIPTION_MAX ? "text-red-600 font-medium" : "text-gray-500"}`}>
+                {t("charactersMax", { count: description.length })}
+                {description.length > DESCRIPTION_MAX && " · Shorten to 200 characters to post."}
+              </p>
             </div>
 
             {saveError && (

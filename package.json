@@ -18,6 +18,8 @@
     "db:ensure-candidate-users": "tsx prisma/ensure-candidate-users.ts",
     "db:seed-candidate-skills": "tsx prisma/seed-candidate-skills.ts",
     "db:remove-vacancies-kursi-spar": "tsx prisma/remove-vacancies-by-company-name.ts",
+    "db:rename-companies-kursi-spar": "tsx prisma/rename-companies-kursi-spar.ts",
+    "db:delete-all": "tsx prisma/delete-all-companies-users-vacancies.ts",
     "db:push": "prisma db push",
     "postinstall": "prisma generate"
   },

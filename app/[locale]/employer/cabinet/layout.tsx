@@ -28,9 +28,9 @@ export default function EmployerCabinetLayout({
   const [availableSlots, setAvailableSlots] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
-  const [companyName, setCompanyName] = useState<string | null>(() =>
-    typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_name") : null
-  );
+  // Always start with null so we never show a previous user's company name (e.g. "Spar").
+  // Company name is set only from GET /api/companies so it stays dynamic per logged-in employer.
+  const [companyName, setCompanyName] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/session", { credentials: "include" })
@@ -61,14 +61,13 @@ export default function EmployerCabinetLayout({
                 }
                 window.dispatchEvent(new CustomEvent("employer-company-ready"));
               }
-              // Prefer API name; fallback to name stored after registration (cabinet load can race with session).
-              const name = company?.name ?? (typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_name") : null);
-              if (company?.name && typeof window !== "undefined") window.sessionStorage.removeItem("matcher_employer_company_name");
-              setCompanyName(name ?? null);
+              const name = company?.name ?? null;
+              if (typeof window !== "undefined" && name) window.sessionStorage.setItem("matcher_employer_company_name", name);
+              setCompanyName(name);
               setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
             })
             .catch(() => {
-              setCompanyName(typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_name") : null);
+              setCompanyName(null);
               setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
             });
         }

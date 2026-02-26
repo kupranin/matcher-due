@@ -3,6 +3,20 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { SESSION_COOKIE_NAME } from "@/lib/session";
 
+/** Clear session cookie so browser stops sending it (e.g. after DB wipe or expiry). */
+function responseWithClearedSessionCookie(body: { userId: null; user: null }) {
+  const res = NextResponse.json(body, { status: 200 });
+  res.cookies.set(SESSION_COOKIE_NAME, "", {
+    path: "/",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 0,
+    expires: new Date(0),
+  });
+  return res;
+}
+
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -19,7 +33,7 @@ export async function GET() {
       if (session) {
         await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
       }
-      return NextResponse.json({ userId: null, user: null }, { status: 200 });
+      return responseWithClearedSessionCookie({ userId: null, user: null });
     }
 
     const payload: { userId: string; user: { id: string; email: string; role: string }; token?: string } = {
@@ -34,6 +48,6 @@ export async function GET() {
     return NextResponse.json(payload);
   } catch (e) {
     console.error("Session get error:", e);
-    return NextResponse.json({ userId: null, user: null }, { status: 200 });
+    return responseWithClearedSessionCookie({ userId: null, user: null });
   }
 }
