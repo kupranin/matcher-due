@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getEmployerCompanyFromSession } from "@/lib/employerAuth";
+import { getEmployerCompanyFromSession, getEmployerFromSession } from "@/lib/employerAuth";
 
 /**
  * GET /api/companies
@@ -42,13 +42,13 @@ export async function GET(request: Request) {
 
 /**
  * POST /api/companies
- * Create company for the current employer (session). User must match company.
+ * Create company for the current employer (session). User must be signed in as EMPLOYER; company may not exist yet.
  * Body: name, companyId, contactEmail, contactPhone (optional: bio, website, etc.)
  */
 export async function POST(request: Request) {
   try {
-    const ctx = await getEmployerCompanyFromSession(request);
-    if (!ctx) {
+    const employer = await getEmployerFromSession(request);
+    if (!employer) {
       return NextResponse.json({ error: "Sign in as employer to create a company" }, { status: 401 });
     }
 
@@ -62,14 +62,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "name and contactEmail required" }, { status: 400 });
     }
 
-    const existing = await prisma.company.findUnique({ where: { userId: ctx.userId } });
+    const existing = await prisma.company.findUnique({ where: { userId: employer.userId } });
     if (existing) {
       return NextResponse.json({ id: existing.id, userId: existing.userId });
     }
 
     const company = await prisma.company.create({
       data: {
-        userId: ctx.userId,
+        userId: employer.userId,
         name,
         companyId,
         contactEmail,

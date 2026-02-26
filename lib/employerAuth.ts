@@ -20,12 +20,10 @@ export type EmployerContext = {
 };
 
 /**
- * Resolves the current employer's company from the session cookie or Authorization: Bearer header.
- * Returns null if not logged in, not EMPLOYER, session expired, or no company.
- * Use this for all employer-scoped APIs (companies, vacancies, matches, chat, subscriptions).
- * Pass the request so the Bearer token can be used when the cookie is not sent.
+ * Resolves the current employer from the session cookie or Authorization: Bearer header.
+ * Does not require a company to exist. Use for POST /api/companies (create company).
  */
-export async function getEmployerCompanyFromSession(request?: Request): Promise<EmployerContext | null> {
+export async function getEmployerFromSession(request?: Request): Promise<{ userId: string } | null> {
   const cookieStore = await cookies();
   let token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!token && request) {
@@ -41,15 +39,27 @@ export async function getEmployerCompanyFromSession(request?: Request): Promise<
   if (!session || session.expiresAt < new Date() || session.user.role !== "EMPLOYER") {
     return null;
   }
+  return { userId: session.user.id };
+}
+
+/**
+ * Resolves the current employer's company from the session cookie or Authorization: Bearer header.
+ * Returns null if not logged in, not EMPLOYER, session expired, or no company.
+ * Use this for GET/PATCH company, vacancies, matches, chat, subscriptions.
+ * Pass the request so the Bearer token can be used when the cookie is not sent.
+ */
+export async function getEmployerCompanyFromSession(request?: Request): Promise<EmployerContext | null> {
+  const employer = await getEmployerFromSession(request);
+  if (!employer) return null;
 
   const company = await prisma.company.findUnique({
-    where: { userId: session.user.id },
+    where: { userId: employer.userId },
     select: { id: true, name: true, userId: true },
   });
   if (!company) return null;
 
   return {
-    userId: session.user.id,
+    userId: company.userId,
     companyId: company.id,
     company: { id: company.id, name: company.name, userId: company.userId },
   };

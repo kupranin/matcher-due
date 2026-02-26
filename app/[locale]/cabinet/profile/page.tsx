@@ -12,6 +12,9 @@ import {
 import { GEORGIAN_CITIES } from "@/lib/georgianLocations";
 import { addSkillToDb } from "@/lib/userContentApi";
 import { ALL_SKILLS } from "@/lib/allSkills";
+import { processImageToMaxKb } from "@/lib/imageUtils";
+
+const PROFILE_PHOTO_MAX_KB = 200;
 
 const WORK_TYPES = ["Full-time", "Part-time", "Temporary", "Remote"];
 const JOB_SUGGESTIONS = [
@@ -31,6 +34,7 @@ export default function CabinetProfilePage() {
   const tSkillNames = useTranslations("skillNames");
   const skillLabel = (s: string) => (ALL_SKILLS.includes(s) ? (tSkillNames(s) as string) : s);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
   const [job, setJob] = useState("");
@@ -74,22 +78,28 @@ export default function CabinetProfilePage() {
     if (userId) {
       fetch(`/api/candidates/profile?userId=${encodeURIComponent(userId)}`, { credentials: "include" })
         .then((r) => r.json())
-        .then((data: { photo?: string | null }) => {
-          if (data?.photo) setPhotoUrl(data.photo);
+        .then((data: { photo?: string | null } | null) => {
+          setPhotoUrl(data?.photo ?? null);
         })
         .catch(() => {});
     }
   }, []);
 
-  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = typeof reader.result === "string" ? reader.result : null;
-      if (dataUrl) setPhotoUrl(dataUrl);
-    };
-    reader.readAsDataURL(file);
+    e.target.value = "";
+    if (!file) return;
+    setPhotoError(null);
+    if (!file.type.startsWith("image/")) {
+      setPhotoError(t("photoInvalidFile"));
+      return;
+    }
+    try {
+      const dataUrl = await processImageToMaxKb(file, PROFILE_PHOTO_MAX_KB);
+      setPhotoUrl(dataUrl);
+    } catch (err) {
+      setPhotoError(err instanceof Error ? err.message : t("photoTooLarge"));
+    }
   }
 
   function addSkill() {
@@ -135,9 +145,11 @@ export default function CabinetProfilePage() {
               <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 {photoUrl ? t("changePhoto") : t("addPhoto")}
               </button>
-              {photoUrl && <button type="button" onClick={() => setPhotoUrl(null)} className="ml-2 text-sm text-gray-500 hover:text-red-600">{t("remove")}</button>}
+              {photoUrl && <button type="button" onClick={() => { setPhotoUrl(null); setPhotoError(null); }} className="ml-2 text-sm text-gray-500 hover:text-red-600">{t("remove")}</button>}
             </div>
           </div>
+          {photoError && <p className="mt-2 text-sm text-red-600">{photoError}</p>}
+          <p className="mt-1 text-xs text-gray-500">{t("photoMaxSize", { kb: PROFILE_PHOTO_MAX_KB })}</p>
         </section>
 
         <section className="rounded-3xl border bg-white p-6 shadow-sm">

@@ -55,7 +55,7 @@ export default function EmployerRegisterPage() {
     if (digits.length < 4) return;
     setRegisterError("");
     try {
-      // 1. Register user only (simpler; avoids transaction/DB failures).
+      // 1. Register company = user + company created together. Vacancies will link to this company.
       const regRes = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -63,18 +63,22 @@ export default function EmployerRegisterPage() {
           email: email.trim().toLowerCase(),
           password,
           role: "EMPLOYER",
+          companyName: companyName.trim(),
+          companyId: companyId.trim() || "N/A",
+          contactEmail: email.trim().toLowerCase(),
+          contactPhone: phone.trim(),
         }),
       });
       const regData = await regRes.json().catch(() => ({}));
       const userId = regData.userId;
-      let companyIdFromReg = regData.companyId;
+      const companyIdFromReg = regData.companyId;
       if (!userId) {
         const msg = regData.error || "Registration failed. Try again or log in if you already have an account.";
         const hint = regData.hint ? ` ${regData.hint}` : "";
         setRegisterError(msg + hint);
         return;
       }
-      // 2. Log in to get session cookie and token.
+      // 2. Log in to get session cookie (and token for client).
       const loginRes = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -99,34 +103,10 @@ export default function EmployerRegisterPage() {
         window.sessionStorage.removeItem("employerHasSubscription");
         window.sessionStorage.setItem("matcher_employer_user_id", sessionUserId);
         window.sessionStorage.setItem("employerLoggedIn", "1");
-      }
-      // 3. Create company (requires session). New user: no companyId yet. Existing: may have companyIdFromReg.
-      if (!companyIdFromReg) {
-        const headers: Record<string, string> = { "Content-Type": "application/json" };
-        if (token) headers.Authorization = `Bearer ${token}`;
-        const companyRes = await fetch("/api/companies", {
-          method: "POST",
-          headers,
-          credentials: "include",
-          body: JSON.stringify({
-            name: companyName.trim(),
-            companyId: companyId.trim() || "N/A",
-            contactEmail: email.trim().toLowerCase(),
-            contactPhone: phone.trim(),
-          }),
-        });
-        const companyData = await companyRes.json().catch(() => null);
-        if (companyData?.id) {
-          companyIdFromReg = companyData.id;
-        } else if (companyRes.status === 400 || companyRes.status === 401) {
-          const errMsg = (companyData as { error?: string })?.error || "Could not create company.";
-          setRegisterError(errMsg);
-          return;
+        if (companyIdFromReg) {
+          window.sessionStorage.setItem("matcher_employer_company_id", companyIdFromReg);
+          window.sessionStorage.setItem("matcher_employer_company_name", companyName.trim());
         }
-      }
-      if (typeof window !== "undefined") {
-        if (companyIdFromReg) window.sessionStorage.setItem("matcher_employer_company_id", companyIdFromReg);
-        window.sessionStorage.setItem("matcher_employer_company_name", companyName.trim());
       }
       setOtpOpen(false);
       router.push("/employer/cabinet");

@@ -50,6 +50,10 @@ export async function GET(request: Request) {
   }
 }
 
+/** Max profile photo size: 200 KB. Base64 ~4/3 of bytes → ~274k chars. */
+const PROFILE_PHOTO_MAX_BYTES = 200 * 1024;
+const PROFILE_PHOTO_MAX_BASE64_LENGTH = Math.ceil(PROFILE_PHOTO_MAX_BYTES * (4 / 3)) + 500;
+
 /** PATCH /api/candidates/profile — update profile (body: userId + profile fields). */
 export async function PATCH(request: Request) {
   try {
@@ -70,7 +74,10 @@ export async function PATCH(request: Request) {
     const willingToRelocate = body?.willingToRelocate === true || body?.willingToRelocate === false ? body.willingToRelocate : undefined;
     const jobTitle = typeof body?.jobTitle === "string" ? body.jobTitle.trim() || null : undefined;
     const availableToWork = body?.availableToWork === true || body?.availableToWork === false ? body.availableToWork : undefined;
-    const photo = body?.photo === null ? null : (typeof body?.photo === "string" ? body.photo.trim() || null : undefined);
+    let photo: string | null | undefined = body?.photo === null ? null : (typeof body?.photo === "string" ? body.photo.trim() || null : undefined);
+    if (photo != null && photo.length > PROFILE_PHOTO_MAX_BASE64_LENGTH) {
+      return NextResponse.json({ error: "Photo too large. Maximum 200 KB." }, { status: 400 });
+    }
     const skills = Array.isArray(body?.skills)
       ? (body.skills as Array<{ name?: string; level?: string }>)
           .filter((s) => s && typeof s?.name === "string" && (s.name as string).trim().length > 0)
