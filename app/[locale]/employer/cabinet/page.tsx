@@ -138,7 +138,7 @@ export default function EmployerCabinetPage() {
       .then(([list, company]: [unknown, { id?: string; name?: string } | null]) => {
         const hasCompany = company && typeof company === "object" && "id" in company && company.id && !("error" in company);
         if (hasCompany && typeof window !== "undefined") {
-          window.sessionStorage.setItem("matcher_employer_company_id", company.id);
+          if (company.id) window.sessionStorage.setItem("matcher_employer_company_id", company.id);
           if (company.name) window.sessionStorage.setItem("matcher_employer_company_name", company.name);
         }
         if (!hasCompany) {
