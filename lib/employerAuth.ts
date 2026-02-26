@@ -19,16 +19,29 @@ export type EmployerContext = {
   company: { id: string; name: string; userId: string };
 };
 
+/** Read session token from the request (Cookie or Authorization). Use this so route handlers see the same token the client sent. */
+function getTokenFromRequest(request?: Request): string | undefined {
+  if (!request) return undefined;
+  const auth = request.headers.get("Authorization");
+  if (auth?.startsWith("Bearer ")) return auth.slice(7).trim();
+  const cookieHeader = request.headers.get("Cookie");
+  if (cookieHeader) {
+    const match = cookieHeader.match(new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`));
+    if (match?.[1]) return match[1].trim();
+  }
+  return undefined;
+}
+
 /**
  * Resolves the current employer from the session cookie or Authorization: Bearer header.
  * Does not require a company to exist. Use for POST /api/companies (create company).
+ * Prefer token from the request (Cookie/Authorization) so auth works when cookies() lags or isn't forwarded.
  */
 export async function getEmployerFromSession(request?: Request): Promise<{ userId: string } | null> {
-  const cookieStore = await cookies();
-  let token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  if (!token && request) {
-    const auth = request.headers.get("Authorization");
-    if (auth?.startsWith("Bearer ")) token = auth.slice(7).trim();
+  let token = getTokenFromRequest(request);
+  if (!token) {
+    const cookieStore = await cookies();
+    token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   }
   if (!token) return null;
 
