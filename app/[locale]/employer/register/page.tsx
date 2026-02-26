@@ -55,53 +55,33 @@ export default function EmployerRegisterPage() {
     if (digits.length < 4) return;
     setRegisterError("");
     try {
-      // 1. Register company = user + company created together. Vacancies will link to this company.
-      const regRes = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          password,
-          role: "EMPLOYER",
-          companyName: companyName.trim(),
-          companyId: companyId.trim() || "N/A",
-          contactEmail: email.trim().toLowerCase(),
-          contactPhone: phone.trim(),
-        }),
-      });
-      const regData = await regRes.json().catch(() => ({}));
-      const userId = regData.userId;
-      const companyIdFromReg = regData.companyId;
-      if (!userId) {
-        const msg = regData.error || "Registration failed. Try again or log in if you already have an account.";
-        const hint = regData.hint ? ` ${regData.hint}` : "";
-        setRegisterError(msg + hint);
-        return;
-      }
-      // 2. Log in to get session cookie (and token for client).
-      const loginRes = await fetch("/api/auth/login", {
+      const res = await fetch("/api/auth/employer-register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           password,
-          role: "EMPLOYER",
+          companyName: companyName.trim(),
+          companyId: companyId.trim() || "N/A",
+          contactEmail: email.trim().toLowerCase(),
+          contactPhone: phone.trim(),
         }),
       });
-      if (!loginRes.ok) {
-        setRegisterError("Account created. Please sign in on the login page.");
-        setOtpOpen(false);
-        router.push("/login");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = typeof data?.error === "string" ? data.error : "Registration failed. Please try again.";
+        const hint = typeof data?.hint === "string" ? ` ${data.hint}` : "";
+        setRegisterError(msg + hint);
         return;
       }
-      const loginData = await loginRes.json().catch(() => ({}));
-      const sessionUserId = loginData.userId || userId;
-      const token = typeof loginData.token === "string" ? loginData.token : null;
+      const userId = data.userId;
+      const companyIdFromReg = data.companyId;
+      const token = typeof data.token === "string" ? data.token : null;
       if (typeof window !== "undefined") {
         if (token) window.sessionStorage.setItem("matcher_employer_token", token);
         window.sessionStorage.removeItem("employerHasSubscription");
-        window.sessionStorage.setItem("matcher_employer_user_id", sessionUserId);
+        if (userId) window.sessionStorage.setItem("matcher_employer_user_id", userId);
         window.sessionStorage.setItem("employerLoggedIn", "1");
         if (companyIdFromReg) {
           window.sessionStorage.setItem("matcher_employer_company_id", companyIdFromReg);
