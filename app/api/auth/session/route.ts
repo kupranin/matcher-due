@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
-import { SESSION_COOKIE_NAME } from "@/lib/session";
+import { SESSION_COOKIE_NAME, getSessionTokenFromRequest } from "@/lib/session";
 
 /** Clear session cookie so browser stops sending it (e.g. after DB wipe or expiry). */
 function responseWithClearedSessionCookie(body: { userId: null; user: null }) {
@@ -19,16 +19,7 @@ function responseWithClearedSessionCookie(body: { userId: null; user: null }) {
 
 export async function GET(request: Request) {
   try {
-    let token: string | undefined;
-    const cookieHeader = request.headers.get("Cookie");
-    if (cookieHeader) {
-      const m = cookieHeader.match(new RegExp(`${SESSION_COOKIE_NAME.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}=([^;]+)`));
-      if (m?.[1]) token = m[1].trim();
-    }
-    if (!token) {
-      const cookieStore = await cookies();
-      token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-    }
+    const token = getSessionTokenFromRequest(request) ?? (await cookies()).get(SESSION_COOKIE_NAME)?.value;
     if (!token) {
       return NextResponse.json({ userId: null, user: null }, { status: 200 });
     }
