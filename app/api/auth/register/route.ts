@@ -5,8 +5,8 @@ import { hashPassword } from "@/lib/auth";
 /**
  * POST /api/auth/register
  * Body: email, password, role ("CANDIDATE" | "EMPLOYER").
- * When role is EMPLOYER, also pass: companyName, companyId, contactEmail, contactPhone
- * so the company is created in the same transaction as the user (ensures company exists after register).
+ * Creates the user only. For EMPLOYER, the client must then log in and call POST /api/companies
+ * to create the company (avoids transaction/DB issues and gives clearer errors).
  */
 export async function POST(request: Request) {
   try {
@@ -22,52 +22,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
     }
 
-    if (role === "EMPLOYER") {
-      const companyName = typeof body?.companyName === "string" ? body.companyName.trim() : "";
-      const companyId = typeof body?.companyId === "string" ? body.companyId.trim() || "N/A" : "N/A";
-      const contactEmail = typeof body?.contactEmail === "string" ? body.contactEmail.trim().toLowerCase() : "";
-      const contactPhone = typeof body?.contactPhone === "string" ? body.contactPhone.trim() : "";
-      if (!companyName || companyName.length < 2) {
-        return NextResponse.json({ error: "Company name required" }, { status: 400 });
-      }
-      if (!contactEmail || contactEmail.length < 3) {
-        return NextResponse.json({ error: "Contact email required" }, { status: 400 });
-      }
-
-      const existingUser = await prisma.user.findUnique({
-        where: { email },
-        include: { company: { select: { id: true } } },
-      });
-      if (existingUser) {
-        return NextResponse.json({
-          error: "Email already registered",
-          userId: existingUser.id,
-          ...(existingUser.company && { companyId: existingUser.company.id }),
-        }, { status: 200 });
-      }
-
-      const passwordHash = hashPassword(password);
-      const { user, company } = await prisma.$transaction(async (tx) => {
-        const u = await tx.user.create({
-          data: { email, passwordHash, role },
-        });
-        const c = await tx.company.create({
-          data: {
-            userId: u.id,
-            name: companyName,
-            companyId,
-            contactEmail: contactEmail || email,
-            contactPhone: contactPhone || "",
-          },
-        });
-        return { user: u, company: c };
-      });
-      return NextResponse.json({ userId: user.id, companyId: company.id });
-    }
-
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const existing = await prisma.user.findUnique({
+      where: { email },
+      ...(role === "EMPLOYER" ? { include: { company: { select: { id: true } } } } : {}),
+    });
     if (existing) {
-      return NextResponse.json({ error: "Email already registered", userId: existing.id }, { status: 200 });
+      const withCompany = existing as { id: string; company?: { id: string } };
+      return NextResponse.json({
+        error: "Email already registered",
+        userId: withCompany.id,
+        ...(role === "EMPLOYER" && withCompany.company && { companyId: withCompany.company.id }),
+      }, { status: 200 });
     }
 
     const passwordHash = hashPassword(password);

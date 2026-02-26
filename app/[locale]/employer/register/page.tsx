@@ -55,7 +55,7 @@ export default function EmployerRegisterPage() {
     if (digits.length < 4) return;
     setRegisterError("");
     try {
-      // Register creates both User and Company in one transaction so the company is always in the DB.
+      // 1. Register user only (simpler; avoids transaction/DB failures).
       const regRes = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -63,10 +63,6 @@ export default function EmployerRegisterPage() {
           email: email.trim().toLowerCase(),
           password,
           role: "EMPLOYER",
-          companyName: companyName.trim(),
-          companyId: companyId.trim() || "N/A",
-          contactEmail: email.trim().toLowerCase(),
-          contactPhone: phone.trim(),
         }),
       });
       const regData = await regRes.json().catch(() => ({}));
@@ -78,7 +74,7 @@ export default function EmployerRegisterPage() {
         setRegisterError(msg + hint);
         return;
       }
-      // Log in to set session cookie and get token.
+      // 2. Log in to get session cookie and token.
       const loginRes = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -103,20 +99,34 @@ export default function EmployerRegisterPage() {
         window.sessionStorage.removeItem("employerHasSubscription");
         window.sessionStorage.setItem("matcher_employer_user_id", sessionUserId);
         window.sessionStorage.setItem("employerLoggedIn", "1");
-        if (companyIdFromReg) {
-          window.sessionStorage.setItem("matcher_employer_company_id", companyIdFromReg);
-          window.sessionStorage.setItem("matcher_employer_company_name", companyName.trim());
-        } else {
-          // Existing user: fetch company so we have companyId and name
-          const companyRes = await fetch("/api/companies", { credentials: "include", ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}) });
-          const companyData = await companyRes.json().catch(() => null);
-          if (companyData?.id) {
-            window.sessionStorage.setItem("matcher_employer_company_id", companyData.id);
-            window.sessionStorage.setItem("matcher_employer_company_name", companyData.name ?? companyName.trim());
-          } else {
-            window.sessionStorage.setItem("matcher_employer_company_name", companyName.trim());
-          }
+      }
+      // 3. Create company (requires session). New user: no companyId yet. Existing: may have companyIdFromReg.
+      if (!companyIdFromReg) {
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const companyRes = await fetch("/api/companies", {
+          method: "POST",
+          headers,
+          credentials: "include",
+          body: JSON.stringify({
+            name: companyName.trim(),
+            companyId: companyId.trim() || "N/A",
+            contactEmail: email.trim().toLowerCase(),
+            contactPhone: phone.trim(),
+          }),
+        });
+        const companyData = await companyRes.json().catch(() => null);
+        if (companyData?.id) {
+          companyIdFromReg = companyData.id;
+        } else if (companyRes.status === 400 || companyRes.status === 401) {
+          const errMsg = (companyData as { error?: string })?.error || "Could not create company.";
+          setRegisterError(errMsg);
+          return;
         }
+      }
+      if (typeof window !== "undefined") {
+        if (companyIdFromReg) window.sessionStorage.setItem("matcher_employer_company_id", companyIdFromReg);
+        window.sessionStorage.setItem("matcher_employer_company_name", companyName.trim());
       }
       setOtpOpen(false);
       router.push("/employer/cabinet");

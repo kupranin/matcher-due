@@ -245,8 +245,8 @@ export default function UserFlow1Page() {
       const exists = prev.some((s) => s.name.toLowerCase() === normalized.toLowerCase());
       if (exists) return prev.filter((s) => s.name.toLowerCase() !== normalized.toLowerCase());
       if (prev.length >= 5) return prev;
-      const displayName = normalized.replace(/\b\w/g, (c) => c.toUpperCase());
-      return [...prev, { name: displayName }];
+      // Keep original casing so suggested list and level selection match (e.g. "Physical stamina").
+      return [...prev, { name: normalized }];
     });
   }
 
@@ -262,7 +262,8 @@ export default function UserFlow1Page() {
   }
 
   function setSkillLevel(name: string, level: SkillLevel) {
-    setSkills((prev) => prev.map((s) => (s.name === name ? { ...s, level } : s)));
+    const nameLower = name.toLowerCase();
+    setSkills((prev) => prev.map((s) => (s.name.toLowerCase() === nameLower ? { ...s, level } : s)));
   }
 
   const canContinue = useMemo(() => {
@@ -702,7 +703,7 @@ export default function UserFlow1Page() {
                   <div className="mt-2 flex flex-wrap gap-2 items-center">
                     {(suggestedSkills.length ? suggestedSkills : ["Communication", "Teamwork", "Time management"]).map(
                       (s) => {
-                        const active = skills.some((x) => x.name === s);
+                        const active = skills.some((x) => x.name.toLowerCase() === s.toLowerCase());
                         const disabled = !active && skills.length >= 5;
                         return (
                           <button

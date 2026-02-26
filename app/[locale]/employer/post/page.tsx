@@ -220,10 +220,11 @@ export default function EmployerPostPage() {
   const filteredSkillsForSearch = useMemo(() => {
     const q = skillSearch.trim().toLowerCase();
     if (q.length < 2) return [];
-    const inRequired = new Set(requiredSkills.map((s) => s.name));
-    const inGood = new Set(goodToHaveSkills.map((s) => s.name));
+    const alreadyAdded = (skillName: string) =>
+      requiredSkills.some((x) => x.name.toLowerCase() === skillName.toLowerCase()) ||
+      goodToHaveSkills.some((x) => x.name.toLowerCase() === skillName.toLowerCase());
     return ALL_SKILLS.filter((s) => {
-      if (inRequired.has(s) || inGood.has(s)) return false;
+      if (alreadyAdded(s)) return false;
       const canAdd = addingAsRequired ? requiredSkills.length < 5 : goodToHaveSkills.length < 5;
       if (!canAdd) return false;
       return s.toLowerCase().includes(q);
@@ -231,20 +232,20 @@ export default function EmployerPostPage() {
   }, [skillSearch, requiredSkills, goodToHaveSkills, addingAsRequired]);
 
   function addSkill(s: string) {
-    const name = s.trim();
-    if (!name || name.length < 2) return;
-    const displayName = name.replace(/\b\w/g, (c) => c.toUpperCase());
-    const inRequired = requiredSkills.some((x) => x.name.toLowerCase() === displayName.toLowerCase());
-    const inGood = goodToHaveSkills.some((x) => x.name.toLowerCase() === displayName.toLowerCase());
+    const normalized = s.trim();
+    if (!normalized || normalized.length < 2) return;
+    const inRequired = requiredSkills.some((x) => x.name.toLowerCase() === normalized.toLowerCase());
+    const inGood = goodToHaveSkills.some((x) => x.name.toLowerCase() === normalized.toLowerCase());
     if (inRequired || inGood) return;
-    const skill: VacancySkill = { name: displayName, level: "Intermediate" };
-    const canonical = ALL_SKILLS.find((x) => x.toLowerCase() === displayName.toLowerCase());
-    const finalName = canonical ?? displayName;
+    // Keep original casing so suggested list and level selection match (e.g. "Physical stamina").
+    const canonical = ALL_SKILLS.find((x) => x.toLowerCase() === normalized.toLowerCase());
+    const finalName = canonical ?? normalized;
+    const skill: VacancySkill = { name: finalName, level: "Intermediate" };
     if (addingAsRequired && requiredSkills.length < 5) {
-      setRequiredSkills((prev) => [...prev, { ...skill, name: finalName }]);
+      setRequiredSkills((prev) => [...prev, skill]);
       addSkillToDb(finalName);
     } else if (!addingAsRequired && goodToHaveSkills.length < 5) {
-      setGoodToHaveSkills((prev) => [...prev, { ...skill, name: finalName }]);
+      setGoodToHaveSkills((prev) => [...prev, skill]);
       addSkillToDb(finalName);
     }
   }
@@ -257,34 +258,37 @@ export default function EmployerPostPage() {
   }
 
   function removeSkill(name: string, isRequired: boolean) {
-    if (isRequired) setRequiredSkills((prev) => prev.filter((x) => x.name !== name));
-    else setGoodToHaveSkills((prev) => prev.filter((x) => x.name !== name));
+    const nameLower = name.toLowerCase();
+    if (isRequired) setRequiredSkills((prev) => prev.filter((x) => x.name.toLowerCase() !== nameLower));
+    else setGoodToHaveSkills((prev) => prev.filter((x) => x.name.toLowerCase() !== nameLower));
   }
 
   function setSkillLevel(name: string, level: SkillLevel, isRequired: boolean) {
+    const nameLower = name.toLowerCase();
     if (isRequired) {
       setRequiredSkills((prev) =>
-        prev.map((sk) => (sk.name === name ? { ...sk, level } : sk))
+        prev.map((sk) => (sk.name.toLowerCase() === nameLower ? { ...sk, level } : sk))
       );
     } else {
       setGoodToHaveSkills((prev) =>
-        prev.map((sk) => (sk.name === name ? { ...sk, level } : sk))
+        prev.map((sk) => (sk.name.toLowerCase() === nameLower ? { ...sk, level } : sk))
       );
     }
   }
 
   function moveSkill(name: string, fromRequired: boolean) {
+    const nameLower = name.toLowerCase();
     const skill = fromRequired
-      ? requiredSkills.find((x) => x.name === name)
-      : goodToHaveSkills.find((x) => x.name === name);
+      ? requiredSkills.find((x) => x.name.toLowerCase() === nameLower)
+      : goodToHaveSkills.find((x) => x.name.toLowerCase() === nameLower);
     if (!skill) return;
     if (fromRequired) {
       if (goodToHaveSkills.length >= 5) return;
-      setRequiredSkills((prev) => prev.filter((x) => x.name !== name));
+      setRequiredSkills((prev) => prev.filter((x) => x.name.toLowerCase() !== nameLower));
       setGoodToHaveSkills((prev) => [...prev, skill]);
     } else {
       if (requiredSkills.length >= 5) return;
-      setGoodToHaveSkills((prev) => prev.filter((x) => x.name !== name));
+      setGoodToHaveSkills((prev) => prev.filter((x) => x.name.toLowerCase() !== nameLower));
       setRequiredSkills((prev) => [...prev, skill]);
     }
   }
@@ -1059,8 +1063,8 @@ export default function EmployerPostPage() {
 
               <div className="mt-3 flex flex-wrap gap-2 items-center">
                 {suggestedSkills.map((s) => {
-                  const inRequired = requiredSkills.some((x) => x.name === s);
-                  const inGood = goodToHaveSkills.some((x) => x.name === s);
+                  const inRequired = requiredSkills.some((x) => x.name.toLowerCase() === s.toLowerCase());
+                  const inGood = goodToHaveSkills.some((x) => x.name.toLowerCase() === s.toLowerCase());
                   const added = inRequired || inGood;
                   const canAdd = addingAsRequired
                     ? requiredSkills.length < 5 && !added
