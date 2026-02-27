@@ -91,7 +91,7 @@ export default function EmployerPostPage() {
   const [paywallRedirect, setPaywallRedirect] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<(typeof PACKAGES)[number] | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"invoice" | "card" | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
   const [jobRoles, setJobRoles] = useState<JobTemplateRole[]>([]);
 
@@ -420,11 +420,36 @@ export default function EmployerPostPage() {
       try {
         const token = window.sessionStorage.getItem("matcher_employer_token");
         const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+        // First, try to load an existing company for this employer.
         const companyRes = await fetch("/api/companies", { credentials: "include", ...auth });
         const companyData = await companyRes.json().catch(() => null);
-        if (companyData?.id) {
+        if (companyRes.ok && companyData?.id) {
           companyId = companyData.id;
           window.sessionStorage.setItem("matcher_employer_company_id", companyData.id);
+        } else {
+          // If no company exists yet, create a minimal one so the employer
+          // always has a company record before posting their first vacancy.
+          const nameFromStorage = window.sessionStorage.getItem("matcher_employer_company_name");
+          const fallbackName = nameFromStorage || jobTitle.trim() || "Company";
+          const createRes = await fetch("/api/companies", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              ...(auth.headers || {}),
+            },
+            body: JSON.stringify({
+              name: fallbackName,
+            }),
+          });
+          const created = await createRes.json().catch(() => null);
+          if (createRes.ok && created?.id) {
+            companyId = created.id;
+            window.sessionStorage.setItem("matcher_employer_company_id", created.id);
+            if (fallbackName && !nameFromStorage) {
+              window.sessionStorage.setItem("matcher_employer_company_name", fallbackName);
+            }
+          }
         }
       } catch {
         // ignore

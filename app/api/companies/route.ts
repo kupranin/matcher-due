@@ -53,18 +53,28 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const name = typeof body?.name === "string" ? body.name.trim() : "";
+    const rawName = typeof body?.name === "string" ? body.name.trim() : "";
     const companyId = typeof body?.companyId === "string" ? body.companyId.trim() : "N/A";
-    const contactEmail = typeof body?.contactEmail === "string" ? body.contactEmail.trim().toLowerCase() : "";
+    const contactEmailFromBody =
+      typeof body?.contactEmail === "string" ? body.contactEmail.trim().toLowerCase() : "";
     const contactPhone = typeof body?.contactPhone === "string" ? body.contactPhone.trim() : "";
-
-    if (!name || !contactEmail) {
-      return NextResponse.json({ error: "name and contactEmail required" }, { status: 400 });
-    }
 
     const existing = await prisma.company.findUnique({ where: { userId: employer.userId } });
     if (existing) {
       return NextResponse.json({ id: existing.id, userId: existing.userId });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: employer.userId },
+      select: { email: true },
+    });
+
+    const fallbackEmail = user?.email?.trim().toLowerCase() ?? "";
+    const contactEmail = contactEmailFromBody || fallbackEmail;
+    const name = rawName || (user?.email ? user.email.split("@")[0] || "Company" : "Company");
+
+    if (!name) {
+      return NextResponse.json({ error: "name required" }, { status: 400 });
     }
 
     const company = await prisma.company.create({
@@ -72,7 +82,7 @@ export async function POST(request: Request) {
         userId: employer.userId,
         name,
         companyId,
-        contactEmail,
+        contactEmail: contactEmail || null,
         contactPhone,
       },
     });
