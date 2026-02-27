@@ -5,9 +5,9 @@ import { generateSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SEC } from "
 
 /**
  * POST /api/auth/employer-register
- * Single-step employer registration: create user + company + session.
+ * Single-step employer registration: create user + company + session in one transaction.
  * Body: email, password, companyName, companyId?, contactEmail?, contactPhone?
- * Returns: userId, companyId, token. Sets session cookie so user is logged in.
+ * Returns: userId, companyId, token. Sets session cookie. Redirect client to /employer/post?registered=1 to add vacancy.
  */
 export async function POST(request: Request) {
   try {
@@ -15,9 +15,9 @@ export async function POST(request: Request) {
     const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
     const password = typeof body?.password === "string" ? body.password : "";
     const companyName = typeof body?.companyName === "string" ? body.companyName.trim() : "";
-    const companyId = typeof body?.companyId === "string" ? body.companyId.trim() || "N/A" : "N/A";
-    const contactEmail = typeof body?.contactEmail === "string" ? body.contactEmail.trim().toLowerCase() : email;
-    const contactPhone = typeof body?.contactPhone === "string" ? body.contactPhone.trim() : "";
+    const companyIdRaw = typeof body?.companyId === "string" ? body.companyId.trim() : "";
+    const contactEmailRaw = typeof body?.contactEmail === "string" ? body.contactEmail.trim().toLowerCase() : "";
+    const contactPhoneRaw = typeof body?.contactPhone === "string" ? body.contactPhone.trim() : "";
 
     if (!email || email.length < 3) {
       return NextResponse.json({ error: "Invalid email" }, { status: 400 });
@@ -28,9 +28,15 @@ export async function POST(request: Request) {
     if (!companyName || companyName.length < 2) {
       return NextResponse.json({ error: "Company name is required (at least 2 characters)" }, { status: 400 });
     }
+
+    const contactEmail = contactEmailRaw || email;
     if (!contactEmail || contactEmail.length < 3) {
       return NextResponse.json({ error: "Contact email is required" }, { status: 400 });
     }
+
+    // DB requires non-empty string for contactPhone; use placeholder when missing
+    const companyId = companyIdRaw || "N/A";
+    const contactPhone = contactPhoneRaw || "—";
 
     const existing = await prisma.user.findUnique({
       where: { email },
@@ -62,7 +68,7 @@ export async function POST(request: Request) {
           companyId,
           contactEmail,
           contactPhone,
-          availableSlots: 10, // 10 free vacancy slots for every new company
+          availableSlots: 10,
         },
       });
       await tx.session.create({
