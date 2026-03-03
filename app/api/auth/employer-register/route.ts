@@ -56,10 +56,13 @@ export async function POST(request: Request) {
     return res;
   } catch (e) {
     console.error("Employer register error:", e);
-    const err = e as Error;
-    const hint = process.env.NODE_ENV === "development" ? err?.message : undefined;
+    const err = e as Error & { code?: string };
+    const rawMessage = err?.message ?? String(e);
+    // Always return a hint so the client can show it (e.g. missing DB column, connection error).
+    const hint =
+      rawMessage.length > 200 ? rawMessage.slice(0, 200) + "…" : rawMessage;
     return NextResponse.json(
-      { error: "Registration failed. Please try again.", ...(hint && { hint }) },
+      { error: "Registration failed. Please try again.", hint },
       { status: 500 }
     );
   }

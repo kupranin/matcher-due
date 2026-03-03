@@ -47,7 +47,14 @@ export default function EmployerRegisterPage() {
           contactPhone: phone.trim() || "",
         }),
       });
-      const data = await res.json().catch(() => ({}));
+      let data: { error?: string; hint?: string; userId?: string; companyId?: string; token?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        setRegisterError(res.status >= 500 ? "Server error. Try again or check your deployment logs." : "Registration failed. Please try again.");
+        setIsSubmitting(false);
+        return;
+      }
       if (!res.ok) {
         const msg = typeof data?.error === "string" ? data.error : "Registration failed. Please try again.";
         const hint = typeof data?.hint === "string" ? ` ${data.hint}` : "";
@@ -70,8 +77,9 @@ export default function EmployerRegisterPage() {
       }
       router.push("/employer/post?registered=1");
       return;
-    } catch {
-      setRegisterError("Something went wrong. Please try again.");
+    } catch (e) {
+      const err = e as Error;
+      setRegisterError(err?.message?.includes("fetch") ? "Network error. Check your connection and try again." : "Something went wrong. Please try again.");
       setIsSubmitting(false);
     }
   }
