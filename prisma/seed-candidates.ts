@@ -16,8 +16,7 @@ const passwordHash = hashSync(PASSWORD, 10);
 
 const CANDIDATES = [
   {
-    email: "nino@example.com",
-    fullName: "Nino K.",
+    fullName: "Nino Kapanadze",
     phone: "+995555123456",
     locationCityId: "tbilisi",
     salaryMin: 1100,
@@ -32,8 +31,7 @@ const CANDIDATES = [
     ],
   },
   {
-    email: "candidate2@example.com",
-    fullName: "Giorgi M.",
+    fullName: "Giorgi Maisuradze",
     phone: "+995555111222",
     locationCityId: "tbilisi",
     salaryMin: 900,
@@ -48,8 +46,7 @@ const CANDIDATES = [
     ],
   },
   {
-    email: "candidate3@example.com",
-    fullName: "Mariam T.",
+    fullName: "Mariam Beridze",
     phone: "+995555222333",
     locationCityId: "batumi",
     salaryMin: 1000,
@@ -64,8 +61,7 @@ const CANDIDATES = [
     ],
   },
   {
-    email: "candidate4@example.com",
-    fullName: "Davit G.",
+    fullName: "Davit Kvirkvelia",
     phone: "+995555333444",
     locationCityId: "tbilisi",
     salaryMin: 800,
@@ -80,8 +76,7 @@ const CANDIDATES = [
     ],
   },
   {
-    email: "candidate5@example.com",
-    fullName: "Ana S.",
+    fullName: "Ana Giorgadze",
     phone: "+995555444555",
     locationCityId: "tbilisi",
     salaryMin: 950,
@@ -97,16 +92,34 @@ const CANDIDATES = [
   },
 ];
 
+function generateEmailFromName(fullName: string, used: Set<string>): string {
+  const base = fullName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+  let localPart = base || "candidate";
+  let email = `${localPart}@gmail.com`;
+  let suffix = 2;
+  while (used.has(email)) {
+    email = `${localPart}${suffix}@gmail.com`;
+    suffix++;
+  }
+  used.add(email);
+  return email;
+}
+
 async function main() {
   console.log("Seeding candidates...");
   await prisma.$connect();
 
+  const usedEmails = new Set<string>();
+
   for (const c of CANDIDATES) {
+    const email = generateEmailFromName(c.fullName, usedEmails);
     const user = await prisma.user.upsert({
-      where: { email: c.email },
+      where: { email },
       update: { passwordHash },
       create: {
-        email: c.email,
+        email,
         passwordHash,
         role: "CANDIDATE",
       },
@@ -138,7 +151,7 @@ async function main() {
         create: { candidateProfileId: profile.id, name: s.name, level: s.level },
       });
     }
-    console.log(`  ${c.email} (${c.fullName})`);
+    console.log(`  ${email} (${c.fullName})`);
   }
 
   console.log(`Done. ${CANDIDATES.length} candidates seeded. Password: ${PASSWORD}`);

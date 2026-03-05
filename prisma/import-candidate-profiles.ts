@@ -29,6 +29,19 @@ const prisma = new PrismaClient(
     : undefined
 );
 
+const GEORGIAN_FIRST_NAMES = [
+  "Nino",
+  "Giorgi",
+  "Mariam",
+  "Levan",
+  "Ana",
+  "Dato",
+  "Luka",
+  "Salome",
+  "Nana",
+  "Ketevan",
+];
+
 function parseWorkTypes(raw: string): string[] {
   if (!raw || !raw.trim()) return ["Full-time"];
   try {
@@ -45,6 +58,35 @@ function parseWorkTypes(raw: string): string[] {
 function parseBool(raw: string): boolean {
   const v = (raw || "").trim().toLowerCase();
   return v === "true" || v === "1" || v === "yes";
+}
+
+function makeUniqueFullName(originalFullName: string, seenNames: Set<string>, index: number): string {
+  const parts = originalFullName.trim().split(/\s+/);
+  const surname = parts.length > 1 ? parts[parts.length - 1] : originalFullName.trim();
+  let firstName = GEORGIAN_FIRST_NAMES[index % GEORGIAN_FIRST_NAMES.length];
+  let candidate = `${firstName} ${surname}`;
+  let attempt = 1;
+  while (seenNames.has(candidate.toLowerCase()) && attempt < GEORGIAN_FIRST_NAMES.length * 2) {
+    firstName = GEORGIAN_FIRST_NAMES[(index + attempt) % GEORGIAN_FIRST_NAMES.length];
+    candidate = `${firstName} ${surname}`;
+    attempt++;
+  }
+  return candidate;
+}
+
+function generateEmailFromName(fullName: string, usedEmails: Set<string>): string {
+  const base = fullName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+  let localPart = base || "candidate";
+  let email = `${localPart}@gmail.com`;
+  let suffix = 2;
+  while (usedEmails.has(email)) {
+    email = `${localPart}${suffix}@gmail.com`;
+    suffix++;
+  }
+  usedEmails.add(email);
+  return email;
 }
 
 async function main() {
@@ -80,6 +122,8 @@ async function main() {
   }>;
 
   const passwordHash = hashPassword(PASSWORD);
+  const seenNames = new Set<string>();
+  const usedEmails = new Set<string>();
 
   console.log(`Importing ${rows.length} candidate profiles from ${CSV_PATH}...`);
   let created = 0;
@@ -87,13 +131,19 @@ async function main() {
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const fullName = (row.full_name || "").trim();
+    let fullName = (row.full_name || "").trim();
     if (!fullName) {
       skipped++;
       continue;
     }
 
-    const email = `candidate-${i + 1}@imported.matcher.local`;
+    const normalizedName = fullName.toLowerCase();
+    if (seenNames.has(normalizedName)) {
+      fullName = makeUniqueFullName(fullName, seenNames, i);
+    }
+    seenNames.add(fullName.toLowerCase());
+
+    const email = generateEmailFromName(fullName, usedEmails);
     const salaryMin = Math.max(0, parseInt(row.salary_min || "0", 10) || 0);
     const experienceMonths = Math.max(0, parseInt(row.experience_months || "0", 10) || 0);
     const workTypes = parseWorkTypes(row.work_types || "");
@@ -158,7 +208,7 @@ async function main() {
 
   console.log(`Done. Imported ${created} candidates, skipped ${skipped}.`);
   console.log(`All passwords set to: ${PASSWORD}`);
-  console.log(`Log in with e.g. candidate-1@imported.matcher.local / ${PASSWORD}`);
+  console.log(`Example login: first imported candidate's email will be their name as namesurname@gmail.com`);
 }
 
 main()
