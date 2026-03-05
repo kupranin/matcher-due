@@ -3,19 +3,22 @@ import { prisma } from "@/lib/db";
 import { getEmployerCompanyFromSession, vacancyBelongsToEmployerCompany } from "@/lib/employerAuth";
 import { computeMatchScore } from "@/lib/matchScore";
 
+const LOG_PREFIX = "[matches]";
+
 /**
- * POST /api/matches — record a like (candidate or employer).
+ * POST /api/matches — record a like (candidate or employer). Atomic upsert; match is durable in DB.
  * - Candidate: sends candidateLiked: true; no auth required (match is by vacancyId + candidateProfileId).
- * - Employer: sends employerLiked: true; vacancy must belong to employer's company (company matches vacancy).
+ * - Employer: sends employerLiked: true; vacancy must belong to employer's company.
+ * - Returns hasMatch: true only when both sides have liked (mutual); client must show match only then.
  */
 export async function POST(request: Request) {
+  const reqId = `req-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   try {
     const body = await request.json().catch(() => ({}));
     const vacancyId = typeof body?.vacancyId === "string" ? body.vacancyId.trim() : "";
     const candidateProfileId = typeof body?.candidateProfileId === "string" ? body.candidateProfileId.trim() : "";
     const candidateLiked = Boolean(body?.candidateLiked);
     const employerLiked = Boolean(body?.employerLiked);
-    const candidatePitch = typeof body?.candidatePitch === "string" ? body.candidatePitch.trim() || null : null;
 
     if (!vacancyId || !candidateProfileId) {
       return NextResponse.json({ error: "vacancyId and candidateProfileId required" }, { status: 400 });
@@ -67,41 +70,77 @@ export async function POST(request: Request) {
       );
     }
 
-    await prisma.match.upsert({
-      where: {
-        vacancyId_candidateProfileId: { vacancyId, candidateProfileId },
-      },
-      update: {
-        ...(employerLiked && { employerLiked: true }),
-        ...(candidateLiked && { candidateLiked: true }),
-        ...(candidatePitch != null && { candidatePitch }),
-        ...(matchScore != null && { matchScore }),
-      },
-      create: {
+    const existing = await prisma.match.findUnique({
+      where: { vacancyId_candidateProfileId: { vacancyId, candidateProfileId } },
+    });
+    const didFindCounterLike = existing
+      ? (candidateLiked && existing.employerLiked) || (employerLiked && existing.candidateLiked)
+      : false;
+
+    const match = await prisma.$transaction(async (tx) => {
+      const updated = await tx.match.upsert({
+        where: {
+          vacancyId_candidateProfileId: { vacancyId, candidateProfileId },
+        },
+        update: {
+          ...(employerLiked && { employerLiked: true }),
+          ...(candidateLiked && { candidateLiked: true }),
+          ...(matchScore != null && { matchScore }),
+        },
+        create: {
+          vacancyId,
+          candidateProfileId,
+          candidateLiked,
+          employerLiked,
+          matchScore: matchScore ?? undefined,
+        },
+      });
+      const after = await tx.match.findUnique({
+        where: { vacancyId_candidateProfileId: { vacancyId, candidateProfileId } },
+      });
+      return after ?? updated;
+    });
+
+    const verify = await prisma.match.findUnique({
+      where: { vacancyId_candidateProfileId: { vacancyId, candidateProfileId } },
+    });
+    if (!verify) {
+      console.error(`${LOG_PREFIX} CRITICAL verify failed after commit reqId=${reqId} vacancyId=${vacancyId} candidateProfileId=${candidateProfileId}`);
+      return NextResponse.json({ error: "Failed to save like" }, { status: 500 });
+    }
+
+    const hasMatch = Boolean(verify.candidateLiked && verify.employerLiked);
+    console.info(
+      JSON.stringify({
+        tag: LOG_PREFIX,
+        reqId,
         vacancyId,
         candidateProfileId,
         candidateLiked,
         employerLiked,
-        candidatePitch,
-        matchScore: matchScore ?? undefined,
-      },
-    });
+        didFindCounterLike: didFindCounterLike || hasMatch,
+        matchId: verify.id,
+        hasMatch,
+        committed: true,
+      })
+    );
 
-    const match = await prisma.match.findUnique({
-      where: { vacancyId_candidateProfileId: { vacancyId, candidateProfileId } },
-    });
-    if (!match) {
-      return NextResponse.json({ error: "Failed to save like" }, { status: 500 });
-    }
     return NextResponse.json({
-      id: match.id,
-      candidateLiked: match.candidateLiked,
-      employerLiked: match.employerLiked,
-      createdAt: typeof match.createdAt?.toISOString === "function" ? match.createdAt.toISOString() : String(match.createdAt),
+      id: verify.id,
+      candidateLiked: verify.candidateLiked,
+      employerLiked: verify.employerLiked,
+      hasMatch,
+      createdAt:
+        typeof verify.createdAt?.toISOString === "function"
+          ? verify.createdAt.toISOString()
+          : String(verify.createdAt),
     });
   } catch (e) {
-    console.error("Match upsert error:", e);
-    return NextResponse.json({ error: "Failed to save like" }, { status: 500 });
+    console.error(`${LOG_PREFIX} Match upsert error reqId=${reqId}`, e);
+    return NextResponse.json(
+      { error: "Failed to save like", hint: e instanceof Error ? e.message : String(e) },
+      { status: 500 }
+    );
   }
 }
 

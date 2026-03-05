@@ -3,8 +3,9 @@ import { prisma } from "@/lib/db";
 import { getEmployerCompanyFromSession, matchBelongsToEmployerCompany } from "@/lib/employerAuth";
 
 /**
- * GET /api/matches/[id] — fetch a single match (employer only).
- * Used when the chats page has matchId in URL but the list returned empty (e.g. timing/session).
+ * GET /api/matches/[id] — fetch a single match.
+ * - Employer: requires session; match must belong to employer's company.
+ * - Candidate: pass ?candidateProfileId= ; match is returned only if it belongs to that candidate.
  */
 export async function GET(
   request: Request,
@@ -16,15 +17,8 @@ export async function GET(
       return NextResponse.json({ error: "match id required" }, { status: 400 });
     }
 
-    const ctx = await getEmployerCompanyFromSession(request);
-    if (!ctx) {
-      return NextResponse.json({ error: "Sign in as employer to view this match" }, { status: 401 });
-    }
-
-    const allowed = await matchBelongsToEmployerCompany(matchId, ctx.companyId);
-    if (!allowed) {
-      return NextResponse.json({ error: "Match not found or access denied" }, { status: 403 });
-    }
+    const { searchParams } = new URL(request.url);
+    const candidateProfileIdParam = searchParams.get("candidateProfileId");
 
     const m = await prisma.match.findUnique({
       where: { id: matchId },
@@ -36,6 +30,20 @@ export async function GET(
 
     if (!m) {
       return NextResponse.json({ error: "Match not found" }, { status: 404 });
+    }
+
+    const ctx = await getEmployerCompanyFromSession(request);
+    if (ctx) {
+      const allowed = await matchBelongsToEmployerCompany(matchId, ctx.companyId);
+      if (!allowed) {
+        return NextResponse.json({ error: "Match not found or access denied" }, { status: 403 });
+      }
+    } else if (candidateProfileIdParam) {
+      if (m.candidateProfileId !== candidateProfileIdParam.trim()) {
+        return NextResponse.json({ error: "Match not found or access denied" }, { status: 403 });
+      }
+    } else {
+      return NextResponse.json({ error: "Sign in as employer or pass candidateProfileId to view this match" }, { status: 401 });
     }
 
     return NextResponse.json({

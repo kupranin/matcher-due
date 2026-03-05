@@ -265,6 +265,7 @@ model Match {
   candidateProfile   CandidateProfile @relation(fields: [candidateProfileId], references: [id], onDelete: Cascade)
   employerLiked      Boolean          @default(false) @map("employer_liked")
   candidateLiked     Boolean          @default(false) @map("candidate_liked")
+  /// Deprecated: Quick pitch was removed; no longer written. Kept for backward compatibility.
   candidatePitch     String?          @map("candidate_pitch") @db.Text
   matchScore         Int?             @map("match_score") // 0-100 from weighted scoring
   createdAt          DateTime         @default(now()) @map("created_at")

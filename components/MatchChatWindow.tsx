@@ -46,10 +46,18 @@ export default function MatchChatWindow({
     return init;
   })();
 
+  const chatUrl = (matchId: string): string => {
+    const base = `/api/chat?matchId=${encodeURIComponent(matchId)}`;
+    if (userRole === "candidate" && match.candidateId) {
+      return `${base}&candidateProfileId=${encodeURIComponent(match.candidateId)}`;
+    }
+    return base;
+  };
+
   useEffect(() => {
     const matchId = match.id;
     function poll() {
-      fetch(`/api/chat?matchId=${encodeURIComponent(matchId)}`, chatFetchOpts)
+      fetch(chatUrl(matchId), chatFetchOpts)
         .then((r) => r.json())
         .then((list: Array<{ id: string; matchId: string; sender: string; text: string; createdAt: number }>) => {
           if (Array.isArray(list)) {
@@ -77,11 +85,13 @@ export default function MatchChatWindow({
         const t = window.sessionStorage.getItem("matcher_employer_token");
         if (t) headers.Authorization = `Bearer ${t}`;
       }
+      const body: { matchId: string; sender: string; text: string; candidateProfileId?: string } = { matchId: match.id, sender, text };
+      if (userRole === "candidate" && match.candidateId) body.candidateProfileId = match.candidateId;
       const res = await fetch("/api/chat", {
         method: "POST",
         headers,
         credentials: "include",
-        body: JSON.stringify({ matchId: match.id, sender, text }),
+        body: JSON.stringify(body),
       });
       const msg = await res.json();
       if (msg.id) setMessages((prev) => [...prev, { id: msg.id, matchId: match.id, sender: msg.sender as "candidate" | "employer", text: msg.text, createdAt: msg.createdAt }]);
@@ -101,11 +111,13 @@ export default function MatchChatWindow({
         const t = window.sessionStorage.getItem("matcher_employer_token");
         if (t) headers.Authorization = `Bearer ${t}`;
       }
+      const body: { matchId: string; sender: string; text: string; candidateProfileId?: string } = { matchId: match.id, sender, text: msg };
+      if (userRole === "candidate" && match.candidateId) body.candidateProfileId = match.candidateId;
       const res = await fetch("/api/chat", {
         method: "POST",
         headers,
         credentials: "include",
-        body: JSON.stringify({ matchId: match.id, sender, text: msg }),
+        body: JSON.stringify(body),
       });
       const message = await res.json();
       if (message.id) setMessages((prev) => [...prev, { id: message.id, matchId: match.id, sender: message.sender as "candidate" | "employer", text: message.text, createdAt: message.createdAt }]);

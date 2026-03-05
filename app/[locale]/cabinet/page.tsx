@@ -6,11 +6,10 @@ import { useRouter } from "@/i18n/navigation";
 import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence, animate } from "framer-motion";
 import { buildVacancyCardsWithMatch } from "@/lib/vacancyApi";
 import { GEORGIAN_CITIES } from "@/lib/georgianLocations";
-import { getCandidateProfileForMatch, loadCandidateProfile, getCandidateProfileId, getCandidateUserId, saveCandidateProfile } from "@/lib/candidateProfileStorage";
-import { addCandidateLike, getCandidateLikes, setCandidatePitch, type MutualMatch } from "@/lib/matchStorage";
+import { getCandidateProfileForMatch, loadCandidateProfile, getCandidateProfileId, getCandidateUserId, saveCandidateProfile, CANDIDATE_PROFILE_ID_KEY } from "@/lib/candidateProfileStorage";
+import { addCandidateLike, getCandidateLikes, type MutualMatch } from "@/lib/matchStorage";
 import MatchCongratulationsModal from "@/components/MatchCongratulationsModal";
 import MatchProgressRing from "@/components/MatchProgressRing";
-import PitchModal from "@/components/PitchModal";
 
 type Vacancy = import("@/lib/vacancyApi").VacancyCardFromApi;
 
@@ -160,6 +159,7 @@ export default function CabinetPage() {
   useEffect(() => {
     const profileUserId = getCandidateUserId();
     type ProfilePayload = {
+      profileId?: string;
       fullName?: string;
       email?: string;
       phone?: string;
@@ -233,6 +233,9 @@ export default function CabinetPage() {
         .then((data: ProfilePayload) => {
           if (data?.fullName) {
             setAvailableToWork(data.availableToWork !== false);
+            if (typeof data.profileId === "string" && data.profileId.trim() && typeof window !== "undefined") {
+              window.localStorage.setItem(CANDIDATE_PROFILE_ID_KEY, data.profileId.trim());
+            }
             const profile = buildProfileFromApi(data);
             saveCandidateProfile({
               profile,
@@ -263,14 +266,11 @@ export default function CabinetPage() {
   const [passed, setPassed] = useState<Vacancy[]>([]);
   const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
   const [newMatch, setNewMatch] = useState<MutualMatch | null>(null);
-  const [pendingLikeVacancy, setPendingLikeVacancy] = useState<Vacancy | null>(null);
-  const [likeSuccess, setLikeSuccess] = useState<{ company: string; vacancyTitle: string } | null>(null);
   const current = vacancies[0];
 
-  async function finishLike(vacancy: Vacancy, pitch: string) {
+  async function finishLike(vacancy: Vacancy) {
     setLiked((prev) => [...prev, vacancy]);
     addCandidateLike(vacancy.id);
-    if (pitch) setCandidatePitch(vacancy.id, pitch);
     const profileId = getCandidateProfileId();
     const stored = loadCandidateProfile();
     const candidateName = stored?.fullName ?? "Candidate";
@@ -283,11 +283,11 @@ export default function CabinetPage() {
             vacancyId: vacancy.id,
             candidateProfileId: profileId,
             candidateLiked: true,
-            candidatePitch: pitch || undefined,
           }),
         });
         const data = await res.json().catch(() => ({}));
-        if (data.employerLiked) {
+        const isMutual = data.hasMatch === true || data.employerLiked === true;
+        if (isMutual) {
           setNewMatch({
             id: data.id,
             vacancyId: vacancy.id,
@@ -298,22 +298,21 @@ export default function CabinetPage() {
             createdAt: data.createdAt ? new Date(data.createdAt).getTime() : Date.now(),
           });
         }
-      } catch {
-        // ignore
+      } catch (err) {
+        console.warn("Like request failed", err);
       }
     }
-    setPendingLikeVacancy(null);
-    setLikeSuccess({ company: vacancy.company, vacancyTitle: vacancy.title });
   }
 
   function handleSwipe(dir: "left" | "right") {
     if (!current) return;
+    const card = current;
     setExitDir(dir);
     setVacancies((prev) => prev.slice(1));
     if (dir === "right") {
-      setPendingLikeVacancy(current);
+      finishLike(card);
     } else {
-      setPassed((prev) => [...prev, current]);
+      setPassed((prev) => [...prev, card]);
     }
     setTimeout(() => setExitDir(null), 50);
   }
@@ -465,54 +464,6 @@ export default function CabinetPage() {
           </motion.button>
         </motion.div>
       )}
-
-      {pendingLikeVacancy && (
-        <PitchModal
-          company={pendingLikeVacancy.company}
-          vacancyTitle={pendingLikeVacancy.title}
-          onSubmit={(pitch) => finishLike(pendingLikeVacancy, pitch)}
-          onSkip={() => finishLike(pendingLikeVacancy, "")}
-        />
-      )}
-
-      <AnimatePresence>
-        {likeSuccess && (
-          <motion.div
-            key="like-success"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="w-full max-w-sm rounded-2xl border-2 border-matcher/30 bg-white p-8 shadow-xl"
-            >
-              <div className="flex justify-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-matcher-mint text-4xl text-matcher-dark">
-                  ✓
-                </div>
-              </div>
-              <h2 className="mt-6 text-center text-xl font-bold tracking-tight text-gray-900">
-                {t("interestSentTitle")}
-              </h2>
-              <p className="mt-2 text-center text-gray-600">
-                {t("interestSentMessage", { company: likeSuccess.company, vacancy: likeSuccess.vacancyTitle })}
-              </p>
-              <button
-                type="button"
-                onClick={() => setLikeSuccess(null)}
-                className="mt-8 w-full rounded-xl bg-matcher py-3 font-semibold text-white shadow transition hover:bg-matcher-dark"
-              >
-                {t("keepSwiping")}
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <MatchCongratulationsModal
         match={newMatch}

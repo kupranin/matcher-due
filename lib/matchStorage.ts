@@ -23,7 +23,6 @@ export const CURRENT_CANDIDATE_ID = "1";
 const KEY_CANDIDATE_LIKES = "matcher_candidate_likes";
 const KEY_EMPLOYER_LIKES = "matcher_employer_likes";
 const KEY_MUTUAL_MATCHES = "matcher_mutual_matches";
-const KEY_CANDIDATE_PITCHES = "matcher_candidate_pitches";
 
 export type EmployerLike = { vacancyId: string; candidateId: string };
 
@@ -42,18 +41,6 @@ export function addCandidateLike(vacancyId: string): void {
   if (!likes.includes(vacancyId)) {
     likes.push(vacancyId);
     localStorage.setItem(KEY_CANDIDATE_LIKES, JSON.stringify(likes));
-  }
-}
-
-export function setCandidatePitch(vacancyId: string, pitch: string): void {
-  if (typeof window === "undefined") return;
-  try {
-    const s = localStorage.getItem(KEY_CANDIDATE_PITCHES);
-    const map: Record<string, string> = s ? JSON.parse(s) : {};
-    map[vacancyId] = pitch;
-    localStorage.setItem(KEY_CANDIDATE_PITCHES, JSON.stringify(map));
-  } catch {
-    // ignore
   }
 }
 

@@ -71,7 +71,7 @@ export default function CandidateChatsPage() {
     fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`)
       .then((r) => r.json())
       .then((list: Array<{ id: string; vacancyId: string; candidateProfileId: string; candidateLiked: boolean; employerLiked: boolean; vacancyTitle: string; company: string; createdAt: string }>) => {
-        const mutual = list
+        const mutual = (Array.isArray(list) ? list : [])
           .filter((m) => m.candidateLiked && m.employerLiked)
           .map((m) => ({
             id: m.id,
@@ -88,9 +88,39 @@ export default function CandidateChatsPage() {
   }, []);
 
   useEffect(() => {
-    if (!matchIdFromUrl || matches.length === 0) return;
+    if (!matchIdFromUrl) return;
     const match = matches.find((m) => m.id === matchIdFromUrl);
-    if (match) setSelectedMatch(match);
+    if (match) {
+      setSelectedMatch(match);
+      return;
+    }
+    if (matches.length === 0) {
+      const profileId = getCandidateProfileId();
+      if (!profileId) return;
+      fetch(`/api/matches/${encodeURIComponent(matchIdFromUrl)}?candidateProfileId=${encodeURIComponent(profileId)}`)
+        .then((r) => r.json())
+        .then((m: { id?: string; vacancyId?: string; candidateProfileId?: string; vacancyTitle?: string; company?: string; createdAt?: string }) => {
+          const id = m?.id;
+          const vacancyId = m?.vacancyId;
+          const candidateProfileId = m?.candidateProfileId;
+          if (id && vacancyId != null && candidateProfileId) {
+            const fullName = loadCandidateProfile()?.fullName ?? "";
+            const createdAt = m.createdAt ? new Date(m.createdAt).getTime() : Date.now();
+            const mutual: MutualMatch = {
+              id,
+              vacancyId,
+              candidateId: candidateProfileId,
+              candidateName: fullName,
+              vacancyTitle: m.vacancyTitle ?? "",
+              company: m.company ?? "",
+              createdAt,
+            };
+            setMatches((prev) => [...prev, mutual]);
+            setSelectedMatch(mutual);
+          }
+        })
+        .catch(() => {});
+    }
   }, [matchIdFromUrl, matches]);
 
   if (matches.length === 0) {
