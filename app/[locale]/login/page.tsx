@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [userType, setUserType] = useState<UserType>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -165,15 +166,25 @@ export default function LoginPage() {
                   {t("forgotPassword")}
                 </Link>
               </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Your password"
-                className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30 ${
-                  password.length > 0 && password.length < 8 ? "border-red-300" : "border-gray-200"
-                }`}
-              />
+              <div className="relative mt-2">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Your password"
+                  className={`w-full rounded-2xl border px-4 py-3 pr-12 text-sm outline-none focus:ring-2 focus:ring-matcher/30 ${
+                    password.length > 0 && password.length < 8 ? "border-red-300" : "border-gray-200"
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
               {password.length > 0 && password.length < 8 && (
                 <p className="mt-2 text-xs text-red-600">Password must be at least 8 characters.</p>
               )}

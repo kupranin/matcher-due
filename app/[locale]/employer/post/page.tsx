@@ -101,15 +101,7 @@ export default function EmployerPostPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const hasStorage = window.sessionStorage.getItem("employerLoggedIn");
-    const userId = window.sessionStorage.getItem("matcher_employer_user_id");
-    const companyId = window.sessionStorage.getItem("matcher_employer_company_id");
-    if (hasStorage && userId && companyId) {
-      setIsLoggedIn(true);
-      setAuthLoading(false);
-      return;
-    }
-    // Confirm with session API so we recognize employer after register or if storage was cleared
+    // Always re-validate with session API so expired sessions don't show as logged in
     fetch("/api/auth/session", { credentials: "include" })
       .then((r) => r.json())
       .then((data: { user?: { id: string; role: string } | null; token?: string }) => {
@@ -136,9 +128,18 @@ export default function EmployerPostPage() {
             .catch(() => {})
             .finally(() => setAuthLoading(false));
         }
+        // Session expired or not employer: clear stale storage and show login
+        window.sessionStorage.removeItem("employerLoggedIn");
+        window.sessionStorage.removeItem("matcher_employer_user_id");
+        window.sessionStorage.removeItem("matcher_employer_company_id");
+        window.sessionStorage.removeItem("matcher_employer_token");
+        setIsLoggedIn(false);
         setAuthLoading(false);
       })
-      .catch(() => setAuthLoading(false));
+      .catch(() => {
+        setAuthLoading(false);
+        setIsLoggedIn(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -400,20 +401,31 @@ export default function EmployerPostPage() {
     ];
     const salMin = salaryMin.trim() ? parseInt(salaryMin.replace(/\D/g, ""), 10) : null;
     const salMax = salaryMax.trim() ? parseInt(salaryMax.replace(/\D/g, ""), 10) : 1200;
-    let companyId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_id") : null;
-    let userId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_user_id") : null;
-    if (typeof window !== "undefined" && !userId) {
+    // Re-validate session before save so we don't submit with an expired session
+    let companyId: string | null = null;
+    let userId: string | null = null;
+    if (typeof window !== "undefined") {
       try {
         const sessionRes = await fetch("/api/auth/session", { credentials: "include" });
         const sessionData = await sessionRes.json().catch(() => ({})) as { user?: { id: string; role: string }; token?: string };
-        if (sessionData?.user?.role === "EMPLOYER" && sessionData.user.id) {
-          const id = String(sessionData.user.id);
-          userId = id;
-          window.sessionStorage.setItem("matcher_employer_user_id", id);
-          if (sessionData.token) window.sessionStorage.setItem("matcher_employer_token", sessionData.token);
+        if (sessionData?.user?.role !== "EMPLOYER" || !sessionData.user?.id) {
+          window.sessionStorage.removeItem("employerLoggedIn");
+          window.sessionStorage.removeItem("matcher_employer_user_id");
+          window.sessionStorage.removeItem("matcher_employer_company_id");
+          window.sessionStorage.removeItem("matcher_employer_token");
+          setSaveError("Your session has expired. Please log in again to save your vacancy.");
+          setIsSubmitting(false);
+          return;
         }
+        userId = String(sessionData.user.id);
+        window.sessionStorage.setItem("matcher_employer_user_id", userId);
+        if (sessionData.token) window.sessionStorage.setItem("matcher_employer_token", sessionData.token);
+        window.sessionStorage.setItem("employerLoggedIn", "1");
+        companyId = window.sessionStorage.getItem("matcher_employer_company_id");
       } catch {
-        // ignore
+        setSaveError("Could not verify your session. Please log in again.");
+        setIsSubmitting(false);
+        return;
       }
     }
     if (!companyId && userId && typeof window !== "undefined") {
@@ -483,20 +495,24 @@ export default function EmployerPostPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const msg = typeof data?.error === "string" ? data.error : "Could not save vacancy. Please try again.";
-        setSaveError(msg);
         if (res.status === 402 && data?.code === "STRICT_PAYWALL_ERROR") {
           setStep("package");
           setPaywallRedirect(true);
           setSaveError(null);
+          setIsSubmitting(false);
+          return;
         }
         if (res.status === 401 && typeof window !== "undefined") {
           window.sessionStorage.removeItem("employerLoggedIn");
           window.sessionStorage.removeItem("matcher_employer_user_id");
           window.sessionStorage.removeItem("matcher_employer_company_id");
           window.sessionStorage.removeItem("matcher_employer_token");
-          setIsLoggedIn(false);
+          setSaveError("Your session has expired. Please log in again to save your vacancy.");
+          setIsSubmitting(false);
+          return;
         }
+        const msg = typeof data?.error === "string" ? data.error : "Could not save vacancy. Please try again.";
+        setSaveError(msg);
         return;
       }
       setSaveError(null);
@@ -1329,9 +1345,14 @@ export default function EmployerPostPage() {
             </div>
 
             {saveError && (
-              <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {saveError}
-              </p>
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <p>{saveError}</p>
+                {saveError.includes("session has expired") && (
+                  <Link href="/login" className="mt-2 inline-block font-medium text-matcher-dark underline hover:no-underline">
+                    Log in again
+                  </Link>
+                )}
+              </div>
             )}
             <button
               type="submit"

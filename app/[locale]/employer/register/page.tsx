@@ -19,6 +19,8 @@ export default function EmployerRegisterPage() {
   const [password, setPassword] = useState("");
   const [registerError, setRegisterError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [emailTaken, setEmailTaken] = useState<string | null>(null);
+  const [emailChecking, setEmailChecking] = useState(false);
   const router = useRouter();
 
   const canSubmit =
@@ -26,7 +28,33 @@ export default function EmployerRegisterPage() {
     companyId.trim().length >= 2 &&
     isValidEmail(email) &&
     password.length >= 8 &&
+    !emailTaken &&
     !isSubmitting;
+
+  async function checkEmailTaken(value: string) {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized || !isValidEmail(normalized)) {
+      setEmailTaken(null);
+      return;
+    }
+    setEmailChecking(true);
+    setEmailTaken(null);
+    try {
+      const res = await fetch(
+        `/api/auth/check-email?email=${encodeURIComponent(normalized)}&role=EMPLOYER`
+      );
+      const data = await res.json().catch(() => ({}));
+      if (data.taken && typeof data.message === "string") {
+        setEmailTaken(data.message);
+      } else {
+        setEmailTaken(null);
+      }
+    } catch {
+      setEmailTaken(null);
+    } finally {
+      setEmailChecking(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -139,14 +167,28 @@ export default function EmployerRegisterPage() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setEmailTaken(null);
+                }}
+                onBlur={() => checkEmailTaken(email)}
                 placeholder={t("contactEmailPlaceholder")}
                 className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30 ${
-                  email.length > 0 && !isValidEmail(email) ? "border-red-300" : "border-gray-200"
+                  email.length > 0 && !isValidEmail(email)
+                    ? "border-red-300"
+                    : emailTaken
+                      ? "border-red-300"
+                      : "border-gray-200"
                 }`}
               />
               {email.length > 0 && !isValidEmail(email) && (
                 <p className="mt-2 text-xs text-red-600">{t("validEmail")}</p>
+              )}
+              {emailChecking && (
+                <p className="mt-2 text-xs text-gray-500">Checking email…</p>
+              )}
+              {emailTaken && !emailChecking && (
+                <p className="mt-2 text-xs text-red-600">{emailTaken}</p>
               )}
             </div>
 

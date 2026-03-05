@@ -19,8 +19,14 @@ export async function POST(request: Request) {
     if (!companyName || companyName.length < 2) return NextResponse.json({ error: "Company name required (min 2 characters)" }, { status: 400 });
     if (!contactEmail || contactEmail.length < 3) return NextResponse.json({ error: "Contact email required" }, { status: 400 });
 
-    const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-    if (existing) return NextResponse.json({ error: "This email is already registered. Please log in." }, { status: 400 });
+    const existing = await prisma.user.findUnique({ where: { email }, select: { id: true, role: true } });
+    if (existing) {
+      const message =
+        existing.role === "EMPLOYER"
+          ? "This email is already registered as an employer. Please log in."
+          : "This email is already registered as a candidate. Please log in or use a different email for employer registration.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
 
     const passwordHash = hashPassword(password);
     const token = generateSessionToken();
