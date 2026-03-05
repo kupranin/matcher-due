@@ -155,6 +155,8 @@ export default function CabinetPage() {
 
   const [availableToWork, setAvailableToWork] = useState(true);
   const [availableToWorkLoading, setAvailableToWorkLoading] = useState(false);
+  const [candidateMeta, setCandidateMeta] = useState<{ photoUrl: string | null; firstName: string | null } | null>(null);
+  const [chipPhotoFailed, setChipPhotoFailed] = useState(false);
 
   useEffect(() => {
     const profileUserId = getCandidateUserId();
@@ -197,7 +199,13 @@ export default function CabinetPage() {
       const vacancyListPromise = useForCandidateApi
         ? fetch(`/api/vacancies/for-candidate?userId=${encodeURIComponent(candidateUserId!)}`, { credentials: "include" })
             .then((r) => r.json())
-            .then((data: { vacancies?: Vacancy[] }) => (Array.isArray(data?.vacancies) ? data.vacancies : []))
+            .then((data: { vacancies?: Vacancy[]; candidateMeta?: { photoUrl?: string | null; firstName?: string | null } }) => {
+              if (data?.candidateMeta) {
+                setCandidateMeta({ photoUrl: data.candidateMeta.photoUrl ?? null, firstName: data.candidateMeta.firstName ?? null });
+                setChipPhotoFailed(false);
+              }
+              return Array.isArray(data?.vacancies) ? data.vacancies : [];
+            })
         : fetch("/api/vacancies", { credentials: "omit" }).then((r) => r.json());
       const matchesPromise = profileId
         ? fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`).then((r) => r.json())
@@ -230,9 +238,14 @@ export default function CabinetPage() {
     if (profileUserId) {
       fetch(`/api/candidates/profile?userId=${encodeURIComponent(profileUserId)}`)
         .then((r) => r.json())
-        .then((data: ProfilePayload) => {
+        .then((data: ProfilePayload & { photo?: string | null }) => {
           if (data?.fullName) {
             setAvailableToWork(data.availableToWork !== false);
+            setCandidateMeta({
+              photoUrl: data.photo?.trim() || null,
+              firstName: data.fullName?.trim().split(/\s+/)[0] ?? null,
+            });
+            setChipPhotoFailed(false);
             if (typeof data.profileId === "string" && data.profileId.trim() && typeof window !== "undefined") {
               window.localStorage.setItem(CANDIDATE_PROFILE_ID_KEY, data.profileId.trim());
             }
@@ -354,6 +367,28 @@ export default function CabinetPage() {
         </div>
       ) : (
         <>
+      {/* Candidate "You" chip with photo or initials */}
+      {(candidateMeta?.firstName || candidateMeta?.photoUrl) && (
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-matcher/20 bg-white/80 px-4 py-2.5 shadow-sm backdrop-blur sm:px-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-matcher-mint">
+            {candidateMeta.photoUrl && !chipPhotoFailed ? (
+              <img
+                src={candidateMeta.photoUrl}
+                alt=""
+                className="h-full w-full object-cover"
+                onError={() => setChipPhotoFailed(true)}
+              />
+            ) : (
+              <span className="text-sm font-semibold text-matcher-dark" aria-hidden>
+                {candidateMeta.firstName ? candidateMeta.firstName.slice(0, 1).toUpperCase() : "?"}
+              </span>
+            )}
+          </div>
+          <span className="text-sm font-medium text-gray-800">
+            {candidateMeta.firstName ? `${t("youLabel")} ${candidateMeta.firstName}` : t("youLabel")}
+          </span>
+        </div>
+      )}
       {/* Available to work toggle */}
       {getCandidateUserId() && (
         <div className="mb-4 flex items-center justify-between rounded-2xl border border-matcher/20 bg-white/80 px-4 py-3 shadow-sm backdrop-blur sm:px-5">

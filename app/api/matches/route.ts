@@ -251,7 +251,7 @@ export async function GET(request: Request) {
       },
       include: {
         vacancy: { select: { title: true }, include: { company: { select: { name: true } } } },
-        candidateProfile: { select: { id: true, fullName: true, jobTitle: true } },
+        candidateProfile: { select: { id: true, fullName: true, jobTitle: true, photo: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -269,6 +269,7 @@ export async function GET(request: Request) {
         company: m.vacancy?.company?.name ?? "",
         candidateName: m.candidateProfile?.fullName ?? "Candidate",
         candidateJobTitle: m.candidateProfile?.jobTitle ?? null,
+        candidatePhotoUrl: m.candidateProfile?.photo?.trim() || null,
       }))
     );
   } catch (e) {

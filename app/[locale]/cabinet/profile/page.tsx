@@ -35,6 +35,7 @@ export default function CabinetProfilePage() {
   const skillLabel = (s: string) => (ALL_SKILLS.includes(s) ? (tSkillNames(s) as string) : s);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
   const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
   const [job, setJob] = useState("");
@@ -80,6 +81,7 @@ export default function CabinetProfilePage() {
         .then((r) => r.json())
         .then((data: { photo?: string | null } | null) => {
           setPhotoUrl(data?.photo ?? null);
+          setPhotoLoadFailed(false);
         })
         .catch(() => {});
     }
@@ -94,9 +96,33 @@ export default function CabinetProfilePage() {
       setPhotoError(t("photoInvalidFile"));
       return;
     }
+    const userId = getCandidateUserId();
+    if (userId) {
+      try {
+        const form = new FormData();
+        form.set("file", file);
+        form.set("userId", userId);
+        const res = await fetch("/api/candidates/profile/photo", {
+          method: "POST",
+          body: form,
+          credentials: "include",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && typeof data?.photoUrl === "string") {
+          setPhotoUrl(data.photoUrl);
+          setPhotoLoadFailed(false);
+          return;
+        }
+        setPhotoError(data?.error ?? t("photoTooLarge"));
+      } catch {
+        setPhotoError(t("photoTooLarge"));
+      }
+      return;
+    }
     try {
       const dataUrl = await processImageToMaxKb(file, PROFILE_PHOTO_MAX_KB);
       setPhotoUrl(dataUrl);
+      setPhotoLoadFailed(false);
     } catch (err) {
       setPhotoError(err instanceof Error ? err.message : t("photoTooLarge"));
     }
@@ -134,10 +160,17 @@ export default function CabinetProfilePage() {
           <p className="mt-1 text-sm text-gray-500">{t("photoHint")}</p>
           <div className="mt-4 flex items-center gap-6">
             <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-gray-100">
-              {photoUrl ? (
-                <img src={photoUrl} alt="Profile" className="h-full w-full object-cover" />
+              {photoUrl && !photoUrl.startsWith("blob:") && !photoLoadFailed ? (
+                <img
+                  src={photoUrl}
+                  alt="Profile"
+                  className="h-full w-full object-cover"
+                  onError={() => setPhotoLoadFailed(true)}
+                />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-3xl text-gray-400">👤</div>
+                <div className="flex h-full w-full items-center justify-center text-3xl text-gray-400" aria-hidden>
+                  👤
+                </div>
               )}
             </div>
             <div>

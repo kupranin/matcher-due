@@ -56,8 +56,14 @@ export async function GET(request: Request) {
       include: { skills: true },
     });
     if (!profile) {
-      return NextResponse.json({ vacancies: [], error: "Candidate profile not found" }, { status: 200 });
+      return NextResponse.json({ candidateMeta: null, vacancies: [], error: "Candidate profile not found" }, { status: 200 });
     }
+
+    const firstName = profile.fullName?.trim().split(/\s+/)[0] ?? null;
+    const candidateMeta = {
+      photoUrl: profile.photo?.trim() || null,
+      firstName,
+    };
 
     const vacancies = await prisma.vacancy.findMany({
       where: { status: "PUBLISHED" },
@@ -106,9 +112,9 @@ export async function GET(request: Request) {
       console.info("[Candidate Opportunities]", JSON.stringify(diagnostic));
     }
 
-    return NextResponse.json({ vacancies: cards });
+    return NextResponse.json({ candidateMeta, vacancies: cards });
   } catch (e) {
     console.error("Vacancies for-candidate error:", e);
-    return NextResponse.json({ error: "Failed to load opportunities", vacancies: [] }, { status: 500 });
+    return NextResponse.json({ candidateMeta: null, error: "Failed to load opportunities", vacancies: [] }, { status: 500 });
   }
 }
