@@ -2,8 +2,8 @@
  * Helpers to build vacancy/candidate cards from API for cabinet.
  */
 
-import type { CandidateProfile, VacancyProfile } from "./matchCalculation";
-import { passesPreCalcFilter, calculateMatch, normalizeEducationLevel } from "./matchCalculation";
+import type { CandidateProfile, VacancyProfile, MatchResult } from "./matchCalculation";
+import { passesPreCalcFilter, calculateMatch, calculateMatchResult, normalizeEducationLevel, shouldShowToViewer } from "./matchCalculation";
 import type { CandidateCard } from "./matchMockData";
 import { GEORGIAN_CITIES } from "./georgianLocations";
 import { getStockPhotosForJob } from "./vacancyStockPhotos";
@@ -40,6 +40,7 @@ export function apiVacancyToProfile(v: {
   requiredExperienceMonths?: number;
   requiredEducationLevel?: string;
   skills?: Array<{ name: string; level?: string; weight?: number }>;
+  title: string;
 }): VacancyProfile {
   return {
     locationCityId: v.locationCityId,
@@ -49,6 +50,7 @@ export function apiVacancyToProfile(v: {
     requiredEducationLevel: normalizeEducationLevel(v.requiredEducationLevel),
     workType: v.workType || "Full-time",
     skills: (v.skills ?? []).map(apiSkillToVacancySkill),
+    positionTitle: v.title,
   };
 }
 
@@ -77,9 +79,6 @@ function vacancyMatchesCandidatePreference(vacancyTitle: string, preferredJob: s
   if (!vacancyNorm || !jobNorm) return true;
   return vacancyNorm === jobNorm || (jobNorm.length >= 3 && vacancyNorm.includes(jobNorm));
 }
-
-/** Minimum match % to show a vacancy (lower = more opportunities shown). */
-const OPPORTUNITIES_MATCH_THRESHOLD = 50;
 
 /** Build vacancy cards with match % from API list and candidate profile. When candidatePreferredJob is set, only vacancies for that role (or more specific, e.g. Senior Barista for Barista) are shown. */
 export function buildVacancyCardsWithMatch(
@@ -120,7 +119,7 @@ export function buildVacancyCardsWithMatch(
         match,
       };
     })
-    .filter((x): x is VacancyCardFromApi => x != null && x.match >= OPPORTUNITIES_MATCH_THRESHOLD);
+    .filter((x): x is VacancyCardFromApi => x != null && x.match >= 50);
 
   // Sort by match % descending
   return cards.sort((a, b) => b.match - a.match);
@@ -131,9 +130,6 @@ export function candidateJobMatchesVacancy(candidateJobTitle: string | null | un
   if (!vacancyTitle) return true;
   return candidateJobMatchesVacancyStrict(candidateJobTitle, vacancyTitle);
 }
-
-/** Minimum match % to show a candidate to employer (lower = more candidates shown). */
-const EMPLOYER_MATCH_THRESHOLD = 50;
 
 /** Build candidate cards with match % from API list and vacancy profile (for employer cabinet). Only includes candidates whose preferred job matches the vacancy when vacancyTitle is provided; candidates with no preferred job are shown for any vacancy. */
 export function buildCandidateCardsWithMatch(
@@ -173,9 +169,15 @@ export function buildCandidateCardsWithMatch(
         educationLevel: normalizeEducationLevel(c.educationLevel),
         workTypes: c.workTypes?.length ? c.workTypes : ["Full-time"],
         skills: skills.map((s) => ({ name: s.name, level: toSkillLevel(s.level) })),
+        availableToWork: c.availableToWork !== false,
+        primaryPosition: c.jobTitle ?? null,
+        desiredPositions: null,
       };
-      const rawMatch = calculateMatch(profile, vacancyProfile);
-      const match = Number.isFinite(rawMatch) ? Math.min(100, Math.max(0, Math.round(rawMatch))) : 0;
+      const result: MatchResult = calculateMatchResult(profile, vacancyProfile);
+      if (!shouldShowToViewer(result, "employer")) {
+        return null;
+      }
+      const match = result.matchPercent;
       return {
         id: c.id,
         name: c.fullName,
@@ -187,6 +189,6 @@ export function buildCandidateCardsWithMatch(
         match,
       };
     })
-    .filter((c) => c.match >= EMPLOYER_MATCH_THRESHOLD)
+    .filter((c): c is CandidateCard & { match: number } => c != null)
     .sort((a, b) => b.match - a.match);
 }
