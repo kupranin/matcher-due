@@ -2,8 +2,8 @@
  * Helpers to build vacancy/candidate cards from API for cabinet.
  */
 
-import type { CandidateProfile, VacancyProfile, MatchResult } from "./matchCalculation";
-import { passesPreCalcFilter, calculateMatch, calculateMatchResult, normalizeEducationLevel, shouldShowToViewer } from "./matchCalculation";
+import type { CandidateProfile, VacancyProfile, MatchResult, GateResult } from "./matchCalculation";
+import { passesHardGate, passesPreCalcFilter, calculateMatch, calculateMatchResult, normalizeEducationLevel, shouldShowToViewer } from "./matchCalculation";
 import type { CandidateCard } from "./matchMockData";
 import { GEORGIAN_CITIES } from "./georgianLocations";
 import { getStockPhotosForJob } from "./vacancyStockPhotos";
@@ -80,49 +80,132 @@ function vacancyMatchesCandidatePreference(vacancyTitle: string, preferredJob: s
   return vacancyNorm === jobNorm || (jobNorm.length >= 3 && vacancyNorm.includes(jobNorm));
 }
 
-/** Build vacancy cards with match % from API list and candidate profile. When candidatePreferredJob is set, only vacancies for that role (or more specific, e.g. Senior Barista for Barista) are shown. */
+export type VacancyForCandidateInput = Array<{
+  id: string;
+  title: string;
+  company: string;
+  locationCityId: string;
+  salaryMin?: number | null;
+  salaryMax: number;
+  workType: string;
+  isRemote?: boolean;
+  requiredExperienceMonths?: number;
+  requiredEducationLevel?: string;
+  skills?: Array<{ name: string; level?: string; weight?: number }>;
+  photo?: string | null;
+}>;
+
+export type ListVacanciesForCandidateDiagnostic = {
+  candidateId: string;
+  availableToWork: boolean;
+  primaryPosition: string | null;
+  locationCityId: string;
+  willingToRelocate: boolean;
+  salaryMin: number | null;
+  countPublished: number;
+  countAfterAvailability: number;
+  countAfterPosition: number;
+  countAfterGeo: number;
+  countAfterFinance: number;
+  countEligible: number;
+  sampleFilteredOut: Array<{ vacancyId: string; title: string; failReason: string }>;
+};
+
+function gateFailReason(gate: GateResult): string {
+  if (!gate.reasons.availabilityPassed) return "availability";
+  if (!gate.reasons.positionPassed) return "position";
+  if (!gate.reasons.geographyPassed) return "geography";
+  if (!gate.reasons.financePassed) return "finance";
+  return "unknown";
+}
+
+/**
+ * Dedicated candidate→vacancy listing: apply hard gates only (no 60% threshold).
+ * Returns vacancies that pass eligibility + optional diagnostic for debugging.
+ */
+export function listVacanciesForCandidate(
+  apiVacancies: VacancyForCandidateInput,
+  candidateProfile: CandidateProfile,
+  candidatePreferredJob?: string | null,
+  options?: { includeDiagnostic?: boolean; diagnosticCandidateId?: string }
+): { cards: VacancyCardFromApi[]; diagnostic?: ListVacanciesForCandidateDiagnostic } {
+  let countAfterAvailability = 0;
+  let countAfterPosition = 0;
+  let countAfterGeo = 0;
+  let countAfterFinance = 0;
+  const sampleFilteredOut: Array<{ vacancyId: string; title: string; failReason: string }> = [];
+
+  const cards: VacancyCardFromApi[] = [];
+  for (const v of apiVacancies) {
+    const profile = apiVacancyToProfile(v);
+    const gate = passesHardGate(candidateProfile, profile);
+    if (!gate.passed) {
+      const reason = gateFailReason(gate);
+      if (sampleFilteredOut.length < 5) sampleFilteredOut.push({ vacancyId: v.id, title: v.title, failReason: reason });
+      continue;
+    }
+    if (candidatePreferredJob != null && candidatePreferredJob.trim() !== "" && !vacancyMatchesCandidatePreference(v.title, candidatePreferredJob)) {
+      if (sampleFilteredOut.length < 5) sampleFilteredOut.push({ vacancyId: v.id, title: v.title, failReason: "position_preference" });
+      continue;
+    }
+    const match = calculateMatch(candidateProfile, profile);
+    const salaryStr = v.salaryMin != null ? `${v.salaryMin.toLocaleString()}–${v.salaryMax.toLocaleString()} GEL` : `${v.salaryMax.toLocaleString()} GEL`;
+    cards.push({
+      id: v.id,
+      title: v.title,
+      company: v.company,
+      location: locationCityName(v.locationCityId),
+      workType: v.workType,
+      salary: salaryStr,
+      photo: v.photo?.trim() || getStockPhotosForJob(v.title)[0] || "https://images.unsplash.com/photo-1521737711867-e3b97395f902?w=800&q=80",
+      profile,
+      match,
+    });
+  }
+  // Per-gate counts: re-run gates in order for diagnostic (availability first, then position, etc.)
+  if (options?.includeDiagnostic) {
+    for (const v of apiVacancies) {
+      const profile = apiVacancyToProfile(v);
+      const gate = passesHardGate(candidateProfile, profile);
+      if (gate.reasons.availabilityPassed) countAfterAvailability++;
+      if (gate.reasons.availabilityPassed && gate.reasons.positionPassed) countAfterPosition++;
+      if (gate.reasons.availabilityPassed && gate.reasons.positionPassed && gate.reasons.geographyPassed) countAfterGeo++;
+      if (gate.reasons.availabilityPassed && gate.reasons.positionPassed && gate.reasons.geographyPassed && gate.reasons.financePassed) countAfterFinance++;
+    }
+  }
+
+  cards.sort((a, b) => b.match - a.match);
+
+  const diagnostic = options?.includeDiagnostic
+    ? {
+        candidateId: options.diagnosticCandidateId ?? "",
+        availableToWork: candidateProfile.availableToWork !== false,
+        primaryPosition: candidateProfile.primaryPosition ?? null,
+        locationCityId: candidateProfile.locationCityId,
+        willingToRelocate: candidateProfile.willingToRelocate,
+        salaryMin: typeof candidateProfile.salaryMin === "number" ? candidateProfile.salaryMin : null,
+        countPublished: apiVacancies.length,
+        countAfterAvailability,
+        countAfterPosition,
+        countAfterGeo,
+        countAfterFinance,
+        countEligible: cards.length,
+        sampleFilteredOut,
+      }
+    : undefined;
+
+  return { cards, diagnostic };
+}
+
+/** Build vacancy cards with match % from API list and candidate profile. When candidatePreferredJob is set, only vacancies for that role (or more specific, e.g. Senior Barista for Barista) are shown. Uses candidate eligibility gates only; no match-percent threshold (60% is employer-side only). */
 export function buildVacancyCardsWithMatch(
-  apiVacancies: Array<{
-    id: string;
-    title: string;
-    company: string;
-    locationCityId: string;
-    salaryMin?: number | null;
-    salaryMax: number;
-    workType: string;
-    isRemote?: boolean;
-    requiredExperienceMonths?: number;
-    requiredEducationLevel?: string;
-    skills?: Array<{ name: string; level?: string; weight?: number }>;
-    photo?: string | null;
-  }>,
+  apiVacancies: VacancyForCandidateInput,
   candidateProfile: CandidateProfile,
   /** Candidate's preferred job title. When set, only vacancies matching this role are shown. */
   candidatePreferredJob?: string | null
 ): VacancyCardFromApi[] {
-  const cards = apiVacancies
-    .map((v) => {
-      const profile = apiVacancyToProfile(v);
-      if (!passesPreCalcFilter(candidateProfile, profile)) return null;
-      if (!vacancyMatchesCandidatePreference(v.title, candidatePreferredJob)) return null;
-      const match = calculateMatch(candidateProfile, profile);
-      const salaryStr = v.salaryMin != null ? `${v.salaryMin.toLocaleString()}–${v.salaryMax.toLocaleString()} GEL` : `${v.salaryMax.toLocaleString()} GEL`;
-      return {
-        id: v.id,
-        title: v.title,
-        company: v.company,
-        location: locationCityName(v.locationCityId),
-        workType: v.workType,
-        salary: salaryStr,
-        photo: v.photo?.trim() || getStockPhotosForJob(v.title)[0] || "https://images.unsplash.com/photo-1521737711867-e3b97395f902?w=800&q=80",
-        profile,
-        match,
-      };
-    })
-    .filter((x): x is VacancyCardFromApi => x != null && x.match >= 50);
-
-  // Sort by match % descending
-  return cards.sort((a, b) => b.match - a.match);
+  const { cards } = listVacanciesForCandidate(apiVacancies, candidateProfile, candidatePreferredJob);
+  return cards;
 }
 
 /** True if candidate's preferred job matches the vacancy title (so employer only sees candidates looking for this role). Uses strict same-job matching. */

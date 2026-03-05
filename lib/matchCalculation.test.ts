@@ -5,6 +5,7 @@ import {
   passesHardGate,
   calculateMatchResult,
   shouldShowToViewer,
+  matchPosition,
 } from "./matchCalculation";
 
 function baseCandidate(overrides: Partial<CandidateProfile> = {}): CandidateProfile {
@@ -119,7 +120,7 @@ function baseVacancy(overrides: Partial<VacancyProfile> = {}): VacancyProfile {
   assert.equal(shouldShowToViewer(r60, "employer"), true);
 })();
 
-// 6) candidate visibility: 10% but eligible => showToCandidate=true
+// 6) candidate visibility: 10% but eligible => showToCandidate=true (no 60% threshold for candidate)
 (function testCandidateVisibilityLowScore() {
   const result: any = {
     eligible: true,
@@ -139,4 +140,34 @@ function baseVacancy(overrides: Partial<VacancyProfile> = {}): VacancyProfile {
   };
   assert.equal(shouldShowToViewer(result, "candidate"), true);
 })();
+
+// 7) Finance: candidate.minSalary null/absent => do NOT apply finance gate (pass)
+(function testFinanceGateCandidateNoMinSalary() {
+  const c = baseCandidate({ availableToWork: true, primaryPosition: "Cashier" }) as CandidateProfile & { salaryMin?: number };
+  delete (c as { salaryMin?: number }).salaryMin;
+  const v = baseVacancy({ salaryMax: 500 });
+  const gate = passesHardGate(c, v);
+  assert.equal(gate.reasons.financePassed, true, "finance should pass when candidate has no min salary");
+})();
+
+// 8) Finance: vacancy.salaryMax null/absent => FAIL finance gate
+(function testFinanceGateVacancyNoMaxSalary() {
+  const c = baseCandidate({ availableToWork: true, primaryPosition: "Cashier", salaryMin: 1000 });
+  const v = baseVacancy({ salaryMax: NaN } as unknown as VacancyProfile);
+  const gate = passesHardGate(c, v);
+  assert.equal(gate.reasons.financePassed, false, "finance should fail when vacancy has no max salary");
+})();
+
+// 9) Position: "Receptionist" matches "Senior Receptionist" (contains fallback)
+(function testPositionContainsFallback() {
+  const c = baseCandidate({ primaryPosition: "Receptionist", availableToWork: true });
+  const v = baseVacancy({ positionTitle: "Senior Receptionist" });
+  assert.equal(matchPosition(c, v), true);
+  const v2 = baseVacancy({ positionTitle: "Receptionist" });
+  assert.equal(matchPosition(c, v2), true);
+})();
+
+// 10) Candidate listing must not depend on match table — exercised by for-candidate API (no INNER JOIN on Match).
+// Gate logic is symmetric: same passesHardGate used for candidate->vacancy; no 60% filter for candidate view.
+console.log("matchCalculation tests passed");
 

@@ -149,7 +149,10 @@ export function matchPosition(candidate: CandidateProfile, vacancy: VacancyProfi
     // Candidate has no declared positions; treat as mismatch.
     return false;
   }
-  return positions.has(vacancyTitleNorm);
+  if (positions.has(vacancyTitleNorm)) return true;
+  // Fallback: token/contains match (e.g. "Receptionist" matches "Senior Receptionist")
+  const posList = Array.from(positions);
+  return posList.some((p) => vacancyTitleNorm.includes(p) || p.includes(vacancyTitleNorm));
 }
 
 /**
@@ -184,14 +187,19 @@ export function passesHardGate(candidate: CandidateProfile, vacancy: VacancyProf
     geographyReason = "Candidate city does not match vacancy city and candidate is not willing to relocate.";
   }
 
-  // 3) Finance gate
+  // 3) Finance gate: vacancy.maxBudget >= 0.8 * candidate.minSalary
+  // If candidate.minSalary is null: do NOT apply finance gate (show vacancy).
+  // If vacancy.salaryMax is null: FAIL finance gate.
   let financePassed = false;
   let financeReason = "";
   const salaryMax = typeof vacancy.salaryMax === "number" ? vacancy.salaryMax : NaN;
   const salaryMin = typeof candidate.salaryMin === "number" ? candidate.salaryMin : NaN;
-  if (!Number.isFinite(salaryMax) || !Number.isFinite(salaryMin)) {
+  if (!Number.isFinite(salaryMax)) {
     financePassed = false;
-    financeReason = "Missing salary information for candidate or vacancy.";
+    financeReason = "Vacancy has no max salary (maxBudget required).";
+  } else if (!Number.isFinite(salaryMin)) {
+    financePassed = true;
+    financeReason = "Candidate has no min salary; finance gate skipped.";
   } else {
     const threshold = salaryMin * 0.8;
     financePassed = salaryMax >= threshold;

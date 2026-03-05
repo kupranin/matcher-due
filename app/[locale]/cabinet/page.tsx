@@ -181,22 +181,36 @@ export default function CabinetPage() {
       educationLevel: (data?.educationLevel as "High School") ?? "High School",
       workTypes: data?.workTypes?.length ? data.workTypes : ["Full-time"],
       skills: (data?.skills ?? []).map((s) => ({ name: s.name, level: (s.level as "Intermediate") ?? "Intermediate" })),
+      availableToWork: data?.availableToWork !== false,
+      primaryPosition: data?.jobTitle ?? null,
+      desiredPositions: null,
     });
     const loadVacanciesAndBuild = (
       profile: import("@/lib/matchCalculation").CandidateProfile,
       preferredJob: string | undefined,
-      profileId: string | null
+      profileId: string | null,
+      candidateUserId: string | null
     ) => {
       setOpportunitiesLoading(true);
-      const vacancyListPromise = fetch("/api/vacancies", { credentials: "omit" }).then((r) => r.json());
+      // When logged in, use dedicated candidate API (no match table, correct gates, server-side diagnostic logging).
+      const useForCandidateApi = Boolean(candidateUserId);
+      const vacancyListPromise = useForCandidateApi
+        ? fetch(`/api/vacancies/for-candidate?userId=${encodeURIComponent(candidateUserId!)}`, { credentials: "include" })
+            .then((r) => r.json())
+            .then((data: { vacancies?: Vacancy[] }) => (Array.isArray(data?.vacancies) ? data.vacancies : []))
+        : fetch("/api/vacancies", { credentials: "omit" }).then((r) => r.json());
       const matchesPromise = profileId
         ? fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`).then((r) => r.json())
         : Promise.resolve([]);
       Promise.all([vacancyListPromise, matchesPromise])
         .then(([list, matches]: [unknown, Array<{ vacancyId: string; employerLiked?: boolean }>]) => {
           setOpportunitiesLoading(false);
-          if (!Array.isArray(list) || list.length === 0) return;
-          const cards = buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob);
+          const cards = useForCandidateApi
+            ? (list as Vacancy[])
+            : Array.isArray(list) && list.length > 0
+              ? buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob)
+              : [];
+          if (cards.length === 0 && !useForCandidateApi) return;
           const likedIds = getCandidateLikes();
           const notYetLiked = cards.filter((c) => !likedIds.includes(c.id));
           const employerLikedVacancyIds = new Set(
@@ -227,22 +241,22 @@ export default function CabinetPage() {
               phone: data.phone ?? "",
               job: data.jobTitle ?? undefined,
             });
-            loadVacanciesAndBuild(profile, data.jobTitle ?? undefined, getCandidateProfileId());
+            loadVacanciesAndBuild(profile, data.jobTitle ?? undefined, getCandidateProfileId(), profileUserId);
           } else {
             const stored = loadCandidateProfile();
             const fallback = getCandidateProfileForMatch();
-            loadVacanciesAndBuild(stored?.profile ?? fallback, stored?.job ?? undefined, getCandidateProfileId());
+            loadVacanciesAndBuild(stored?.profile ?? fallback, stored?.job ?? undefined, getCandidateProfileId(), profileUserId);
           }
         })
         .catch(() => {
           const stored = loadCandidateProfile();
           const fallback = getCandidateProfileForMatch();
-          loadVacanciesAndBuild(stored?.profile ?? fallback, stored?.job ?? undefined, getCandidateProfileId());
+          loadVacanciesAndBuild(stored?.profile ?? fallback, stored?.job ?? undefined, getCandidateProfileId(), profileUserId);
         });
     } else {
       const stored = loadCandidateProfile();
       const profile = stored?.profile ?? getCandidateProfileForMatch();
-      loadVacanciesAndBuild(profile, stored?.job ?? undefined, getCandidateProfileId());
+      loadVacanciesAndBuild(profile, stored?.job ?? undefined, getCandidateProfileId(), null);
     }
   }, []);
   const [liked, setLiked] = useState<Vacancy[]>([]);
