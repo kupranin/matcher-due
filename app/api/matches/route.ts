@@ -2,16 +2,39 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getEmployerCompanyFromSession, vacancyBelongsToEmployerCompany } from "@/lib/employerAuth";
 import { computeMatchScore } from "@/lib/matchScore";
+import { MATCH_SYSTEM_MESSAGE_TEXT } from "@/lib/matchSystemMessage";
 
 const LOG_PREFIX = "[matches]";
 
+let dbConfigLogged = false;
+function logDbConfigOnce() {
+  if (dbConfigLogged) return;
+  dbConfigLogged = true;
+  const url = process.env.DATABASE_URL ?? "";
+  const direct = process.env.DIRECT_URL ?? "";
+  const mask = (u: string) => {
+    if (!u) return "none";
+    try {
+      const parsed = new URL(u.replace(/^postgres:\/\//, "https://"));
+      const host = parsed.hostname ?? "";
+      const projectRef = host.replace(".supabase.co", "").replace(".pooler.supabase.com", "");
+      return `host=${host} projectRef=${projectRef} env=${process.env.NODE_ENV ?? "unknown"}`;
+    } catch {
+      return "masked";
+    }
+  };
+  console.info(`${LOG_PREFIX} DB config: ${mask(url)} direct=${mask(direct)}`);
+}
+
 /**
  * POST /api/matches — record a like (candidate or employer). Atomic upsert; match is durable in DB.
- * - Candidate: sends candidateLiked: true; no auth required (match is by vacancyId + candidateProfileId).
+ * Match = only when employer_liked AND candidate_liked (mutual). Chat is separate; on first mutual we insert system message.
+ * - Candidate: sends candidateLiked: true + candidateProfileId (from session/storage).
  * - Employer: sends employerLiked: true; vacancy must belong to employer's company.
- * - Returns hasMatch: true only when both sides have liked (mutual); client must show match only then.
+ * - Returns hasMatch: true ONLY when server confirms both likes; client must show match only then.
  */
 export async function POST(request: Request) {
+  logDbConfigOnce();
   const reqId = `req-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   try {
     const body = await request.json().catch(() => ({}));
@@ -72,12 +95,20 @@ export async function POST(request: Request) {
 
     const existing = await prisma.match.findUnique({
       where: { vacancyId_candidateProfileId: { vacancyId, candidateProfileId } },
+      select: { id: true, employerLiked: true, candidateLiked: true, matchedAt: true },
     });
-    const didFindCounterLike = existing
-      ? (candidateLiked && existing.employerLiked) || (employerLiked && existing.candidateLiked)
-      : false;
+    const before = existing
+      ? {
+          employerLiked: existing.employerLiked,
+          candidateLiked: existing.candidateLiked,
+          matchedAt: existing.matchedAt != null,
+        }
+      : null;
 
-    const match = await prisma.$transaction(async (tx) => {
+    let didSetMatchedAt = false;
+    let didInsertSystemMessage = false;
+
+    const verify = await prisma.$transaction(async (tx) => {
       const updated = await tx.match.upsert({
         where: {
           vacancyId_candidateProfileId: { vacancyId, candidateProfileId },
@@ -98,42 +129,66 @@ export async function POST(request: Request) {
       const after = await tx.match.findUnique({
         where: { vacancyId_candidateProfileId: { vacancyId, candidateProfileId } },
       });
-      return after ?? updated;
+      const row = after ?? updated;
+      const isMutual = Boolean(row.candidateLiked && row.employerLiked);
+      const matchedAtNull = row.matchedAt == null;
+
+      if (isMutual && matchedAtNull) {
+        await tx.match.update({
+          where: { id: row.id },
+          data: { matchedAt: new Date() },
+        });
+        didSetMatchedAt = true;
+        await tx.chatMessage.create({
+          data: {
+            matchId: row.id,
+            sender: "system",
+            text: MATCH_SYSTEM_MESSAGE_TEXT,
+          },
+        });
+        didInsertSystemMessage = true;
+      }
+      return row;
     });
 
-    const verify = await prisma.match.findUnique({
+    const verifyAfter = await prisma.match.findUnique({
       where: { vacancyId_candidateProfileId: { vacancyId, candidateProfileId } },
     });
-    if (!verify) {
+    if (!verifyAfter) {
       console.error(`${LOG_PREFIX} CRITICAL verify failed after commit reqId=${reqId} vacancyId=${vacancyId} candidateProfileId=${candidateProfileId}`);
       return NextResponse.json({ error: "Failed to save like" }, { status: 500 });
     }
 
-    const hasMatch = Boolean(verify.candidateLiked && verify.employerLiked);
+    const hasMatch = Boolean(verifyAfter.candidateLiked && verifyAfter.employerLiked);
     console.info(
       JSON.stringify({
         tag: LOG_PREFIX,
         reqId,
         vacancyId,
         candidateProfileId,
-        candidateLiked,
-        employerLiked,
-        didFindCounterLike: didFindCounterLike || hasMatch,
-        matchId: verify.id,
-        hasMatch,
+        before,
+        after: {
+          employerLiked: verifyAfter.employerLiked,
+          candidateLiked: verifyAfter.candidateLiked,
+          matchedAt: verifyAfter.matchedAt != null,
+        },
+        isMatch: hasMatch,
+        didSetMatchedAt,
+        didInsertSystemMessage,
+        matchId: verifyAfter.id,
         committed: true,
       })
     );
 
     return NextResponse.json({
-      id: verify.id,
-      candidateLiked: verify.candidateLiked,
-      employerLiked: verify.employerLiked,
+      id: verifyAfter.id,
+      candidateLiked: verifyAfter.candidateLiked,
+      employerLiked: verifyAfter.employerLiked,
       hasMatch,
       createdAt:
-        typeof verify.createdAt?.toISOString === "function"
-          ? verify.createdAt.toISOString()
-          : String(verify.createdAt),
+        typeof verifyAfter.createdAt?.toISOString === "function"
+          ? verifyAfter.createdAt.toISOString()
+          : String(verifyAfter.createdAt),
     });
   } catch (e) {
     console.error(`${LOG_PREFIX} Match upsert error reqId=${reqId}`, e);
@@ -145,18 +200,23 @@ export async function POST(request: Request) {
 }
 
 /**
- * GET /api/matches
- * - ?candidateProfileId= : candidate's matches (all vacancies they liked / were liked by).
- * - No param + employer session: matches for that company's vacancies only (company matches vacancy).
+ * GET /api/matches — list matches. Match = candidate_liked AND employer_liked (mutual).
+ * - ?candidateProfileId= : candidate's matches. Default: mutual only (Matches tab). ?allLikes=1: all rows where candidate liked (Liked tab).
+ * - No param + employer session: employer's mutual matches for their company's vacancies.
  */
 export async function GET(request: Request) {
+  logDbConfigOnce();
   try {
     const { searchParams } = new URL(request.url);
     const candidateProfileId = searchParams.get("candidateProfileId");
+    const allLikes = searchParams.get("allLikes") === "1" || searchParams.get("allLikes") === "true";
 
     if (candidateProfileId) {
       const list = await prisma.match.findMany({
-        where: { candidateProfileId },
+        where: {
+          candidateProfileId,
+          ...(allLikes ? { candidateLiked: true } : { candidateLiked: true, employerLiked: true }),
+        },
         include: {
           vacancy: { include: { company: { select: { name: true } } } },
         },
@@ -184,7 +244,11 @@ export async function GET(request: Request) {
     }
 
     const list = await prisma.match.findMany({
-      where: { vacancy: { companyId: ctx.companyId } },
+      where: {
+        vacancy: { companyId: ctx.companyId },
+        candidateLiked: true,
+        employerLiked: true,
+      },
       include: {
         vacancy: { select: { title: true }, include: { company: { select: { name: true } } } },
         candidateProfile: { select: { id: true, fullName: true, jobTitle: true } },

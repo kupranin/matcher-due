@@ -78,7 +78,7 @@ export default function CabinetLikedPage() {
       setLoading(false);
       return;
     }
-    fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`)
+    fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}&allLikes=1`)
       .then((r) => r.json())
       .then((list: LikedMatch[]) => {
         if (Array.isArray(list)) {

@@ -42,7 +42,15 @@ export default async function LocaleLayout({ children, params }: Props) {
   setRequestLocale(locale);
   const displayLocale = locale === "local" ? "en" : locale;
 
-  const messages = await getMessages();
+  let messages: Record<string, unknown> | undefined;
+  try {
+    messages = await getMessages();
+  } catch (_) {
+    messages = {};
+  }
+  if (!messages || typeof messages !== "object") {
+    messages = {};
+  }
 
   return (
     <NextIntlClientProvider messages={messages}>

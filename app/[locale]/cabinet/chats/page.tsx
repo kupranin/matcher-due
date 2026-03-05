@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -57,7 +57,7 @@ function MatchListItem({
   );
 }
 
-export default function CandidateChatsPage() {
+function CandidateChatsContent() {
   const t = useTranslations("chats");
   const searchParams = useSearchParams();
   const matchIdFromUrl = searchParams.get("matchId");
@@ -168,5 +168,13 @@ export default function CandidateChatsPage() {
         ))}
       </div>
     </div>
+  );
+}
+
+export default function CandidateChatsPage() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-md px-4 py-16 flex justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-matcher border-t-transparent" aria-hidden /></div>}>
+      <CandidateChatsContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { Suspense, useState, useMemo, useEffect, useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
@@ -75,7 +75,7 @@ const SKILL_LEVELS: SkillLevel[] = ["Beginner", "Intermediate", "Advanced"];
 
 type Step = "vacancy" | "vacancySaved" | "package" | "payment" | "success";
 
-export default function EmployerPostPage() {
+function EmployerPostContent() {
   const locale = useLocale();
   const apiLocale = (locale === "local" ? "en" : locale) as "en" | "ka";
   const t = useTranslations("employerPost");
@@ -1411,5 +1411,13 @@ export default function EmployerPostPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function EmployerPostPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-matcher border-t-transparent" aria-hidden /></div>}>
+      <EmployerPostContent />
+    </Suspense>
   );
 }

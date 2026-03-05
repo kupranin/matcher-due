@@ -257,6 +257,7 @@ model RoleSkillTemplate {
 }
 
 // ——— Matches (Swipe / Like) ———
+// Match = mutual like only for UI: employer_liked AND candidate_liked. Chat is separate (available after match).
 model Match {
   id                 String           @id @default(cuid())
   vacancyId          String           @map("vacancy_id")
@@ -269,6 +270,8 @@ model Match {
   candidatePitch     String?          @map("candidate_pitch") @db.Text
   matchScore         Int?             @map("match_score") // 0-100 from weighted scoring
   createdAt          DateTime         @default(now()) @map("created_at")
+  /// Set when both employer_liked and candidate_liked become true; used to insert system chat message once.
+  matchedAt          DateTime?        @map("matched_at")
 
   chatMessages ChatMessage[]
 
@@ -281,7 +284,7 @@ model ChatMessage {
   id        String   @id @default(cuid())
   matchId   String   @map("match_id")
   match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  sender    String   // "candidate" | "employer"
+  sender    String   // "candidate" | "employer" | "system"
   text      String   @db.Text
   createdAt DateTime @default(now()) @map("created_at")
 

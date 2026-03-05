@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Link, useRouter } from "@/i18n/navigation";
 import Logo from "@/components/Logo";
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const t = useTranslations("resetPassword");
   const tCommon = useTranslations("common");
   const router = useRouter();
@@ -159,5 +159,13 @@ export default function ResetPasswordPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-matcher border-t-transparent" aria-hidden /></div>}>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }

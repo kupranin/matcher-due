@@ -61,7 +61,7 @@ export default function MatchChatWindow({
         .then((r) => r.json())
         .then((list: Array<{ id: string; matchId: string; sender: string; text: string; createdAt: number }>) => {
           if (Array.isArray(list)) {
-            setMessages(list.map((m) => ({ id: m.id, matchId: m.matchId, sender: m.sender as "candidate" | "employer", text: m.text, createdAt: typeof m.createdAt === "number" ? m.createdAt : new Date(m.createdAt).getTime() })));
+            setMessages(list.map((m) => ({ id: m.id, matchId: m.matchId, sender: (m.sender === "system" ? "system" : m.sender === "employer" ? "employer" : "candidate") as "candidate" | "employer" | "system", text: m.text, createdAt: typeof m.createdAt === "number" ? m.createdAt : new Date(m.createdAt).getTime() })));
           }
         })
         .catch(() => {});
@@ -312,22 +312,30 @@ export default function MatchChatWindow({
           </div>
         ) : (
           <div className="space-y-3">
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={`flex ${m.sender === userRole ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                    m.sender === userRole
-                      ? "bg-matcher text-white"
-                      : "bg-gray-100 text-gray-900"
-                  }`}
-                >
-                  <p className="text-sm">{m.text}</p>
+            {messages.map((m) =>
+              m.sender === "system" ? (
+                <div key={m.id} className="flex justify-center">
+                  <div className="max-w-[85%] rounded-xl bg-gray-100 px-3 py-2 text-center">
+                    <p className="text-xs text-gray-500">{m.text}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ) : (
+                <div
+                  key={m.id}
+                  className={`flex ${m.sender === userRole ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                      m.sender === userRole
+                        ? "bg-matcher text-white"
+                        : "bg-gray-100 text-gray-900"
+                    }`}
+                  >
+                    <p className="text-sm">{m.text}</p>
+                  </div>
+                </div>
+              )
+            )}
             <div ref={bottomRef} />
           </div>
         )}
