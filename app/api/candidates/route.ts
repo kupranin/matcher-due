@@ -20,6 +20,7 @@ export async function GET() {
         educationLevel: c.educationLevel,
         willingToRelocate: c.willingToRelocate,
         availableToWork: c.availableToWork,
+        photo: c.photo?.trim() || null,
         skills: c.skills.map((s) => ({ name: s.name, level: s.level })),
       }))
     );

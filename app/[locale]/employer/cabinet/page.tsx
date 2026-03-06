@@ -63,12 +63,16 @@ function SwipeCard({
             {candidate.photo ? (
               <img
                 src={candidate.photo}
-                alt={candidate.name}
+                alt=""
                 className="h-full w-full object-cover"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                  const next = (e.currentTarget as HTMLImageElement).nextElementSibling as HTMLElement | null;
+                  if (next) next.style.display = "flex";
+                }}
               />
-            ) : (
-              <span className="flex h-full w-full items-center justify-center text-3xl">👤</span>
-            )}
+            ) : null}
+            <span className="flex h-full w-full items-center justify-center text-3xl" style={candidate.photo ? { display: "none" } : undefined} aria-hidden>👤</span>
           </div>
           <h2 className="text-xl font-bold text-gray-900">
             {candidate.name}

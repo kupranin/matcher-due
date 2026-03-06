@@ -14,8 +14,16 @@ type MatchItem = {
   company: string;
   candidateName: string;
   candidateJobTitle?: string | null;
+  candidatePhotoUrl?: string | null;
   createdAt: string;
+  matchedAt?: string | null;
 };
+
+function getEmployerAuthHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = window.sessionStorage.getItem("matcher_employer_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 export default function EmployerMatchesPage() {
   const t = useTranslations("chats");
@@ -23,9 +31,10 @@ export default function EmployerMatchesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const companyId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_id") : null;
-    const url = companyId ? `/api/matches?companyId=${encodeURIComponent(companyId)}` : "/api/matches";
-    fetch(url, { credentials: "include" })
+    const opts: RequestInit = { credentials: "include" };
+    const auth = getEmployerAuthHeaders();
+    if (Object.keys(auth).length) opts.headers = auth;
+    fetch("/api/matches", opts)
       .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
       .then(({ ok, data: list }) => {
         const arr = ok && Array.isArray(list) ? list : [];
@@ -80,8 +89,12 @@ export default function EmployerMatchesPage() {
             href={`/employer/cabinet/chats?matchId=${encodeURIComponent(match.id)}`}
             className="flex w-full items-center gap-4 rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-matcher hover:bg-matcher-pale/30"
           >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-matcher-mint text-xl">
-              👤
+            <div className="flex h-12 w-12 shrink-0 overflow-hidden rounded-full bg-matcher-mint">
+              {match.candidatePhotoUrl ? (
+                <img src={match.candidatePhotoUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center text-xl" aria-hidden>👤</span>
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-gray-900">

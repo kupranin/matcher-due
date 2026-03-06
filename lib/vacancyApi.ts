@@ -227,6 +227,7 @@ export function buildCandidateCardsWithMatch(
     educationLevel: string;
     willingToRelocate: boolean;
     availableToWork?: boolean;
+    photo?: string | null;
     skills: Array<{ name: string; level: string }>;
   }>,
   vacancyProfile: VacancyProfile,
@@ -267,11 +268,12 @@ export function buildCandidateCardsWithMatch(
         job: c.jobTitle ?? "Candidate",
         location: locationCityName(c.locationCityId),
         workType: (c.workTypes && c.workTypes[0]) ? c.workTypes[0] : "Full-time",
+        photo: c.photo?.trim() || undefined,
         skills: skills.map((s) => s.name).join(", "),
         profile,
         match,
       };
     })
-    .filter((c): c is CandidateCard & { match: number } => c != null)
-    .sort((a, b) => b.match - a.match);
+    .filter((c): c is NonNullable<typeof c> => c != null)
+    .sort((a, b) => b.match - a.match) as Array<CandidateCard & { match: number }>;
 }

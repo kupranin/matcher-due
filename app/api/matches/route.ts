@@ -175,6 +175,7 @@ export async function POST(request: Request) {
         isMatch: hasMatch,
         didSetMatchedAt,
         didInsertSystemMessage,
+        didInsertChatSeed: didInsertSystemMessage,
         matchId: verifyAfter.id,
         committed: true,
       })
@@ -184,7 +185,10 @@ export async function POST(request: Request) {
       id: verifyAfter.id,
       candidateLiked: verifyAfter.candidateLiked,
       employerLiked: verifyAfter.employerLiked,
-      hasMatch,
+      hasMatch: hasMatch,
+      isMatch: hasMatch,
+      matchId: verifyAfter.id,
+      matchedAt: verifyAfter.matchedAt != null ? verifyAfter.matchedAt.toISOString() : null,
       createdAt:
         typeof verifyAfter.createdAt?.toISOString === "function"
           ? verifyAfter.createdAt.toISOString()
@@ -253,7 +257,7 @@ export async function GET(request: Request) {
         vacancy: { select: { title: true }, include: { company: { select: { name: true } } } },
         candidateProfile: { select: { id: true, fullName: true, jobTitle: true, photo: true } },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ matchedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
     });
     return NextResponse.json(
       list.map((m) => ({
@@ -265,6 +269,7 @@ export async function GET(request: Request) {
         candidatePitch: m.candidatePitch,
         matchScore: m.matchScore ?? undefined,
         createdAt: m.createdAt.toISOString(),
+        matchedAt: m.matchedAt != null ? m.matchedAt.toISOString() : null,
         vacancyTitle: m.vacancy?.title ?? "",
         company: m.vacancy?.company?.name ?? "",
         candidateName: m.candidateProfile?.fullName ?? "Candidate",

@@ -24,7 +24,7 @@ export async function GET(
       where: { id: matchId },
       include: {
         vacancy: { select: { title: true }, include: { company: { select: { name: true } } } },
-        candidateProfile: { select: { id: true, fullName: true, jobTitle: true } },
+        candidateProfile: { select: { id: true, fullName: true, jobTitle: true, photo: true } },
       },
     });
 
@@ -55,10 +55,12 @@ export async function GET(
       candidatePitch: m.candidatePitch,
       matchScore: m.matchScore ?? undefined,
       createdAt: m.createdAt.toISOString(),
+      matchedAt: m.matchedAt != null ? m.matchedAt.toISOString() : null,
       vacancyTitle: m.vacancy?.title ?? "",
       company: m.vacancy?.company?.name ?? "",
       candidateName: m.candidateProfile?.fullName ?? "Candidate",
       candidateJobTitle: m.candidateProfile?.jobTitle ?? null,
+      candidatePhotoUrl: m.candidateProfile?.photo?.trim() || null,
     });
   } catch (e) {
     console.error("Match get error:", e);
