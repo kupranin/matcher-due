@@ -205,7 +205,8 @@ export async function POST(request: Request) {
 
 /**
  * GET /api/matches — list matches. Match = candidate_liked AND employer_liked (mutual).
- * - ?candidateProfileId= : candidate's matches. Default: mutual only (Matches tab). ?allLikes=1: all rows where candidate liked (Liked tab).
+ * Does NOT require chat_messages to exist. Queries matches table only.
+ * - ?candidateProfileId= : candidate's matches. Default: mutual only. ?allLikes=1: all where candidate liked.
  * - No param + employer session: employer's mutual matches for their company's vacancies.
  */
 export async function GET(request: Request) {
@@ -247,6 +248,7 @@ export async function GET(request: Request) {
       return NextResponse.json([]);
     }
 
+    // Employer match list: query matches table only (do not require chat_messages)
     const list = await prisma.match.findMany({
       where: {
         vacancy: { companyId: ctx.companyId },
@@ -260,22 +262,25 @@ export async function GET(request: Request) {
       orderBy: [{ matchedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
     });
     return NextResponse.json(
-      list.map((m) => ({
-        id: m.id,
-        vacancyId: m.vacancyId,
-        candidateProfileId: m.candidateProfileId,
-        candidateLiked: Boolean(m.candidateLiked),
-        employerLiked: Boolean(m.employerLiked),
-        candidatePitch: m.candidatePitch,
-        matchScore: m.matchScore ?? undefined,
-        createdAt: m.createdAt.toISOString(),
-        matchedAt: m.matchedAt != null ? m.matchedAt.toISOString() : null,
-        vacancyTitle: m.vacancy?.title ?? "",
-        company: m.vacancy?.company?.name ?? "",
-        candidateName: m.candidateProfile?.fullName ?? "Candidate",
-        candidateJobTitle: m.candidateProfile?.jobTitle ?? null,
-        candidatePhotoUrl: m.candidateProfile?.photo?.trim() || null,
-      }))
+      list.map((m) => {
+        const photoUrl = m.candidateProfile?.photo?.trim() || null;
+        return {
+          id: m.id,
+          vacancyId: m.vacancyId,
+          candidateProfileId: m.candidateProfileId,
+          candidateLiked: Boolean(m.candidateLiked),
+          employerLiked: Boolean(m.employerLiked),
+          matchScore: m.matchScore ?? undefined,
+          matchedAt: m.matchedAt != null ? m.matchedAt.toISOString() : null,
+          createdAt: m.createdAt.toISOString(),
+          vacancyTitle: m.vacancy?.title ?? "",
+          company: m.vacancy?.company?.name ?? "",
+          candidateName: m.candidateProfile?.fullName ?? "Candidate",
+          candidateJobTitle: m.candidateProfile?.jobTitle ?? null,
+          candidatePhotoUrl: photoUrl,
+          photoUrl,
+        };
+      })
     );
   } catch (e) {
     console.error("Matches list error:", e);

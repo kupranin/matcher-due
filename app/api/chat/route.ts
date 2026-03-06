@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getEmployerCompanyFromSession, matchBelongsToEmployerCompany } from "@/lib/employerAuth";
 
-/** GET /api/chat?matchId= — list messages for a match. Employer: session required, match must belong to company. Candidate: pass candidateProfileId= and match must belong to that candidate. */
+/** GET /api/chat?matchId= — list messages. Employer: session required, match must belong to company. Candidate: candidateProfileId= required. */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -32,14 +32,16 @@ export async function GET(request: Request) {
     const list = await prisma.chatMessage.findMany({
       where: { matchId },
       orderBy: { createdAt: "asc" },
+      select: { id: true, sender: true, text: true, createdAt: true },
     });
     return NextResponse.json(
       list.map((m) => ({
         id: m.id,
-        matchId: m.matchId,
+        matchId,
         sender: m.sender,
         text: m.text,
         createdAt: m.createdAt.getTime(),
+        created_at: m.createdAt.getTime(),
       }))
     );
   } catch (e) {

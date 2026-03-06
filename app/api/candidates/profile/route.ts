@@ -25,13 +25,15 @@ export async function GET(request: Request) {
       include: { skills: true, user: { select: { email: true } } },
     });
     if (!profile) return NextResponse.json(null);
+    const photoUrl = profile.photo?.trim() || null;
     return NextResponse.json({
       profileId: profile.id,
       userId: profile.userId,
       fullName: profile.fullName,
       phone: profile.phone,
       email: profile.user.email,
-      photo: profile.photo ?? null,
+      photo: photoUrl,
+      photoUrl,
       locationCityId: profile.locationCityId,
       locationDistrictId: profile.locationDistrictId,
       salaryMin: profile.salaryMin,

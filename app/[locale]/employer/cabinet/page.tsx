@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence, animate } from "framer-motion";
 import { buildCandidateCardsWithMatch } from "@/lib/vacancyApi";
+import { getAvatarSrc } from "@/lib/avatarPlaceholder";
 import { apiVacancyToProfile } from "@/lib/vacancyApi";
 import { getRecommendedSalaryForTitleWithAverages } from "@/lib/jobTemplates";
 import type { MutualMatch } from "@/lib/matchStorage";
@@ -51,46 +52,43 @@ function SwipeCard({
       style={{ x, rotate }}
       className="absolute inset-0 cursor-grab active:cursor-grabbing"
     >
-      <div className="flex h-full w-full flex-col justify-between rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
-        <div className="flex items-start justify-between">
-          <MatchProgressRing percent={matchPct} size={52} className="text-matcher" innerClassName="text-matcher-dark">
-            {matchPct}%
-          </MatchProgressRing>
-        </div>
-
-        <div className="space-y-2">
-          <div className="relative h-16 w-16 overflow-hidden rounded-2xl bg-gray-100">
-            {candidate.photo ? (
-              <img
-                src={candidate.photo}
-                alt=""
-                className="h-full w-full object-cover"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                  const next = (e.currentTarget as HTMLImageElement).nextElementSibling as HTMLElement | null;
-                  if (next) next.style.display = "flex";
-                }}
-              />
-            ) : null}
-            <span className="flex h-full w-full items-center justify-center text-3xl" style={candidate.photo ? { display: "none" } : undefined} aria-hidden>👤</span>
+      <div className="flex h-full w-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+        {/* Photo fills the card */}
+        <div className="relative min-h-0 flex-1 bg-gray-100">
+          <img
+            src={getAvatarSrc(candidate.photo)}
+            alt=""
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = "/images/avatar-placeholder.svg";
+            }}
+          />
+          {/* Match ring overlaid on photo */}
+          <div className="absolute left-3 top-3">
+            <MatchProgressRing percent={matchPct} size={52} className="text-matcher" innerClassName="text-matcher-dark">
+              {matchPct}%
+            </MatchProgressRing>
           </div>
-          <h2 className="text-xl font-bold text-gray-900">
+        </div>
+        {/* Info strip at bottom */}
+        <div className="shrink-0 border-t border-gray-100 bg-white p-4">
+          <h2 className="text-lg font-bold text-gray-900">
             {candidate.name}
             {candidate.job && candidate.job !== "Candidate" ? ` · ${candidate.job}` : ""}
           </h2>
-          <p className="text-sm text-gray-500">{candidate.location} · {candidate.workType}</p>
+          <p className="mt-0.5 text-sm text-gray-500">{candidate.location} · {candidate.workType}</p>
           {candidate.skills && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {(typeof candidate.skills === "string" ? candidate.skills.split(/,\s*/) : []).filter(Boolean).map((name) => (
-              <span key={name} className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
-                {name.trim()}
-              </span>
-            ))}
-          </div>
-        )}
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {(typeof candidate.skills === "string" ? candidate.skills.split(/,\s*/) : []).filter(Boolean).map((name) => (
+                <span key={name} className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
+                  {name.trim()}
+                </span>
+              ))}
+            </div>
+          )}
+          <p className="mt-2 text-xs text-gray-400">{t("swipeInstruction")}</p>
         </div>
-
-        <p className="text-xs text-gray-400">{t("swipeInstruction")}</p>
       </div>
     </motion.div>
   );

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { getAvatarSrc } from "@/lib/avatarPlaceholder";
 
 type MatchItem = {
   id: string;
@@ -15,6 +16,7 @@ type MatchItem = {
   candidateName: string;
   candidateJobTitle?: string | null;
   candidatePhotoUrl?: string | null;
+  photoUrl?: string | null;
   createdAt: string;
   matchedAt?: string | null;
 };
@@ -90,11 +92,15 @@ export default function EmployerMatchesPage() {
             className="flex w-full items-center gap-4 rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-matcher hover:bg-matcher-pale/30"
           >
             <div className="flex h-12 w-12 shrink-0 overflow-hidden rounded-full bg-matcher-mint">
-              {match.candidatePhotoUrl ? (
-                <img src={match.candidatePhotoUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <span className="flex h-full w-full items-center justify-center text-xl" aria-hidden>👤</span>
-              )}
+              <img
+                src={getAvatarSrc(match.photoUrl ?? match.candidatePhotoUrl)}
+                alt=""
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "/images/avatar-placeholder.svg";
+                }}
+              />
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-gray-900">

@@ -58,8 +58,11 @@ export default function MatchChatWindow({
     const matchId = match.id;
     function poll() {
       fetch(chatUrl(matchId), chatFetchOpts)
-        .then((r) => r.json())
-        .then((list: Array<{ id: string; matchId: string; sender: string; text: string; createdAt: number }>) => {
+        .then((r) => {
+          if (!r.ok) return null;
+          return r.json();
+        })
+        .then((list: Array<{ id: string; matchId: string; sender: string; text: string; createdAt: number }> | null) => {
           if (Array.isArray(list)) {
             setMessages(list.map((m) => ({ id: m.id, matchId: m.matchId, sender: (m.sender === "system" ? "system" : m.sender === "employer" ? "employer" : "candidate") as "candidate" | "employer" | "system", text: m.text, createdAt: typeof m.createdAt === "number" ? m.createdAt : new Date(m.createdAt).getTime() })));
           }
