@@ -1,19 +1,61 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { computeMatchScore } from "@/lib/matchScore";
+import { getSessionTokenFromRequest } from "@/lib/session";
 
-/** POST /api/matches — record a like (candidate or employer). Creates or updates Match. */
+/**
+ * Helper to check employer auth from session.
+ */
+async function getEmployerCompanyFromSession(request: Request) {
+  const token = getSessionTokenFromRequest(request);
+  if (!token) return null;
+  const session = await prisma.session.findUnique({
+    where: { token },
+    include: { user: { select: { id: true, role: true } } },
+  });
+  if (!session || session.expiresAt < new Date() || session.user.role !== "EMPLOYER") return null;
+  const company = await prisma.company.findUnique({
+    where: { userId: session.user.id },
+    select: { id: true, name: true, userId: true },
+  });
+  if (!company) return null;
+  return {
+    userId: company.userId,
+    companyId: company.id,
+    company: { id: company.id, name: company.name, userId: company.userId },
+  };
+}
+
+async function vacancyBelongsToEmployerCompany(vacancyId: string, employerCompanyId: string) {
+  const v = await prisma.vacancy.findUnique({ where: { id: vacancyId }, select: { companyId: true } });
+  return v?.companyId === employerCompanyId;
+}
+
+/**
+ * POST /api/matches — record a like (candidate or employer).
+ * Relies on DB triggers to set matched_at and insert chat_messages seed.
+ */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const vacancyId = typeof body?.vacancyId === "string" ? body.vacancyId.trim() : "";
     const candidateProfileId = typeof body?.candidateProfileId === "string" ? body.candidateProfileId.trim() : "";
     const candidateLiked = Boolean(body?.candidateLiked);
     const employerLiked = Boolean(body?.employerLiked);
-    const candidatePitch = typeof body?.candidatePitch === "string" ? body.candidatePitch.trim() || null : null;
 
     if (!vacancyId || !candidateProfileId) {
       return NextResponse.json({ error: "vacancyId and candidateProfileId required" }, { status: 400 });
+    }
+
+    if (employerLiked) {
+      const ctx = await getEmployerCompanyFromSession(request);
+      if (!ctx) {
+        return NextResponse.json({ error: "Sign in as employer to like a candidate" }, { status: 401 });
+      }
+      const allowed = await vacancyBelongsToEmployerCompany(vacancyId, ctx.companyId);
+      if (!allowed) {
+        return NextResponse.json({ error: "Vacancy does not belong to your company" }, { status: 403 });
+      }
     }
 
     const [candidate, vacancy] = await Promise.all([
@@ -58,7 +100,6 @@ export async function POST(request: Request) {
       update: {
         ...(employerLiked && { employerLiked: true }),
         ...(candidateLiked && { candidateLiked: true }),
-        ...(candidatePitch != null && { candidatePitch }),
         ...(matchScore != null && { matchScore }),
       },
       create: {
@@ -66,14 +107,19 @@ export async function POST(request: Request) {
         candidateProfileId,
         candidateLiked,
         employerLiked,
-        candidatePitch,
         matchScore: matchScore ?? undefined,
       },
     });
+
+    const isMatch = Boolean(match.employerLiked && match.candidateLiked);
+
     return NextResponse.json({
-      id: match.id,
-      candidateLiked: match.candidateLiked,
+      ok: true,
+      matchId: match.id,
       employerLiked: match.employerLiked,
+      candidateLiked: match.candidateLiked,
+      isMatch,
+      matchedAt: match.matchedAt?.toISOString() ?? null,
       createdAt: typeof match.createdAt?.toISOString === "function" ? match.createdAt.toISOString() : String(match.createdAt),
     });
   } catch (e) {
@@ -82,63 +128,112 @@ export async function POST(request: Request) {
   }
 }
 
-/** GET /api/matches?candidateProfileId= — matches for candidate. GET /api/matches?companyId= — matches for employer's company. */
+/**
+ * GET /api/matches — employer match inbox query or candidate match query.
+ */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const candidateProfileId = searchParams.get("candidateProfileId");
-    const companyId = searchParams.get("companyId");
-
+    
     if (candidateProfileId) {
+      // Candidate match query
       const list = await prisma.match.findMany({
-        where: { candidateProfileId },
+        where: { candidateProfileId, candidateLiked: true, employerLiked: true },
         include: {
           vacancy: { include: { company: { select: { name: true } } } },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ matchedAt: "desc" }, { createdAt: "desc" }],
       });
       return NextResponse.json(
         list.map((m) => ({
           id: m.id,
+          matchId: m.id,
           vacancyId: m.vacancyId,
           candidateProfileId: m.candidateProfileId,
           candidateLiked: m.candidateLiked,
           employerLiked: m.employerLiked,
-          candidatePitch: m.candidatePitch,
-          matchScore: m.matchScore ?? undefined,
-          createdAt: m.createdAt.toISOString(),
+          matchedAt: m.matchedAt?.toISOString() ?? null,
           vacancyTitle: m.vacancy.title,
-          company: m.vacancy.company.name,
+          companyName: m.vacancy.company.name,
         }))
       );
     }
-    if (companyId) {
-      const list = await prisma.match.findMany({
-        where: { vacancy: { companyId } },
-        include: {
-          vacancy: { select: { title: true }, include: { company: { select: { name: true } } } },
-          candidateProfile: { select: { id: true, fullName: true, jobTitle: true } },
-        },
-        orderBy: { createdAt: "desc" },
-      });
-      return NextResponse.json(
-        list.map((m) => ({
-          id: m.id,
-          vacancyId: m.vacancyId,
-          candidateProfileId: m.candidateProfileId,
-          candidateLiked: m.candidateLiked,
-          employerLiked: m.employerLiked,
-          candidatePitch: m.candidatePitch,
-          matchScore: m.matchScore ?? undefined,
-          createdAt: m.createdAt.toISOString(),
-          vacancyTitle: m.vacancy.title,
-          company: m.vacancy.company.name,
-          candidateName: m.candidateProfile.fullName,
-          candidateJobTitle: m.candidateProfile.jobTitle,
-        }))
-      );
+
+    // Employer match query
+    const ctx = await getEmployerCompanyFromSession(request);
+    if (!ctx) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    return NextResponse.json({ error: "candidateProfileId or companyId required" }, { status: 400 });
+
+    // Explicitly query matches + last chat message
+    const rawMatches = await prisma.$queryRaw<any[]>`
+      SELECT
+          m.id AS match_id,
+          m.vacancy_id,
+          m.candidate_profile_id,
+          m.match_score,
+          m.employer_liked,
+          m.candidate_liked,
+          m.matched_at,
+          m.created_at,
+
+          cp.full_name AS candidate_name,
+          cp.photo AS candidate_photo_url,
+
+          v.title AS vacancy_title,
+          v.company_id,
+
+          c.name AS company_name,
+
+          lm.text AS last_message_text,
+          lm.created_at AS last_message_at
+
+      FROM public.matches m
+
+      JOIN public."CandidateProfile" cp
+          ON cp.id = m.candidate_profile_id
+
+      JOIN public."Vacancy" v
+          ON v.id = m.vacancy_id
+
+      JOIN public."Company" c
+          ON c.id = v.company_id
+
+      LEFT JOIN LATERAL (
+          SELECT
+              cm.text,
+              cm.created_at
+          FROM public.chat_messages cm
+          WHERE cm.match_id = m.id
+          ORDER BY cm.created_at DESC
+          LIMIT 1
+      ) lm ON true
+
+      WHERE
+          v.company_id = ${ctx.companyId}
+          AND m.employer_liked = true
+          AND m.candidate_liked = true
+
+      ORDER BY
+          COALESCE(lm.created_at, m.matched_at, m.created_at) DESC;
+    `;
+
+    return NextResponse.json(
+      rawMatches.map(m => ({
+        matchId: m.match_id,
+        vacancyId: m.vacancy_id,
+        candidateProfileId: m.candidate_profile_id,
+        candidateName: m.candidate_name,
+        candidatePhotoUrl: m.candidate_photo_url,
+        vacancyTitle: m.vacancy_title,
+        companyName: m.company_name,
+        matchedAt: m.matched_at,
+        lastMessageText: m.last_message_text,
+        lastMessageAt: m.last_message_at
+      }))
+    );
+
   } catch (e) {
     console.error("Matches list error:", e);
     return NextResponse.json({ error: "Failed to list matches" }, { status: 500 });

@@ -146,6 +146,10 @@ export default function EmployerCabinetPage() {
   const [liked, setLiked] = useState<Candidate[]>([]);
   const [passed, setPassed] = useState<Candidate[]>([]);
 
+  type LikeState = "idle" | "submitting" | "matched" | "notMatched" | "error";
+  const [likeState, setLikeState] = useState<LikeState>("idle");
+  const [likeError, setLikeError] = useState<string | null>(null);
+
   useEffect(() => {
     if (selectedVacancy && candidates.length > 0) {
       setCandidateStack(candidates);
@@ -196,23 +200,38 @@ export default function EmployerCabinetPage() {
 
   async function handleSwipe(dir: "left" | "right") {
     if (!current || !selectedVacancy) return;
-    setCandidateStack((prev) => prev.slice(1));
-    if (dir === "right") {
-      setLiked((prev) => [...prev, current]);
-      try {
-        const res = await fetch("/api/matches", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            vacancyId: selectedVacancy.id,
-            candidateProfileId: current.id,
-            employerLiked: true,
-          }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (data.candidateLiked) {
+    if (dir === "left") {
+      setCandidateStack((prev) => prev.slice(1));
+      setPassed((prev) => [...prev, current]);
+      return;
+    }
+
+    setLikeError(null);
+    setLikeState("submitting");
+    const startedAt = Date.now();
+
+    try {
+      const res = await fetch("/api/matches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vacancyId: selectedVacancy.id,
+          candidateProfileId: current.id,
+          employerLiked: true,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      const elapsed = Date.now() - startedAt;
+      const delay = Math.max(0, 2000 - elapsed);
+
+      const applyResult = () => {
+        setCandidateStack((prev) => prev.slice(1));
+        setLiked((prev) => [...prev, current]);
+        
+        if (data.isMatch) {
           setNewMatch({
-            id: data.id,
+            id: data.matchId ?? data.id,
             vacancyId: selectedVacancy.id,
             candidateId: current.id,
             candidateName: current.name,
@@ -220,15 +239,31 @@ export default function EmployerCabinetPage() {
             company: selectedVacancy.company,
             createdAt: data.createdAt ? new Date(data.createdAt).getTime() : Date.now(),
           });
+          setLikeState("matched");
+        } else {
+          setLikeState("notMatched");
+          setTimeout(() => setLikeState("idle"), 50);
         }
-      } catch {
-        // ignore
+      };
+
+      if (delay > 0) {
+        setTimeout(applyResult, delay);
+      } else {
+        applyResult();
       }
-    } else setPassed((prev) => [...prev, current]);
+    } catch {
+      setLikeState("error");
+      setLikeError("Something went wrong");
+      setTimeout(() => {
+        setLikeState("idle");
+        setLikeError(null);
+      }, 2000);
+    }
   }
 
   function handleOpenChat() {
     setNewMatch(null);
+    setLikeState("idle");
     router.push("/employer/cabinet/chats");
   }
 
@@ -334,6 +369,11 @@ export default function EmployerCabinetPage() {
       </div>
 
       <div className="relative mx-auto mt-8 aspect-[3/4] max-h-[500px]">
+        {likeError && (
+          <div className="absolute -top-12 left-0 right-0 z-10 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800 text-center shadow-md">
+            {likeError}
+          </div>
+        )}
         {currentCandidate ? (
           <AnimatePresence mode="wait">
             <motion.div
@@ -343,7 +383,15 @@ export default function EmployerCabinetPage() {
               transition={{ duration: 0.2 }}
               className="absolute inset-0"
             >
-              <SwipeCard candidate={currentCandidate} onSwipe={handleSwipe} />
+              <div className="relative h-full w-full">
+                <SwipeCard candidate={currentCandidate} onSwipe={likeState === "submitting" ? () => {} : handleSwipe} />
+                {likeState === "submitting" && (
+                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-2xl bg-white/80 backdrop-blur-sm">
+                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-matcher border-t-transparent"></div>
+                    <p className="mt-4 font-medium text-gray-700">{t("checkingMatch")}</p>
+                  </div>
+                )}
+              </div>
             </motion.div>
           </AnimatePresence>
         ) : (
@@ -365,18 +413,20 @@ export default function EmployerCabinetPage() {
       </div>
 
       {currentCandidate && (
-        <div className="mt-6 flex justify-center gap-4">
+        <div className="mt-6 flex justify-center gap-4 relative z-10">
           <button
             type="button"
+            disabled={likeState === "submitting"}
             onClick={() => handleSwipe("left")}
-            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-gray-300 bg-white text-gray-500 shadow-sm hover:bg-gray-50"
+            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-gray-300 bg-white text-gray-500 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="text-xl">✕</span>
           </button>
           <button
             type="button"
+            disabled={likeState === "submitting"}
             onClick={() => handleSwipe("right")}
-            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-matcher bg-matcher text-white shadow-sm hover:bg-matcher-dark"
+            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-matcher bg-matcher text-white shadow-sm hover:bg-matcher-dark disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="text-xl">♥</span>
           </button>
@@ -385,7 +435,10 @@ export default function EmployerCabinetPage() {
 
       <MatchCongratulationsModal
         match={newMatch}
-        onClose={() => setNewMatch(null)}
+        onClose={() => {
+          setNewMatch(null);
+          setLikeState("idle");
+        }}
         onOpenChat={handleOpenChat}
       />
     </div>

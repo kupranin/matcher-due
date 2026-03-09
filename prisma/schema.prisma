@@ -239,6 +239,7 @@ model Match {
   candidatePitch     String?          @map("candidate_pitch") @db.Text
   matchScore         Int?             @map("match_score") // 0-100 from weighted scoring
   createdAt          DateTime         @default(now()) @map("created_at")
+  matchedAt          DateTime?        @map("matched_at")
 
   chatMessages ChatMessage[]
 

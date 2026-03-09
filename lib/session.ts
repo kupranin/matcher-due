@@ -11,6 +11,28 @@ export function generateSessionToken(): string {
   return randomBytes(32).toString("hex");
 }
 
+/** Read session token from the request (Authorization: Bearer or Cookie). */
+export function getSessionTokenFromRequest(request: Request): string | undefined {
+  const auth = request.headers.get("Authorization");
+  if (typeof auth === "string" && auth.startsWith("Bearer ")) {
+    const t = auth.slice(7).trim();
+    if (t.length > 0) return t;
+  }
+  const cookieHeader = request.headers.get("Cookie");
+  if (typeof cookieHeader === "string") {
+    const name = SESSION_COOKIE_NAME + "=";
+    const start = cookieHeader.indexOf(name);
+    if (start !== -1) {
+      const valueStart = start + name.length;
+      const end = cookieHeader.indexOf(";", valueStart);
+      const value = end === -1 ? cookieHeader.slice(valueStart) : cookieHeader.slice(valueStart, end);
+      const t = value.trim();
+      if (t.length > 0) return t;
+    }
+  }
+  return undefined;
+}
+
 export function sessionCookieOptions(expiresAt: Date): {
   name: string;
   value: string;
