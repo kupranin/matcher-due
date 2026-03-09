@@ -279,55 +279,83 @@ export default function CabinetPage() {
   const [passed, setPassed] = useState<Vacancy[]>([]);
   const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
   const [newMatch, setNewMatch] = useState<MutualMatch | null>(null);
+  type LikeState = "idle" | "submitting" | "matched" | "notMatched" | "error";
+  const [likeState, setLikeState] = useState<LikeState>("idle");
+  const [likeError, setLikeError] = useState<string | null>(null);
   const current = vacancies[0];
 
-  async function finishLike(vacancy: Vacancy) {
-    setLiked((prev) => [...prev, vacancy]);
-    addCandidateLike(vacancy.id);
-    const profileId = getCandidateProfileId();
-    const stored = loadCandidateProfile();
-    const candidateName = stored?.fullName ?? "Candidate";
-    if (profileId) {
-      try {
-        const res = await fetch("/api/matches", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            vacancyId: vacancy.id,
-            candidateProfileId: profileId,
-            candidateLiked: true,
-          }),
-        });
-        const data = await res.json().catch(() => ({}));
-        const isMutual = data.hasMatch === true || data.employerLiked === true;
-        if (isMutual) {
-          setNewMatch({
-            id: data.id,
-            vacancyId: vacancy.id,
-            candidateId: profileId,
-            candidateName,
-            vacancyTitle: vacancy.title,
-            company: vacancy.company,
-            createdAt: data.createdAt ? new Date(data.createdAt).getTime() : Date.now(),
-          });
-        }
-      } catch (err) {
-        console.warn("Like request failed", err);
-      }
-    }
-  }
+  const MIN_LOADING_MS = 600;
 
-  function handleSwipe(dir: "left" | "right") {
+  async function handleSwipe(dir: "left" | "right") {
     if (!current) return;
     const card = current;
-    setExitDir(dir);
-    setVacancies((prev) => prev.slice(1));
-    if (dir === "right") {
-      finishLike(card);
-    } else {
+    if (dir === "left") {
+      setExitDir("left");
+      setVacancies((prev) => prev.slice(1));
       setPassed((prev) => [...prev, card]);
+      setTimeout(() => setExitDir(null), 50);
+      return;
     }
-    setTimeout(() => setExitDir(null), 50);
+    const profileId = getCandidateProfileId();
+    if (!profileId) {
+      setLiked((prev) => [...prev, card]);
+      addCandidateLike(card.id);
+      setExitDir("right");
+      setVacancies((prev) => prev.slice(1));
+      setTimeout(() => setExitDir(null), 50);
+      return;
+    }
+    setLikeError(null);
+    setLikeState("submitting");
+    const startedAt = Date.now();
+    const stored = loadCandidateProfile();
+    const candidateName = stored?.fullName ?? "Candidate";
+    try {
+      const res = await fetch("/api/matches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vacancyId: card.id,
+          candidateProfileId: profileId,
+          candidateLiked: true,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const elapsed = Date.now() - startedAt;
+      const delay = Math.max(0, MIN_LOADING_MS - elapsed);
+      const applyResult = () => {
+        setVacancies((prev) => prev.slice(1));
+        setLiked((prev) => [...prev, card]);
+        addCandidateLike(card.id);
+        const isMatch = data.isMatch === true;
+        if (isMatch) {
+          setNewMatch({
+            id: data.matchId ?? data.id,
+            vacancyId: card.id,
+            candidateId: profileId,
+            candidateName,
+            vacancyTitle: card.title,
+            company: card.company,
+            createdAt: data.createdAt ? new Date(data.createdAt).getTime() : Date.now(),
+          });
+          setLikeState("matched");
+        } else {
+          setLikeState("idle");
+        }
+        setExitDir("right");
+        setTimeout(() => setExitDir(null), 50);
+      };
+      if (delay > 0) setTimeout(applyResult, delay);
+      else applyResult();
+    } catch (err) {
+      console.warn("Like request failed", err);
+      setLikeState("error");
+      setLikeError("Request failed. Please try again.");
+      setTimeout(() => {
+        setLikeState("idle");
+        setLikeError(null);
+      }, 2000);
+    }
   }
 
   function handleOpenChat(m?: MutualMatch | null) {
@@ -439,6 +467,11 @@ export default function CabinetPage() {
       <h1 className="font-heading text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{t("yourOpportunities")}</h1>
       <p className="mt-2 text-gray-600">{t("swipeHint")}</p>
 
+      {likeError && (
+        <div className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
+          {likeError}
+        </div>
+      )}
       <div className="relative mx-auto mt-6 aspect-[3/4] max-h-[380px] sm:mt-8 sm:max-h-[440px] md:max-h-[520px]">
         {current ? (
           <AnimatePresence mode="wait">
@@ -453,7 +486,22 @@ export default function CabinetPage() {
               }}
               className="absolute inset-0"
             >
-              <SwipeCard vacancy={current} onSwipe={handleSwipe} />
+              <div className="relative h-full w-full">
+                <SwipeCard
+                  vacancy={current}
+                  onSwipe={likeState === "submitting" ? () => {} : handleSwipe}
+                />
+                {likeState === "submitting" && (
+                  <div
+                    className="absolute inset-0 flex flex-col items-center justify-center rounded-3xl bg-gray-900/80 backdrop-blur-sm"
+                    aria-busy="true"
+                    aria-live="polite"
+                  >
+                    <div className="h-10 w-10 animate-spin rounded-full border-2 border-matcher-bright border-t-transparent" />
+                    <p className="mt-3 text-sm font-medium text-white">{t("checkingMatch")}</p>
+                  </div>
+                )}
+              </div>
             </motion.div>
           </AnimatePresence>
         ) : (
@@ -481,19 +529,21 @@ export default function CabinetPage() {
         >
           <motion.button
             type="button"
+            disabled={likeState === "submitting"}
             onClick={() => handleSwipe("left")}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-lg shadow-rose-300/50 transition-shadow hover:shadow-xl hover:shadow-rose-400/50"
+            whileHover={likeState !== "submitting" ? { scale: 1.1 } : {}}
+            whileTap={likeState !== "submitting" ? { scale: 0.9 } : {}}
+            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-lg shadow-rose-300/50 transition-shadow hover:shadow-xl hover:shadow-rose-400/50 disabled:opacity-50 disabled:pointer-events-none"
           >
             <span className="text-2xl font-bold">✕</span>
           </motion.button>
           <motion.button
             type="button"
+            disabled={likeState === "submitting"}
             onClick={() => handleSwipe("right")}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-matcher to-matcher-teal text-white shadow-lg shadow-matcher/40 transition-shadow hover:shadow-xl hover:shadow-matcher/50"
+            whileHover={likeState !== "submitting" ? { scale: 1.1 } : {}}
+            whileTap={likeState !== "submitting" ? { scale: 0.9 } : {}}
+            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-matcher to-matcher-teal text-white shadow-lg shadow-matcher/40 transition-shadow hover:shadow-xl hover:shadow-matcher/50 disabled:opacity-50 disabled:pointer-events-none"
           >
             <span className="text-2xl">♥</span>
           </motion.button>
@@ -502,7 +552,10 @@ export default function CabinetPage() {
 
       <MatchCongratulationsModal
         match={newMatch}
-        onClose={() => setNewMatch(null)}
+        onClose={() => {
+          setNewMatch(null);
+          setLikeState("idle");
+        }}
         onOpenChat={(match) => handleOpenChat(match)}
       />
         </>

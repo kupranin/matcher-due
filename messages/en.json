@@ -576,7 +576,8 @@
     "loadingOpportunities": "Loading opportunities…",
     "publishedOpportunities": "Published opportunities",
     "publishedOpportunitiesCount": "{count} vacancies for you",
-    "andMore": "+ {count} more"
+    "andMore": "+ {count} more",
+    "checkingMatch": "Checking match…"
   },
   "chats": {
     "noMatchesYet": "No matches yet",
@@ -841,7 +842,8 @@
     "likedThisJobFirst": "{count} candidates have already liked this job — they appear first.",
     "likedThisJobFirst_one": "1 candidate has already liked this job — they appear first.",
     "viewCandidates": "View candidates",
-    "loadingOpportunities": "Loading opportunities…"
+    "loadingOpportunities": "Loading opportunities…",
+    "checkingMatch": "Checking match…"
   },
   "userFlowExtras": {
     "loadingJobs": "Loading jobs…",

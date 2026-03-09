@@ -232,6 +232,9 @@ export default function EmployerCabinetPage() {
   const [candidateStack, setCandidateStack] = useState<Candidate[]>([]);
   const [liked, setLiked] = useState<Candidate[]>([]);
   const [passed, setPassed] = useState<Candidate[]>([]);
+  type LikeState = "idle" | "submitting" | "matched" | "notMatched" | "error";
+  const [likeState, setLikeState] = useState<LikeState>("idle");
+  const [likeError, setLikeError] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedVacancy && candidates.length > 0) {
@@ -282,23 +285,36 @@ export default function EmployerCabinetPage() {
     }
   }
 
+  const MIN_LOADING_MS = 600;
+
   async function handleSwipe(dir: "left" | "right") {
     if (!current || !selectedVacancy) return;
-    setCandidateStack((prev) => prev.slice(1));
-    if (dir === "right") {
-      setLiked((prev) => [...prev, current]);
-      try {
-        const res = await fetch("/api/matches", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...getEmployerAuthHeaders() },
-          credentials: "include",
-          body: JSON.stringify({
-            vacancyId: selectedVacancy.id,
-            candidateProfileId: current.id,
-            employerLiked: true,
-          }),
-        });
-        const data = await res.json().catch(() => ({}));
+    if (dir === "left") {
+      setCandidateStack((prev) => prev.slice(1));
+      setPassed((prev) => [...prev, current]);
+      return;
+    }
+    setLikeError(null);
+    setLikeState("submitting");
+    const startedAt = Date.now();
+    try {
+      const res = await fetch("/api/matches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getEmployerAuthHeaders() },
+        credentials: "include",
+        body: JSON.stringify({
+          vacancyId: selectedVacancy.id,
+          candidateProfileId: current.id,
+          employerLiked: true,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const elapsed = Date.now() - startedAt;
+      const delay = Math.max(0, MIN_LOADING_MS - elapsed);
+
+      const applyResult = () => {
+        setCandidateStack((prev) => prev.slice(1));
+        setLiked((prev) => [...prev, current]);
         if (res.ok && data.id) {
           setCompanyMatches((prev) => [
             ...prev,
@@ -314,10 +330,10 @@ export default function EmployerCabinetPage() {
             },
           ]);
         }
-        const isMutual = data.candidateLiked === true && data.employerLiked === true;
-        if (isMutual) {
+        const isMatch = data.isMatch === true;
+        if (isMatch) {
           setNewMatch({
-            id: data.id,
+            id: data.matchId ?? data.id,
             vacancyId: selectedVacancy.id,
             candidateId: current.id,
             candidateName: current.name,
@@ -325,11 +341,25 @@ export default function EmployerCabinetPage() {
             company: selectedVacancy.company,
             createdAt: data.createdAt ? new Date(data.createdAt).getTime() : Date.now(),
           });
+          setLikeState("matched");
+        } else {
+          setLikeState("idle");
         }
-      } catch {
-        // ignore
+      };
+
+      if (delay > 0) {
+        setTimeout(applyResult, delay);
+      } else {
+        applyResult();
       }
-    } else setPassed((prev) => [...prev, current]);
+    } catch {
+      setLikeState("error");
+      setLikeError("Request failed. Please try again.");
+      setTimeout(() => {
+        setLikeState("idle");
+        setLikeError(null);
+      }, 2000);
+    }
   }
 
   function handleOpenChat(m?: MutualMatch | null) {
@@ -537,6 +567,11 @@ export default function EmployerCabinetPage() {
         </button>
       </div>
 
+      {likeError && (
+        <div className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
+          {likeError}
+        </div>
+      )}
       <div className="relative mx-auto mt-8 aspect-[3/4] max-h-[500px]">
         {currentCandidate ? (
           <AnimatePresence mode="wait">
@@ -547,7 +582,22 @@ export default function EmployerCabinetPage() {
               transition={{ duration: 0.2 }}
               className="absolute inset-0"
             >
-              <SwipeCard candidate={currentCandidate} onSwipe={handleSwipe} />
+              <div className="relative h-full w-full">
+                <SwipeCard
+                  candidate={currentCandidate}
+                  onSwipe={likeState === "submitting" ? () => {} : handleSwipe}
+                />
+                {likeState === "submitting" && (
+                  <div
+                    className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl bg-white/90 backdrop-blur-sm"
+                    aria-busy="true"
+                    aria-live="polite"
+                  >
+                    <div className="h-10 w-10 animate-spin rounded-full border-2 border-matcher border-t-transparent" />
+                    <p className="mt-3 text-sm font-medium text-gray-700">{t("checkingMatch")}</p>
+                  </div>
+                )}
+              </div>
             </motion.div>
           </AnimatePresence>
         ) : (
@@ -572,15 +622,17 @@ export default function EmployerCabinetPage() {
         <div className="mt-6 flex justify-center gap-4">
           <button
             type="button"
+            disabled={likeState === "submitting"}
             onClick={() => handleSwipe("left")}
-            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-gray-300 bg-white text-gray-500 shadow-sm hover:bg-gray-50"
+            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-gray-300 bg-white text-gray-500 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
           >
             <span className="text-xl">✕</span>
           </button>
           <button
             type="button"
+            disabled={likeState === "submitting"}
             onClick={() => handleSwipe("right")}
-            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-matcher bg-matcher text-white shadow-sm hover:bg-matcher-dark"
+            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-matcher bg-matcher text-white shadow-sm hover:bg-matcher-dark disabled:opacity-50 disabled:pointer-events-none"
           >
             <span className="text-xl">♥</span>
           </button>
@@ -589,7 +641,10 @@ export default function EmployerCabinetPage() {
 
       <MatchCongratulationsModal
         match={newMatch}
-        onClose={() => setNewMatch(null)}
+        onClose={() => {
+          setNewMatch(null);
+          setLikeState("idle");
+        }}
         onOpenChat={(match) => handleOpenChat(match)}
         userRole="employer"
       />

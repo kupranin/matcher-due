@@ -687,7 +687,8 @@
     "loadingOpportunities": "შესაძლებლობები იტვირთება…",
     "publishedOpportunities": "გამოქვეყნებული ვაკანსიები",
     "publishedOpportunitiesCount": "{count} ვაკანსია შენთვის",
-    "andMore": "+ {count} სხვა"
+    "andMore": "+ {count} სხვა",
+    "checkingMatch": "მატჩი იკვლევა…"
   },
   "chats": {
     "noMatchesYet": "ჯერ შესაბამისობები არ არის",
@@ -953,7 +954,8 @@
     "likedThisJobFirst": "{count} კანდიდატს უკვე მოეწონა ეს სამსახური — ისინი პირველები ჩანან.",
     "likedThisJobFirst_one": "1 კანდიდატს უკვე მოეწონა ეს სამსახური — ის პირველი ჩანს.",
     "viewCandidates": "კანდიდატების ნახვა",
-    "loadingOpportunities": "შესაძლებლობები იტვირთება…"
+    "loadingOpportunities": "შესაძლებლობები იტვირთება…",
+    "checkingMatch": "მატჩი იკვლევა…"
   },
   "userFlowExtras": {
     "loadingJobs": "სამსახურები იტვირთება…",
