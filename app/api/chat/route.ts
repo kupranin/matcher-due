@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getEmployerCompanyFromSession } from "@/lib/employerAuth";
 
 /** GET /api/chat?matchId= — list messages for a match. */
 export async function GET(request: Request) {
@@ -7,6 +8,19 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const matchId = searchParams.get("matchId");
     if (!matchId) return NextResponse.json({ error: "matchId required" }, { status: 400 });
+
+    // Enforce employer access control
+    const ctx = await getEmployerCompanyFromSession(request);
+    if (ctx) {
+      const match = await prisma.match.findUnique({
+        where: { id: matchId },
+        include: { vacancy: { select: { companyId: true } } }
+      });
+      if (!match || match.vacancy?.companyId !== ctx.companyId) {
+        return NextResponse.json({ error: "Forbidden: match does not belong to your company" }, { status: 403 });
+      }
+    }
+
     const list = await prisma.chatMessage.findMany({
       where: { matchId },
       orderBy: { createdAt: "asc" },
@@ -33,8 +47,23 @@ export async function POST(request: Request) {
     const matchId = typeof body?.matchId === "string" ? body.matchId.trim() : "";
     const sender = body?.sender === "employer" ? "employer" : "candidate";
     const text = typeof body?.text === "string" ? body.text.trim() : "";
+    
     if (!matchId) return NextResponse.json({ error: "matchId required" }, { status: 400 });
     if (!text) return NextResponse.json({ error: "text required" }, { status: 400 });
+
+    // Enforce employer access control
+    const ctx = await getEmployerCompanyFromSession(request);
+    if (sender === "employer") {
+      if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      const match = await prisma.match.findUnique({
+        where: { id: matchId },
+        include: { vacancy: { select: { companyId: true } } }
+      });
+      if (!match || match.vacancy?.companyId !== ctx.companyId) {
+        return NextResponse.json({ error: "Forbidden: match does not belong to your company" }, { status: 403 });
+      }
+    }
+
     const msg = await prisma.chatMessage.create({
       data: { matchId, sender, text },
     });

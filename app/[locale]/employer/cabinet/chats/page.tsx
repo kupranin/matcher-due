@@ -45,21 +45,19 @@ function EmployerChatsContent() {
           setMatches([]);
           return;
         }
-        const mutual = list
-          .filter((m) => m.candidateLiked === true && m.employerLiked === true)
-          .map(m => ({
-            id: m.matchId || m.id,
-            vacancyId: m.vacancyId,
-            candidateId: m.candidateProfileId,
-            candidateName: m.candidateName ?? "Candidate",
-            candidateJobTitle: m.candidateJobTitle ?? null,
-            candidatePhotoUrl: m.candidatePhotoUrl ?? null,
-            vacancyTitle: m.vacancyTitle,
-            company: m.companyName || m.company,
-            createdAt: new Date(m.createdAt || m.matchedAt || Date.now()).getTime(),
-            lastMessageText: m.lastMessageText,
-            lastMessageAt: m.lastMessageAt
-          }));
+        const mutual = list.map(m => ({
+          id: m.matchId || m.id,
+          vacancyId: m.vacancyId,
+          candidateId: m.candidateProfileId,
+          candidateName: m.candidateName ?? "Candidate",
+          candidateJobTitle: m.candidateJobTitle ?? null,
+          candidatePhotoUrl: m.candidatePhotoUrl ?? null,
+          vacancyTitle: m.vacancyTitle,
+          company: m.companyName || m.company,
+          createdAt: new Date(m.createdAt || m.matchedAt || Date.now()).getTime(),
+          lastMessageText: m.lastMessageText,
+          lastMessageAt: m.lastMessageAt
+        }));
         setMatches(mutual);
       })
       .catch(() => setMatches([]));
