@@ -86,14 +86,18 @@ export default function EmployerMatchesPage() {
   if (matches.length === 0) {
     return (
       <div className="mx-auto max-w-md px-4 py-16">
-        <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-12 text-center">
-          <p className="text-5xl">♥</p>
-          <h2 className="mt-4 text-xl font-bold text-gray-900">{t("noMatchesYet")}</h2>
-          <p className="mt-2 text-gray-600">{t("noMatchesHintEmployer")}</p>
+        <div className="rounded-3xl border-2 border-dashed border-gray-200 bg-gradient-to-b from-white to-gray-50/50 p-12 text-center shadow-sm">
+          <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-matcher-pale/80 text-5xl">
+            ♥
+          </div>
+          <h2 className="mt-6 text-xl font-bold text-gray-900">{t("noMatchesYet")}</h2>
+          <p className="mt-3 text-gray-600">
+            When you and a candidate like each other, they will appear here.
+          </p>
           <p className="mt-4 text-sm text-gray-500">{t("keepSwipingHintEmployer")}</p>
           <Link
             href="/employer/cabinet"
-            className="mt-6 inline-block rounded-xl bg-matcher px-6 py-3 font-semibold text-white hover:bg-matcher-dark"
+            className="mt-6 inline-block rounded-xl bg-matcher px-6 py-3.5 font-semibold text-white shadow-lg shadow-matcher/20 hover:bg-matcher-dark transition-colors"
           >
             Browse candidates
           </Link>

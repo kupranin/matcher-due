@@ -173,8 +173,8 @@ export default function EmployerCabinetLayout({
                 key={href}
                 href={href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
-                  active ? "bg-matcher-mint text-matcher-dark" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                className={`rounded-xl px-4 py-3 text-sm font-medium transition-colors duration-200 ${
+                  active ? "bg-matcher-mint text-matcher-dark shadow-sm" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 }`}
               >
                 {label}

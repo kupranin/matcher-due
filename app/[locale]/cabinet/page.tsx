@@ -31,6 +31,8 @@ const VibeIcons = {
   ),
 };
 
+const SWIPE_THRESHOLD = 100;
+
 function SwipeCard({
   vacancy,
   onSwipe,
@@ -40,9 +42,11 @@ function SwipeCard({
 }) {
   const t = useTranslations("cabinet");
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-200, 200], [-12, 12]);
-  const likeOpacity = useTransform(x, [0, 100, 200], [0, 0.5, 1]);
-  const nopeOpacity = useTransform(x, [-200, -100, 0], [1, 0.5, 0]);
+  const rotate = useTransform(x, [-220, 220], [-14, 14]);
+  const likeOpacity = useTransform(x, [0, 60, SWIPE_THRESHOLD], [0, 0.4, 1]);
+  const nopeOpacity = useTransform(x, [-220, -100, 0], [1, 0.4, 0]);
+  const bgLeftOpacity = useTransform(x, [0, -120], [0, 0.22]);
+  const bgRightOpacity = useTransform(x, [120, 0], [0.22, 0]);
 
   const flexibleHours = vacancy.workType.toLowerCase().includes("part") || vacancy.workType.toLowerCase().includes("remote") || vacancy.workType.toLowerCase().includes("flex");
   const vibes = [
@@ -52,22 +56,26 @@ function SwipeCard({
   ].filter((v) => v.show);
 
   function handleDragEnd(_: unknown, info: PanInfo) {
-    const threshold = 80;
-    if (info.offset.x > threshold) onSwipe("right");
-    else if (info.offset.x < -threshold) onSwipe("left");
-    else animate(x, 0, { type: "spring", stiffness: 300, damping: 30 });
+    if (info.offset.x > SWIPE_THRESHOLD) onSwipe("right");
+    else if (info.offset.x < -SWIPE_THRESHOLD) onSwipe("left");
+    else animate(x, 0, { type: "spring", stiffness: 280, damping: 28 });
   }
 
   return (
     <motion.div
       drag="x"
-      dragConstraints={{ left: -180, right: 180 }}
-      dragElastic={0.7}
+      dragConstraints={{ left: -200, right: 200 }}
+      dragElastic={0.65}
       onDragEnd={handleDragEnd}
       style={{ x, rotate }}
       className="absolute inset-0 cursor-grab active:cursor-grabbing"
     >
-      <div className="flex h-full w-full flex-col overflow-hidden rounded-3xl bg-gray-900 shadow-2xl shadow-gray-300/50 ring-2 ring-white/20">
+      {/* Background hint: green right, red left */}
+      <div className="absolute -inset-3 flex rounded-[1.5rem] overflow-hidden">
+        <motion.div style={{ opacity: bgLeftOpacity }} className="flex-1 bg-rose-400/40" aria-hidden />
+        <motion.div style={{ opacity: bgRightOpacity }} className="flex-1 bg-emerald-400/40" aria-hidden />
+      </div>
+      <div className="relative flex h-full w-full flex-col overflow-hidden rounded-3xl bg-gray-900 shadow-2xl shadow-gray-300/50 ring-2 ring-white/20">
         {/* Image block – salary pill top-right, match ring top-left */}
         <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden">
           <img
@@ -138,19 +146,19 @@ function SwipeCard({
 
 function OpportunitiesSkeleton() {
   return (
-    <div className="flex h-full min-h-[380px] w-full flex-col overflow-hidden rounded-3xl bg-gray-200/80 shadow-2xl">
-      <div className="aspect-[4/3] w-full shrink-0 animate-pulse bg-gray-300/60" />
+    <div className="flex h-full min-h-[380px] w-full flex-col overflow-hidden rounded-3xl border border-gray-200/80 bg-white shadow-xl">
+      <div className="aspect-[4/3] w-full shrink-0 bg-gray-100 animate-pulse" />
       <div className="flex flex-1 flex-col justify-between p-5">
-        <div className="space-y-2">
-          <div className="h-6 w-3/4 animate-pulse rounded-lg bg-gray-300/60" />
-          <div className="h-4 w-1/2 animate-pulse rounded-lg bg-gray-300/60" />
-          <div className="mt-3 flex gap-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-8 w-16 animate-pulse rounded-lg bg-gray-300/60" />
+        <div className="space-y-3">
+          <div className="h-6 w-3/4 rounded-lg bg-gray-200/80 animate-pulse" />
+          <div className="h-4 w-1/2 rounded-lg bg-gray-200/80 animate-pulse" />
+          <div className="flex gap-2 pt-1">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-7 w-14 rounded-full bg-gray-200/80 animate-pulse" />
             ))}
           </div>
         </div>
-        <div className="mt-4 h-3 w-2/3 animate-pulse rounded bg-gray-300/60" />
+        <div className="mt-4 h-3 w-2/3 rounded bg-gray-200/80 animate-pulse" />
       </div>
     </div>
   );
@@ -372,13 +380,15 @@ export default function CabinetPage() {
           <AnimatePresence mode="wait">
             <motion.div
               key={current.id}
-              initial={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
               exit={{
                 opacity: 0,
-                x: exitDir === "right" ? 400 : exitDir === "left" ? -400 : 0,
-                rotate: exitDir === "right" ? 20 : exitDir === "left" ? -20 : 0,
-                transition: { duration: 0.3, ease: "easeIn" },
+                x: exitDir === "right" ? 420 : exitDir === "left" ? -420 : 0,
+                rotate: exitDir === "right" ? 18 : exitDir === "left" ? -18 : 0,
+                transition: { duration: 0.25, ease: [0.4, 0, 0.2, 1] },
               }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               className="absolute inset-0"
             >
               <div className="relative h-full w-full">
@@ -418,9 +428,9 @@ export default function CabinetPage() {
             type="button"
             disabled={likeState === "submitting"}
             onClick={() => handleSwipe("left")}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-lg shadow-rose-300/50 transition-shadow hover:shadow-xl hover:shadow-rose-400/50 disabled:opacity-50 disabled:cursor-not-allowed"
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.92 }}
+            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-lg shadow-rose-300/50 transition-shadow hover:shadow-xl hover:shadow-rose-400/50 disabled:opacity-50 disabled:cursor-not-allowed active:ring-4 active:ring-rose-300/50"
           >
             <span className="text-2xl font-bold">✕</span>
           </motion.button>
@@ -430,7 +440,8 @@ export default function CabinetPage() {
             onClick={() => handleSwipe("right")}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-matcher to-matcher-teal text-white shadow-lg shadow-matcher/40 transition-shadow hover:shadow-xl hover:shadow-matcher/50 disabled:opacity-50 disabled:cursor-not-allowed"
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-matcher to-matcher-teal text-white shadow-lg shadow-matcher/40 transition-shadow hover:shadow-xl hover:shadow-matcher/50 disabled:opacity-50 disabled:cursor-not-allowed active:ring-4 active:ring-matcher/40"
           >
             <span className="text-2xl">♥</span>
           </motion.button>
@@ -444,6 +455,7 @@ export default function CabinetPage() {
           setLikeState("idle");
         }}
         onOpenChat={handleOpenChat}
+        isCandidateView={true}
       />
     </div>
   );

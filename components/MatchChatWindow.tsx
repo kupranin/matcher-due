@@ -254,15 +254,16 @@ export default function MatchChatWindow({
       {/* Messages */}
       <div className="flex min-h-[200px] max-h-[50vh] flex-col overflow-y-auto p-4 sm:max-h-[280px] md:h-80 md:max-h-[320px]">
         {messages.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-            <p className="text-sm text-gray-500">Schedule your next steps with {otherName}</p>
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center py-4">
+            <p className="text-sm font-medium text-gray-700">You matched! Start the conversation.</p>
+            <p className="text-xs text-gray-500">Say hi or pick a suggestion below.</p>
             <div className="flex flex-wrap justify-center gap-2">
               {SUGGESTED_MESSAGES.map((msg) => (
                 <button
                   key={msg}
                   type="button"
                   onClick={() => handleSuggested(msg)}
-                  className="rounded-full border border-matcher bg-matcher-pale/50 px-4 py-2 text-sm font-medium text-matcher-dark hover:bg-matcher-mint"
+                  className="rounded-2xl border border-matcher bg-matcher-pale/50 px-4 py-2.5 text-sm font-medium text-matcher-dark hover:bg-matcher-mint hover:border-matcher/60 transition-colors"
                 >
                   {msg}
                 </button>
@@ -270,20 +271,23 @@ export default function MatchChatWindow({
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {messages.map((m) => (
               <div
                 key={m.id}
                 className={`flex ${m.sender === userRole ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                  className={`flex max-w-[85%] flex-col rounded-2xl px-4 py-2.5 shadow-sm ${
                     m.sender === userRole
-                      ? "bg-matcher text-white"
-                      : "bg-gray-100 text-gray-900"
+                      ? "rounded-br-md bg-matcher text-white"
+                      : "rounded-bl-md bg-gray-100 text-gray-900"
                   }`}
                 >
-                  <p className="text-sm">{m.text}</p>
+                  <p className="text-sm leading-snug">{m.text}</p>
+                  <p className={`mt-1 text-[10px] ${m.sender === userRole ? "text-white/80" : "text-gray-400"}`}>
+                    {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </p>
                 </div>
               </div>
             ))}

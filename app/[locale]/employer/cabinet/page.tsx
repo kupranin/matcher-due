@@ -26,20 +26,29 @@ function CandidateCardSkeleton() {
   return (
     <div className="flex h-full w-full flex-col justify-between rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
       <div className="flex items-start justify-between">
-        <div className="h-12 w-12 rounded-full bg-gray-100 animate-pulse" />
+        <div className="h-12 w-12 rounded-full bg-gray-200/80 animate-pulse" />
       </div>
       <div className="space-y-3">
-        <div className="h-16 w-16 rounded-2xl bg-gray-100 animate-pulse" />
-        <div className="h-4 w-40 rounded bg-gray-100 animate-pulse" />
-        <div className="h-3 w-32 rounded bg-gray-100 animate-pulse" />
-        <div className="h-3 w-48 rounded bg-gray-100 animate-pulse" />
+        <div className="h-16 w-16 rounded-2xl bg-gray-200/80 animate-pulse" />
+        <div className="h-5 w-40 rounded-lg bg-gray-200/80 animate-pulse" />
+        <div className="h-3 w-28 rounded bg-gray-200/80 animate-pulse" />
+        <div className="h-3 w-36 rounded bg-gray-200/80 animate-pulse" />
+        <div className="flex gap-2 pt-1">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-6 w-12 rounded-full bg-gray-200/80 animate-pulse" />
+          ))}
+        </div>
       </div>
-      <div className="h-3 w-24 rounded bg-gray-100 animate-pulse" />
+      <div className="flex gap-2">
+        <div className="h-9 flex-1 rounded-full bg-gray-200/80 animate-pulse" />
+        <div className="h-9 flex-1 rounded-full bg-gray-200/80 animate-pulse" />
+      </div>
     </div>
   );
 }
 
 const AVATAR_PLACEHOLDER = "/images/avatar-placeholder.svg";
+const SWIPE_THRESHOLD = 100;
 
 function SwipeCard({
   candidate,
@@ -55,36 +64,46 @@ function SwipeCard({
   const t = useTranslations("cabinet");
   const tPage = useTranslations("employerCabinetPage");
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-200, 200], [-15, 15]);
+  const rotate = useTransform(x, [-220, 220], [-14, 14]);
+  const likeOpacity = useTransform(x, [0, 60, SWIPE_THRESHOLD], [0, 0.4, 1]);
+  const nopeOpacity = useTransform(x, [-220, -100, 0], [1, 0.4, 0]);
+  const bgLeftOpacity = useTransform(x, [0, -120], [0, 0.2]);
+  const bgRightOpacity = useTransform(x, [120, 0], [0.2, 0]);
   const photoSrc = candidate.photo && candidate.photo.trim() ? candidate.photo.trim() : AVATAR_PLACEHOLDER;
 
   function handleDragEnd(_: unknown, info: PanInfo) {
-    const threshold = 80;
-    if (info.offset.x > threshold) onSwipe("right");
-    else if (info.offset.x < -threshold) onSwipe("left");
-    else animate(x, 0, { type: "spring", stiffness: 300, damping: 30 });
+    if (info.offset.x > SWIPE_THRESHOLD) onSwipe("right");
+    else if (info.offset.x < -SWIPE_THRESHOLD) onSwipe("left");
+    else animate(x, 0, { type: "spring", stiffness: 280, damping: 28 });
   }
 
   const matchPct = Number.isFinite(Number(candidate.match)) ? Math.min(100, Math.max(0, Math.round(Number(candidate.match)))) : 0;
+  const skillList = candidate.skills ? candidate.skills.split(", ").slice(0, 4) : [];
 
   return (
     <motion.div
       drag="x"
-      dragConstraints={{ left: -150, right: 150 }}
-      dragElastic={0.6}
+      dragConstraints={{ left: -200, right: 200 }}
+      dragElastic={0.65}
       onDragEnd={handleDragEnd}
       style={{ x, rotate }}
       className="absolute inset-0 cursor-grab active:cursor-grabbing"
     >
-      <div className="flex h-full w-full flex-col justify-between rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
+      <div className="absolute -inset-3 flex overflow-hidden rounded-[1.4rem]">
+        <motion.div style={{ opacity: bgLeftOpacity }} className="flex-1 bg-rose-400/30" aria-hidden />
+        <motion.div style={{ opacity: bgRightOpacity }} className="flex-1 bg-emerald-400/30" aria-hidden />
+      </div>
+      <div className="relative flex h-full w-full flex-col justify-between rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
+        {/* Top: match badge */}
         <div className="flex items-start justify-between">
           <MatchProgressRing percent={matchPct} size={52} className="text-matcher">
             {matchPct}%
           </MatchProgressRing>
         </div>
 
-        <div className="space-y-2">
-          <div className="relative h-16 w-16 overflow-hidden rounded-2xl bg-gray-100">
+        {/* Main: photo, name, role */}
+        <div className="space-y-3">
+          <div className="relative h-20 w-20 overflow-hidden rounded-2xl bg-gray-100 shadow-inner">
             <img
               src={photoSrc}
               alt={candidate.name}
@@ -96,16 +115,39 @@ function SwipeCard({
             />
           </div>
           <h2 className="text-xl font-bold text-gray-900">{candidate.name}</h2>
-          <p className="text-gray-600">{candidate.job}</p>
+          <p className="text-matcher-dark font-medium">{candidate.job}</p>
           <p className="text-sm text-gray-500">{candidate.location} · {candidate.workType}</p>
-          <p className="text-sm text-gray-600">{candidate.skills}</p>
-          <p className="text-xs font-medium text-matcher-dark mt-1">
-            {vacancyTitle} {tPage("at")} {companyName}
-          </p>
+          {skillList.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {skillList.map((s) => (
+                <span key={s} className="rounded-full bg-matcher-pale px-2.5 py-0.5 text-xs font-medium text-matcher-dark">
+                  {s}
+                </span>
+              ))}
+            </div>
+          )}
+          {/* Context: vacancy & company */}
+          <div className="rounded-xl bg-gray-50 px-3 py-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Vacancy</p>
+            <p className="font-medium text-gray-900">{vacancyTitle}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mt-1">Company</p>
+            <p className="text-sm text-gray-700">{companyName}</p>
+          </div>
         </div>
 
         <p className="text-xs text-gray-400">{t("swipeInstruction")}</p>
       </div>
+      {/* Swipe overlays */}
+      <motion.div style={{ opacity: likeOpacity }} className="pointer-events-none absolute inset-0 flex items-center justify-end pr-6 rounded-2xl">
+        <div className="rounded-xl border-2 border-emerald-500 bg-emerald-500/90 px-4 py-2 shadow-lg -rotate-12">
+          <span className="text-xl font-black uppercase tracking-wider text-white">{t("like")}</span>
+        </div>
+      </motion.div>
+      <motion.div style={{ opacity: nopeOpacity }} className="pointer-events-none absolute inset-0 flex items-center justify-start pl-6 rounded-2xl">
+        <div className="rounded-xl border-2 border-rose-500 bg-rose-500/90 px-4 py-2 shadow-lg rotate-12">
+          <span className="text-xl font-black uppercase tracking-wider text-white">{t("nope")}</span>
+        </div>
+      </motion.div>
     </motion.div>
   );
 }
@@ -201,6 +243,7 @@ export default function EmployerCabinetPage() {
   const [candidateStack, setCandidateStack] = useState<Candidate[]>([]);
   const [liked, setLiked] = useState<Candidate[]>([]);
   const [passed, setPassed] = useState<Candidate[]>([]);
+  const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
 
   type LikeState = "idle" | "submitting" | "matched" | "notMatched" | "error";
   const [likeState, setLikeState] = useState<LikeState>("idle");
@@ -265,8 +308,10 @@ export default function EmployerCabinetPage() {
   async function handleSwipe(dir: "left" | "right") {
     if (!current || !selectedVacancy) return;
     if (dir === "left") {
+      setExitDir("left");
       setCandidateStack((prev) => prev.slice(1));
       setPassed((prev) => [...prev, current]);
+      setTimeout(() => setExitDir(null), 50);
       return;
     }
 
@@ -287,8 +332,10 @@ export default function EmployerCabinetPage() {
         2000
       );
       const data = await res.json().catch(() => ({}));
+      setExitDir("right");
       setCandidateStack((prev) => prev.slice(1));
       setLiked((prev) => [...prev, current]);
+      setTimeout(() => setExitDir(null), 50);
 
       if (data.isMatch) {
         setNewMatch({
@@ -419,20 +466,20 @@ export default function EmployerCabinetPage() {
 
   return (
     <div className="mx-auto max-w-md px-4 py-8">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-gray-50/80 px-4 py-3 shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">{t("candidates")}</h1>
-          <p className="mt-1 text-sm font-semibold text-gray-900">
+          <h1 className="text-xl font-bold tracking-tight text-gray-900">{t("candidates")}</h1>
+          <p className="mt-0.5 text-sm font-semibold text-gray-800">
             {selectedVacancy.title} {t("at")} {selectedVacancy.company}
           </p>
           <p className="mt-0.5 text-xs text-gray-500">
-            {t("recommendedSalary", { amount: getRecommendedSalaryForTitle(selectedVacancy.title).toLocaleString() })}
+            {selectedVacancy.location} · {t("recommendedSalary", { amount: getRecommendedSalaryForTitle(selectedVacancy.title).toLocaleString() })}
           </p>
         </div>
         <button
           type="button"
           onClick={handleChangeVacancy}
-          className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+          className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:border-gray-300 transition-colors"
         >
           {t("changeVacancy")}
         </button>
@@ -450,9 +497,15 @@ export default function EmployerCabinetPage() {
           <AnimatePresence mode="wait">
             <motion.div
               key={currentCandidate.id}
-              initial={{ opacity: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.2 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{
+                opacity: 0,
+                x: exitDir === "left" ? -400 : 400,
+                rotate: exitDir === "left" ? -18 : 18,
+                transition: { duration: 0.22, ease: [0.4, 0, 0.2, 1] },
+              }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
               className="absolute inset-0"
             >
               <div className="relative h-full w-full">
@@ -490,24 +543,33 @@ export default function EmployerCabinetPage() {
       </div>
 
       {currentCandidate && (
-        <div className="mt-6 flex justify-center gap-4 relative z-10">
-          <button
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-6 flex justify-center gap-4 relative z-10"
+        >
+          <motion.button
             type="button"
             disabled={likeState === "submitting"}
             onClick={() => handleSwipe("left")}
-            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-gray-300 bg-white text-gray-500 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.94 }}
+            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-gray-300 bg-white text-gray-500 shadow-md hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="text-xl">✕</span>
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             type="button"
             disabled={likeState === "submitting"}
             onClick={() => handleSwipe("right")}
-            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-matcher bg-matcher text-white shadow-sm hover:bg-matcher-dark disabled:opacity-50 disabled:cursor-not-allowed"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-matcher bg-matcher text-white shadow-md shadow-matcher/30 hover:bg-matcher-dark hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="text-xl">♥</span>
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       )}
 
       <MatchCongratulationsModal
@@ -517,6 +579,7 @@ export default function EmployerCabinetPage() {
           setLikeState("idle");
         }}
         onOpenChat={handleOpenChat}
+        isCandidateView={false}
       />
     </div>
   );
