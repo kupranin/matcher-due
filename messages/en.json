@@ -478,6 +478,7 @@
   },
   "cabinet": {
     "yourMatches": "Opportunities for you",
+    "noMoreOpportunities": "No more opportunities right now",
     "swipeHint": "Swipe right to like, left to pass. Find your dream job! 🚀",
     "like": "Like!",
     "nope": "Nope",

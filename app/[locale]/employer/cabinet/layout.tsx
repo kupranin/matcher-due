@@ -94,8 +94,9 @@ export default function EmployerCabinetLayout({
   const sub = subscription;
 
   const navLinks = [
-    { href: "/employer/cabinet", label: tCommon("candidates"), active: pathname?.endsWith("/employer/cabinet") && !pathname?.includes("/chats") },
-    { href: "/employer/cabinet/chats", label: tCommon("chats"), active: pathname?.includes("/chats") },
+    { href: "/employer/cabinet", label: tCommon("candidates"), active: pathname === "/employer/cabinet" },
+    { href: "/employer/cabinet/matches", label: tCommon("matches"), active: pathname === "/employer/cabinet/matches" },
+    { href: "/employer/cabinet/chats", label: tCommon("chats"), active: pathname === "/employer/cabinet/chats" },
     { href: "/employer/post?from=cabinet", label: tCommon("postVacancy"), active: false },
     { href: "/employer/cabinet/profile", label: tCommon("company"), active: pathname === "/employer/cabinet/profile" },
   ];
@@ -197,16 +198,19 @@ export default function EmployerCabinetLayout({
 
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-gray-200 bg-white py-2 md:hidden">
-        {navLinks.slice(0, 3).map(({ href, label, active }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${active ? "text-matcher-dark" : "text-gray-500"}`}
-          >
-            <span>{label === tCommon("candidates") ? "👥" : label === tCommon("chats") ? "💬" : "➕"}</span>
-            <span className="truncate max-w-[80px]">{label}</span>
-          </Link>
-        ))}
+        {navLinks.slice(0, 4).map(({ href, label, active }) => {
+          const icon = label === tCommon("candidates") ? "👥" : label === tCommon("matches") ? "♥" : label === tCommon("chats") ? "💬" : "➕";
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${active ? "text-matcher-dark" : "text-gray-500"}`}
+            >
+              <span>{icon}</span>
+              <span className="truncate max-w-[80px]">{label}</span>
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );
