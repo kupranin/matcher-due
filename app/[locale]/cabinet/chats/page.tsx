@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
-import { getCandidateProfileId } from "@/lib/candidateProfileStorage";
-import { loadCandidateProfile } from "@/lib/candidateProfileStorage";
+import { getCandidateProfileId, loadCandidateProfile } from "@/lib/candidateProfileStorage";
 import type { MutualMatch } from "@/lib/matchStorage";
 import MatchChatWindow from "@/components/MatchChatWindow";
 
@@ -65,22 +64,39 @@ export default function CandidateChatsPage() {
     const profileId = getCandidateProfileId();
     const stored = loadCandidateProfile();
     if (!profileId) return;
+
     fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`)
       .then((r) => r.json())
-      .then((list: Array<{ id: string; vacancyId: string; candidateProfileId: string; candidateLiked: boolean; employerLiked: boolean; vacancyTitle: string; company: string; createdAt: string }>) => {
-        const mutual = list
-          .filter((m) => m.candidateLiked && m.employerLiked)
-          .map((m) => ({
-            id: m.id,
+      .then(
+        (
+          list: Array<{
+            id: string;
+            matchId: string;
+            vacancyId: string;
+            candidateProfileId: string;
+            vacancyTitle: string;
+            companyName: string;
+            matchedAt: string | null;
+            createdAt?: string;
+          }>
+        ) => {
+          if (!Array.isArray(list)) return;
+          const mutual = list.map((m) => ({
+            id: m.matchId || m.id,
             vacancyId: m.vacancyId,
             candidateId: m.candidateProfileId,
             candidateName: stored?.fullName ?? "",
             vacancyTitle: m.vacancyTitle,
-            company: m.company,
-            createdAt: new Date(m.createdAt).getTime(),
+            company: m.companyName,
+            createdAt: m.matchedAt
+              ? new Date(m.matchedAt).getTime()
+              : m.createdAt
+              ? new Date(m.createdAt).getTime()
+              : Date.now(),
           }));
-        setMatches(mutual);
-      })
+          setMatches(mutual);
+        }
+      )
       .catch(() => {});
   }, []);
 

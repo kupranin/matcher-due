@@ -7,7 +7,7 @@ import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence, animate
 import { buildVacancyCardsWithMatch } from "@/lib/vacancyApi";
 import { GEORGIAN_CITIES } from "@/lib/georgianLocations";
 import { getCandidateProfileForMatch, loadCandidateProfile, getCandidateProfileId, getCandidateUserId, saveCandidateProfile } from "@/lib/candidateProfileStorage";
-import { addCandidateLike, setCandidatePitch, type MutualMatch } from "@/lib/matchStorage";
+import { addCandidateLike, type MutualMatch } from "@/lib/matchStorage";
 import MatchCongratulationsModal from "@/components/MatchCongratulationsModal";
 import MatchProgressRing from "@/components/MatchProgressRing";
 import PitchModal from "@/components/PitchModal";
@@ -189,57 +189,95 @@ export default function CabinetPage() {
   const [passed, setPassed] = useState<Vacancy[]>([]);
   const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
   const [newMatch, setNewMatch] = useState<MutualMatch | null>(null);
-  const [pendingLikeVacancy, setPendingLikeVacancy] = useState<Vacancy | null>(null);
   const current = vacancies[0];
+  type LikeState = "idle" | "submitting" | "matched" | "notMatched" | "error";
+  const [likeState, setLikeState] = useState<LikeState>("idle");
+  const [likeError, setLikeError] = useState<string | null>(null);
 
-  async function finishLike(vacancy: Vacancy, pitch: string) {
-    setLiked((prev) => [...prev, vacancy]);
-    addCandidateLike(vacancy.id);
-    if (pitch) setCandidatePitch(vacancy.id, pitch);
+  async function withMinimumDelay<T>(promise: Promise<T>, minimumMs = 2000): Promise<T> {
+    const [result] = await Promise.all([
+      promise,
+      new Promise((resolve) => setTimeout(resolve, minimumMs)),
+    ]);
+    return result;
+  }
+
+  async function handleSwipe(dir: "left" | "right") {
+    if (!current) return;
+
+    if (dir === "left") {
+      setExitDir("left");
+      setVacancies((prev) => prev.slice(1));
+      setPassed((prev) => [...prev, current]);
+      setTimeout(() => setExitDir(null), 50);
+      return;
+    }
+
     const profileId = getCandidateProfileId();
+    if (!profileId) {
+      // Not fully onboarded / logged in: behave like local swipe only.
+      setExitDir("right");
+      setVacancies((prev) => prev.slice(1));
+      setLiked((prev) => [...prev, current]);
+      addCandidateLike(current.id);
+      setTimeout(() => setExitDir(null), 50);
+      return;
+    }
+
     const stored = loadCandidateProfile();
     const candidateName = stored?.fullName ?? "Candidate";
-    if (profileId) {
-      try {
-        const res = await fetch("/api/matches", {
+
+    setLikeError(null);
+    setLikeState("submitting");
+
+    try {
+      const res = await withMinimumDelay(
+        fetch("/api/matches", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            vacancyId: vacancy.id,
+            vacancyId: current.id,
             candidateProfileId: profileId,
             candidateLiked: true,
-            candidatePitch: pitch || undefined,
           }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (data.employerLiked) {
-          setNewMatch({
-            id: data.id,
-            vacancyId: vacancy.id,
-            candidateId: profileId,
-            candidateName,
-            vacancyTitle: vacancy.title,
-            company: vacancy.company,
-            createdAt: data.createdAt ? new Date(data.createdAt).getTime() : Date.now(),
-          });
-        }
-      } catch {
-        // ignore
-      }
-    }
-    setPendingLikeVacancy(null);
-  }
+        }),
+        2000
+      );
+      const data = await res.json().catch(() => ({}));
 
-  function handleSwipe(dir: "left" | "right") {
-    if (!current) return;
-    setExitDir(dir);
-    setVacancies((prev) => prev.slice(1));
-    if (dir === "right") {
-      setPendingLikeVacancy(current);
-    } else {
-      setPassed((prev) => [...prev, current]);
+      setExitDir("right");
+      setVacancies((prev) => prev.slice(1));
+      setLiked((prev) => [...prev, current]);
+      addCandidateLike(current.id);
+
+      if (data.isMatch) {
+        setNewMatch({
+          id: data.matchId ?? data.id ?? `${current.id}-${profileId}`,
+          vacancyId: current.id,
+          candidateId: profileId,
+          candidateName,
+          vacancyTitle: current.title,
+          company: current.company,
+          createdAt: data.matchedAt
+            ? new Date(data.matchedAt).getTime()
+            : data.createdAt
+            ? new Date(data.createdAt).getTime()
+            : Date.now(),
+        });
+        setLikeState("matched");
+      } else {
+        setLikeState("idle");
+      }
+
+      setTimeout(() => setExitDir(null), 50);
+    } catch {
+      setLikeState("error");
+      setLikeError("Something went wrong");
+      setTimeout(() => {
+        setLikeState("idle");
+        setLikeError(null);
+      }, 2000);
     }
-    setTimeout(() => setExitDir(null), 50);
   }
 
   function handleOpenChat() {
@@ -293,6 +331,12 @@ export default function CabinetPage() {
       <h1 className="font-heading text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{t("yourMatches")}</h1>
       <p className="mt-2 text-gray-600">{t("swipeHint")}</p>
 
+      {likeError && (
+        <div className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800 shadow-sm">
+          {likeError}
+        </div>
+      )}
+
       <div className="relative mx-auto mt-6 aspect-[3/4] max-h-[380px] sm:mt-8 sm:max-h-[440px] md:max-h-[520px]">
         {current ? (
           <AnimatePresence mode="wait">
@@ -307,7 +351,15 @@ export default function CabinetPage() {
               }}
               className="absolute inset-0"
             >
-              <SwipeCard vacancy={current} onSwipe={handleSwipe} />
+              <div className="relative h-full w-full">
+                <SwipeCard vacancy={current} onSwipe={likeState === "submitting" ? () => {} : handleSwipe} />
+                {likeState === "submitting" && (
+                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-3xl bg-gray-900/80 backdrop-blur-sm">
+                    <div className="h-10 w-10 animate-spin rounded-full border-2 border-matcher-bright border-t-transparent" />
+                    <p className="mt-3 text-sm font-medium text-white">{t("checkingMatch")}</p>
+                  </div>
+                )}
+              </div>
             </motion.div>
           </AnimatePresence>
         ) : (
@@ -326,7 +378,6 @@ export default function CabinetPage() {
         )}
       </div>
 
-      {/* Colorful action buttons */}
       {current && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -335,37 +386,33 @@ export default function CabinetPage() {
         >
           <motion.button
             type="button"
+            disabled={likeState === "submitting"}
             onClick={() => handleSwipe("left")}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-lg shadow-rose-300/50 transition-shadow hover:shadow-xl hover:shadow-rose-400/50"
+            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-lg shadow-rose-300/50 transition-shadow hover:shadow-xl hover:shadow-rose-400/50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="text-2xl font-bold">✕</span>
           </motion.button>
           <motion.button
             type="button"
+            disabled={likeState === "submitting"}
             onClick={() => handleSwipe("right")}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-matcher to-matcher-teal text-white shadow-lg shadow-matcher/40 transition-shadow hover:shadow-xl hover:shadow-matcher/50"
+            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-matcher to-matcher-teal text-white shadow-lg shadow-matcher/40 transition-shadow hover:shadow-xl hover:shadow-matcher/50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="text-2xl">♥</span>
           </motion.button>
         </motion.div>
       )}
 
-      {pendingLikeVacancy && (
-        <PitchModal
-          company={pendingLikeVacancy.company}
-          vacancyTitle={pendingLikeVacancy.title}
-          onSubmit={(pitch) => finishLike(pendingLikeVacancy, pitch)}
-          onSkip={() => finishLike(pendingLikeVacancy, "")}
-        />
-      )}
-
       <MatchCongratulationsModal
         match={newMatch}
-        onClose={() => setNewMatch(null)}
+        onClose={() => {
+          setNewMatch(null);
+          setLikeState("idle");
+        }}
         onOpenChat={handleOpenChat}
       />
     </div>

@@ -47,7 +47,8 @@ export default function CabinetLayout({
   }
 
   const navLinks = [
-    { href: "/cabinet", label: tCommon("matches"), active: pathname === "/cabinet" },
+    { href: "/cabinet", label: tCommon("opportunities"), active: pathname === "/cabinet" },
+    { href: "/cabinet/matches", label: tCommon("matches"), active: pathname === "/cabinet/matches" },
     { href: "/cabinet/chats", label: tCommon("chats"), active: pathname?.includes("/chats") },
     { href: "/cabinet/profile", label: tCommon("profile"), active: pathname === "/cabinet/profile" },
   ];
@@ -122,18 +123,28 @@ export default function CabinetLayout({
 
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-gray-200 bg-white py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
-        {navLinks.map(({ href, label, active }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${
-              active ? "text-matcher-dark" : "text-gray-500"
-            }`}
-          >
-            <span>{label === tCommon("matches") ? "♥" : label === tCommon("chats") ? "💬" : "👤"}</span>
-            <span>{label}</span>
-          </Link>
-        ))}
+        {navLinks.map(({ href, label, active }) => {
+          const icon =
+            href === "/cabinet"
+              ? "💼"
+              : href === "/cabinet/matches"
+              ? "♥"
+              : href === "/cabinet/chats"
+              ? "💬"
+              : "👤";
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${
+                active ? "text-matcher-dark" : "text-gray-500"
+              }`}
+            >
+              <span>{icon}</span>
+              <span>{label}</span>
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );

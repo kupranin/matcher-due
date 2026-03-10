@@ -154,6 +154,7 @@ export async function GET(request: Request) {
           candidateLiked: m.candidateLiked,
           employerLiked: m.employerLiked,
           matchedAt: m.matchedAt?.toISOString() ?? null,
+          createdAt: m.createdAt.toISOString(),
           vacancyTitle: m.vacancy.title,
           companyName: m.vacancy.company.name,
         }))
@@ -229,6 +230,7 @@ export async function GET(request: Request) {
         vacancyTitle: m.vacancy_title,
         companyName: m.company_name,
         matchedAt: m.matched_at,
+        createdAt: m.created_at,
         lastMessageText: m.last_message_text,
         lastMessageAt: m.last_message_at
       }))

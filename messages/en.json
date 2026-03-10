@@ -55,6 +55,7 @@
     "imHiring": "I'm hiring",
     "profile": "Profile",
     "matches": "Matches",
+    "opportunities": "Opportunities",
     "chats": "Chats",
     "register": "Register",
     "candidates": "Candidates",
@@ -476,7 +477,7 @@
     "overLimit": "You have published more than your plan allows."
   },
   "cabinet": {
-    "yourMatches": "Your matches",
+    "yourMatches": "Opportunities for you",
     "swipeHint": "Swipe right to like, left to pass. Find your dream job! 🚀",
     "like": "Like!",
     "nope": "Nope",
