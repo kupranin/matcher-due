@@ -136,15 +136,17 @@ export function buildCandidateCardsWithMatch(
     if (v === "Beginner" || v === "Advanced") return v;
     return "Intermediate";
   };
+  // Browsing: show all candidates (do not filter by match threshold). Sort by match desc.
+  // Optional fields (photo, age, city) use fallbacks so cards still render when null.
   return apiCandidates
     .filter((c) => c.availableToWork !== false)
     .map((c) => {
       const skills = safeSkills(c);
       const profile: CandidateProfile = {
-        locationCityId: c.locationCityId,
-        salaryMin: c.salaryMin,
-        willingToRelocate: c.willingToRelocate,
-        experienceMonths: c.experienceMonths,
+        locationCityId: c.locationCityId ?? "",
+        salaryMin: Number(c.salaryMin) || 0,
+        willingToRelocate: Boolean(c.willingToRelocate),
+        experienceMonths: Number(c.experienceMonths) || 0,
         educationLevel: normalizeEducationLevel(c.educationLevel),
         workTypes: c.workTypes?.length ? c.workTypes : ["Full-time"],
         skills: skills.map((s) => ({ name: s.name, level: toSkillLevel(s.level) })),
@@ -153,9 +155,9 @@ export function buildCandidateCardsWithMatch(
       const match = Number.isFinite(rawMatch) ? Math.min(100, Math.max(0, Math.round(rawMatch))) : 0;
       return {
         id: c.id,
-        name: c.fullName,
+        name: c.fullName ?? "Candidate",
         job: c.jobTitle ?? "Candidate",
-        location: locationCityName(c.locationCityId),
+        location: locationCityName(c.locationCityId ?? ""),
         workType: (c.workTypes && c.workTypes[0]) ? c.workTypes[0] : "Full-time",
         skills: skills.map((s) => s.name).join(", "),
         photo: c.photo ?? undefined,
@@ -164,6 +166,5 @@ export function buildCandidateCardsWithMatch(
         match,
       };
     })
-    .filter((c) => c.match >= 70)
     .sort((a, b) => b.match - a.match);
 }

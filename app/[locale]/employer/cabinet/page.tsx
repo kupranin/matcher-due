@@ -240,8 +240,9 @@ export default function EmployerCabinetPage() {
       .finally(() => setVacanciesLoading(false));
     fetch("/api/candidates")
       .then((r) => r.json())
-      .then((list) => {
-        setApiCandidates(list);
+      .then((list: unknown) => {
+        if (Array.isArray(list)) setApiCandidates(list);
+        else setApiCandidates([]);
       })
       .catch(() => {
         setApiCandidates([]);
@@ -258,7 +259,7 @@ export default function EmployerCabinetPage() {
 
   const [selectedVacancy, setSelectedVacancy] = useState<EmployerVacancy | null>(null);
   useEffect(() => {
-    if (vacancies.length === 1 && !selectedVacancy) setSelectedVacancy(vacancies[0]);
+    if (vacancies.length >= 1 && !selectedVacancy) setSelectedVacancy(vacancies[0]);
   }, [vacancies, selectedVacancy]);
   const candidates = useMemo(
     () => (selectedVacancy && apiCandidates.length > 0 ? buildCandidateCardsWithMatch(apiCandidates, selectedVacancy.profile) : []),
@@ -548,6 +549,21 @@ export default function EmployerCabinetPage() {
               </div>
             </motion.div>
           </AnimatePresence>
+        ) : candidates.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 p-8 text-center">
+            <p className="text-4xl">👥</p>
+            <p className="mt-4 text-lg font-medium text-gray-700">{t("noCandidatesRightNow") ?? "No candidates right now"}</p>
+            <p className="mt-2 text-sm text-gray-500">
+              {t("noCandidatesHint") ?? "There are no candidates to show for this vacancy yet. Try another vacancy or check back later."}
+            </p>
+            <button
+              type="button"
+              onClick={handleChangeVacancy}
+              className="mt-6 rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              {t("changeVacancy")}
+            </button>
+          </div>
         ) : (
           <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 text-center">
             <p className="text-lg font-medium text-gray-600">{t("allCaughtUp")}</p>

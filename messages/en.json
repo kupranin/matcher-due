@@ -721,6 +721,8 @@
     "postFirstVacancy": "Post your first vacancy",
     "packageHint": "You'll fill in the vacancy details, then choose a package (1–10 vacancies or unlimited) and complete payment.",
     "noMoreCandidates": "No more candidates",
+    "noCandidatesRightNow": "No candidates right now",
+    "noCandidatesHint": "There are no candidates to show for this vacancy yet. Try another vacancy or check back later.",
     "at": "at",
     "allCaughtUp": "You're all caught up!",
     "likedPassed": "{liked} liked · {passed} passed",
