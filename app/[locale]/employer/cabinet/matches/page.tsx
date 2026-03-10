@@ -20,6 +20,7 @@ type MatchApiRow = {
   candidateProfileId?: string;
   candidateName?: string;
   candidatePhotoUrl?: string;
+  candidateAge?: number | null;
   vacancyTitle?: string;
   companyName?: string;
   matchedAt?: string;
@@ -32,6 +33,7 @@ type MatchRow = {
   candidateProfileId: string;
   candidateName: string | null;
   candidatePhotoUrl: string | null;
+  candidateAge: number | null;
   vacancyTitle: string;
   companyName: string;
   matchedAt: string | null;
@@ -45,6 +47,7 @@ function toMatchRow(m: MatchApiRow): MatchRow {
     candidateProfileId: typeof m.candidateProfileId === "string" ? m.candidateProfileId : "",
     candidateName: typeof m.candidateName === "string" ? m.candidateName : null,
     candidatePhotoUrl: typeof m.candidatePhotoUrl === "string" ? m.candidatePhotoUrl : null,
+    candidateAge: typeof m.candidateAge === "number" ? m.candidateAge : null,
     vacancyTitle: typeof m.vacancyTitle === "string" ? m.vacancyTitle : "",
     companyName: typeof m.companyName === "string" ? m.companyName : "",
     matchedAt: typeof m.matchedAt === "string" ? m.matchedAt : null,
@@ -134,6 +137,9 @@ export default function EmployerMatchesPage() {
               <p className="truncate text-sm text-gray-600">
                 {match.vacancyTitle} · {match.companyName}
               </p>
+              {typeof match.candidateAge === "number" && match.candidateAge > 0 && (
+                <p className="mt-0.5 text-xs text-gray-500">Age {match.candidateAge}</p>
+              )}
             </div>
             <span className="text-matcher font-medium">{t("chat")}</span>
           </Link>

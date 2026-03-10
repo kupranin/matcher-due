@@ -49,6 +49,7 @@ export default function CabinetProfilePage() {
   const [phone, setPhone] = useState("");
   const [linkedIn, setLinkedIn] = useState("");
   const [languages, setLanguages] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -80,7 +81,7 @@ export default function CabinetProfilePage() {
     }
     fetch(`/api/candidates/profile?userId=${encodeURIComponent(userId)}`)
       .then((r) => r.json())
-      .then((data: { fullName?: string; email?: string; phone?: string; locationCityId?: string; salaryMin?: number; workTypes?: string[]; willingToRelocate?: boolean; skills?: Array<{ name: string; level: string }>; educationLevel?: string; experienceMonths?: number; jobTitle?: string; photo?: string | null } | null) => {
+      .then((data: { fullName?: string; email?: string; phone?: string; locationCityId?: string; salaryMin?: number; workTypes?: string[]; willingToRelocate?: boolean; skills?: Array<{ name: string; level: string }>; educationLevel?: string; experienceMonths?: number; jobTitle?: string; photo?: string | null; dateOfBirth?: string | null } | null) => {
         if (data) {
           if (data.fullName) setFullName(data.fullName);
           if (data.email != null) setEmail(data.email ?? "");
@@ -96,6 +97,7 @@ export default function CabinetProfilePage() {
           if (data.experienceMonths != null) setExperience(data.experienceMonths ? `${data.experienceMonths} months` : "");
           if (Array.isArray(data.workTypes)) setWorkTypes(data.workTypes);
           if (Array.isArray(data.skills)) setSkills(data.skills.map((s) => ({ name: s.name, level: (s.level ?? "Intermediate") as SkillLevel })));
+          if (typeof data.dateOfBirth === "string") setDateOfBirth(data.dateOfBirth);
         }
       })
       .catch(() => {})
@@ -179,6 +181,18 @@ export default function CabinetProfilePage() {
             <div>
               <label className="text-sm font-medium text-gray-900">{t("fullName")}</label>
               <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder={t("fullNamePlaceholder")} className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-900">{t("dateOfBirth") || "Date of birth"}</label>
+              <input
+                type="date"
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+                className="mt-2 w-full max-w-xs rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                {t("dateOfBirthHint") || "We only show your age, not your full birth date."}
+              </p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-900">{t("aboutMe")}</label>
@@ -316,6 +330,7 @@ export default function CabinetProfilePage() {
               job: job.trim() || undefined,
               linkedIn: linkedIn.trim() || undefined,
               languages: languages.trim() || undefined,
+              dateOfBirth: dateOfBirth || undefined,
             });
             const userId = getCandidateUserId();
             setProfileSaving(true);
@@ -354,6 +369,7 @@ export default function CabinetProfilePage() {
                     skills: profile.skills.map((s) => ({ name: s.name, level: s.level })),
                     jobTitle: job.trim() || undefined,
                     ...(photoToSave !== undefined && { photo: photoToSave }),
+                    ...(dateOfBirth && { dateOfBirth }),
                   }),
                 });
               }

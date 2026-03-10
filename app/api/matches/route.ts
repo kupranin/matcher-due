@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { computeMatchScore } from "@/lib/matchScore";
 import { getEmployerCompanyFromSession } from "@/lib/employerAuth";
+import { calculateAge } from "@/lib/age";
 
 async function vacancyBelongsToEmployerCompany(vacancyId: string, employerCompanyId: string) {
   const v = await prisma.vacancy.findUnique({ where: { id: vacancyId }, select: { companyId: true } });
@@ -158,6 +159,7 @@ export async function GET(request: Request) {
 
           cp.full_name AS candidate_name,
           cp.photo AS candidate_photo_url,
+          cp.date_of_birth,
 
           v.title AS vacancy_title,
           v.company_id,
@@ -198,18 +200,19 @@ export async function GET(request: Request) {
     `;
 
     return NextResponse.json(
-      rawMatches.map(m => ({
+      rawMatches.map((m) => ({
         matchId: m.match_id,
         vacancyId: m.vacancy_id,
         candidateProfileId: m.candidate_profile_id,
         candidateName: m.candidate_name,
         candidatePhotoUrl: m.candidate_photo_url,
+        candidateAge: calculateAge(m.date_of_birth as string | null | undefined),
         vacancyTitle: m.vacancy_title,
         companyName: m.company_name,
         matchedAt: m.matched_at,
         createdAt: m.created_at,
         lastMessageText: m.last_message_text,
-        lastMessageAt: m.last_message_at
+        lastMessageAt: m.last_message_at,
       }))
     );
 

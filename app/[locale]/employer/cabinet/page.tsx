@@ -20,7 +20,7 @@ type EmployerVacancy = {
   company: string;
   profile: import("@/lib/matchCalculation").VacancyProfile;
 };
-type Candidate = import("@/lib/matchMockData").CandidateCard & { match: number };
+type Candidate = import("@/lib/matchMockData").CandidateCard & { match: number; age?: number | null };
 
 function CandidateCardSkeleton() {
   return (
@@ -93,17 +93,10 @@ function SwipeCard({
         <motion.div style={{ opacity: bgLeftOpacity }} className="flex-1 bg-rose-400/30" aria-hidden />
         <motion.div style={{ opacity: bgRightOpacity }} className="flex-1 bg-emerald-400/30" aria-hidden />
       </div>
-      <div className="relative flex h-full w-full flex-col justify-between rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
-        {/* Top: match badge */}
-        <div className="flex items-start justify-between">
-          <MatchProgressRing percent={matchPct} size={52} className="text-matcher">
-            {matchPct}%
-          </MatchProgressRing>
-        </div>
-
-        {/* Main: photo, name, role */}
-        <div className="space-y-3">
-          <div className="relative h-20 w-20 overflow-hidden rounded-2xl bg-gray-100 shadow-inner">
+      <div className="relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+        {/* Hero photo */}
+        <div className="relative w-full aspect-[4/5] bg-gray-100">
+          {photoSrc ? (
             <img
               src={photoSrc}
               alt={candidate.name}
@@ -113,12 +106,42 @@ function SwipeCard({
                 e.currentTarget.src = AVATAR_PLACEHOLDER;
               }}
             />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-gray-100 text-4xl text-gray-400">
+              <span>👤</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-1 flex-col justify-between p-6">
+          {/* Top: match badge + name */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 space-y-1">
+              <h2 className="text-xl font-bold text-gray-900">
+                {candidate.name}
+                {typeof candidate.age === "number" && candidate.age > 0 && (
+                  <span className="ml-2 text-base font-semibold text-gray-700">
+                    {candidate.age}
+                    <span className="ml-1 text-xs font-normal text-gray-500">{tPage("yearsOldShort") || "yrs"}</span>
+                  </span>
+                )}
+              </h2>
+              <p className="text-matcher-dark font-medium">{candidate.job}</p>
+              <p className="text-sm text-gray-500">
+                {candidate.location} · {candidate.workType}
+                {typeof candidate.age === "number" && candidate.age > 0 && (
+                  <> · {candidate.age} {tPage("yearsOld") || "years old"}</>
+                )}
+              </p>
+            </div>
+            <MatchProgressRing percent={matchPct} size={52} className="text-matcher">
+              {matchPct}%
+            </MatchProgressRing>
           </div>
-          <h2 className="text-xl font-bold text-gray-900">{candidate.name}</h2>
-          <p className="text-matcher-dark font-medium">{candidate.job}</p>
-          <p className="text-sm text-gray-500">{candidate.location} · {candidate.workType}</p>
+
+          {/* Skills */}
           {skillList.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {skillList.map((s) => (
                 <span key={s} className="rounded-full bg-matcher-pale px-2.5 py-0.5 text-xs font-medium text-matcher-dark">
                   {s}
@@ -126,16 +149,17 @@ function SwipeCard({
               ))}
             </div>
           )}
+
           {/* Context: vacancy & company */}
-          <div className="rounded-xl bg-gray-50 px-3 py-2">
+          <div className="mt-4 rounded-xl bg-gray-50 px-3 py-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Vacancy</p>
             <p className="font-medium text-gray-900">{vacancyTitle}</p>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mt-1">Company</p>
+            <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-gray-500">Company</p>
             <p className="text-sm text-gray-700">{companyName}</p>
           </div>
-        </div>
 
-        <p className="text-xs text-gray-400">{t("swipeInstruction")}</p>
+          <p className="mt-3 text-xs text-gray-400">{t("swipeInstruction")}</p>
+        </div>
       </div>
       {/* Swipe overlays */}
       <motion.div style={{ opacity: likeOpacity }} className="pointer-events-none absolute inset-0 flex items-center justify-end pr-6 rounded-2xl">

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { calculateAge } from "@/lib/age";
 import { hashPassword } from "@/lib/auth";
 
 const SKILL_LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
@@ -34,6 +35,8 @@ export async function GET(request: Request) {
       locationCityId: profile.locationCityId,
       locationDistrictId: profile.locationDistrictId,
       salaryMin: profile.salaryMin,
+      dateOfBirth: profile.dateOfBirth ? profile.dateOfBirth.toISOString().slice(0, 10) : null,
+      age: calculateAge(profile.dateOfBirth),
       willingToRelocate: profile.willingToRelocate,
       experienceMonths: profile.experienceMonths,
       experienceText: profile.experienceText,
@@ -80,6 +83,27 @@ export async function PATCH(request: Request) {
             level: SKILL_LEVELS.includes((s.level as (typeof SKILL_LEVELS)[number]) ?? "Intermediate") ? (s.level as (typeof SKILL_LEVELS)[number]) : "Intermediate",
           }))
       : undefined;
+    const rawDob = typeof body?.dateOfBirth === "string" ? body.dateOfBirth.trim() : undefined;
+    let dateOfBirth: Date | null | undefined = undefined;
+    if (rawDob !== undefined) {
+      if (!rawDob) {
+        dateOfBirth = null;
+      } else {
+        const parsed = new Date(rawDob);
+        const age = calculateAge(parsed);
+        if (!age) {
+          return NextResponse.json({ error: "Please enter a valid date of birth" }, { status: 400 });
+        }
+        if (age < 16) {
+          return NextResponse.json({ error: "You must be at least 16 years old" }, { status: 400 });
+        }
+        if (age > 80) {
+          return NextResponse.json({ error: "Please enter a realistic date of birth" }, { status: 400 });
+        }
+        dateOfBirth = parsed;
+      }
+    }
+
     const update: Record<string, unknown> = {};
     if (fullName !== undefined) update.fullName = fullName;
     if (phone !== undefined) update.phone = phone;
@@ -93,6 +117,7 @@ export async function PATCH(request: Request) {
     if (willingToRelocate !== undefined) update.willingToRelocate = willingToRelocate;
     if (jobTitle !== undefined) update.jobTitle = jobTitle;
     if (availableToWork !== undefined) update.availableToWork = availableToWork;
+    if (dateOfBirth !== undefined) update.dateOfBirth = dateOfBirth;
     if (photo !== undefined) update.photo = photo;
     await prisma.candidateProfile.update({ where: { userId }, data: update as never });
     if (skills !== undefined) {
@@ -136,6 +161,22 @@ export async function POST(request: Request) {
       ? (body.workTypes as string[]).filter((w: unknown) => typeof w === "string").slice(0, 10)
       : ["Full-time"];
     const willingToRelocate = body?.willingToRelocate === true || body?.willingToRelocate === false ? body.willingToRelocate : false;
+    const rawDob = typeof body?.dateOfBirth === "string" ? body.dateOfBirth.trim() : "";
+    let dateOfBirth: Date | null = null;
+    if (rawDob) {
+      const parsed = new Date(rawDob);
+      const age = calculateAge(parsed);
+      if (!age) {
+        return NextResponse.json({ error: "Please enter a valid date of birth" }, { status: 400 });
+      }
+      if (age < 16) {
+        return NextResponse.json({ error: "You must be at least 16 years old" }, { status: 400 });
+      }
+      if (age > 80) {
+        return NextResponse.json({ error: "Please enter a realistic date of birth" }, { status: 400 });
+      }
+      dateOfBirth = parsed;
+    }
     const jobTitle = typeof body?.jobTitle === "string" ? body.jobTitle.trim() || null : null;
     const skills = Array.isArray(body?.skills)
       ? (body.skills as Array<{ name?: string; level?: string }>)
@@ -186,6 +227,7 @@ export async function POST(request: Request) {
       educationLevel,
       workTypes: workTypes.length ? workTypes : ["Full-time"],
       jobTitle,
+      ...(dateOfBirth ? { dateOfBirth } : {}),
     };
 
     const profile = await prisma.candidateProfile.upsert({

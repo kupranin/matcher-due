@@ -10,6 +10,7 @@ import MatchChatWindow from "@/components/MatchChatWindow";
 type MatchRow = MutualMatch & { 
   candidateJobTitle?: string | null;
   candidatePhotoUrl?: string | null;
+  candidateAge?: number | null;
   lastMessageText?: string | null;
   lastMessageAt?: string | null;
 };
@@ -52,6 +53,7 @@ function EmployerChatsContent() {
           candidateName: m.candidateName ?? "Candidate",
           candidateJobTitle: m.candidateJobTitle ?? null,
           candidatePhotoUrl: m.candidatePhotoUrl ?? null,
+          candidateAge: typeof m.candidateAge === "number" ? m.candidateAge : null,
           vacancyTitle: m.vacancyTitle,
           company: m.companyName || m.company,
           createdAt: new Date(m.createdAt || m.matchedAt || Date.now()).getTime(),

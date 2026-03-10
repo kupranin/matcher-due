@@ -75,6 +75,7 @@ model CandidateProfile {
   user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   fullName           String         @map("full_name")
   phone              String?
+  dateOfBirth        DateTime?      @map("date_of_birth")
   locationCityId     String         @map("location_city_id")
   locationDistrictId String?        @map("location_district_id")
   salaryMin          Int            @map("salary_min") // GEL/month

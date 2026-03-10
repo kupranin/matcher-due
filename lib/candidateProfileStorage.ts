@@ -34,6 +34,8 @@ export interface StoredCandidateProfile {
   job?: string;
   linkedIn?: string;
   languages?: string;
+  /** Optional date of birth (YYYY-MM-DD) */
+  dateOfBirth?: string | null;
 }
 
 type SkillLevel = "Beginner" | "Intermediate" | "Advanced";

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { calculateAge } from "@/lib/age";
 
 /** GET /api/candidates — list candidate profiles (for employer swipe deck). */
 export async function GET() {
@@ -20,6 +21,7 @@ export async function GET() {
       willingToRelocate: c.willingToRelocate,
       availableToWork: c.availableToWork,
       photo: c.photo?.trim() || null,
+      age: calculateAge(c.dateOfBirth),
       skills: c.skills.map((s) => ({ name: s.name, level: s.level })),
     }));
 

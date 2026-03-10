@@ -123,12 +123,13 @@ export function buildCandidateCardsWithMatch(
     experienceMonths: number;
     educationLevel: string;
     willingToRelocate: boolean;
+    age?: number | null;
     photo?: string | null;
     availableToWork?: boolean;
     skills: Array<{ name: string; level: string }>;
   }>,
   vacancyProfile: VacancyProfile
-): Array<CandidateCard & { match: number }> {
+): Array<CandidateCard & { match: number; age?: number | null }> {
   const safeSkills = (c: (typeof apiCandidates)[0]) => Array.isArray(c.skills) ? c.skills : [];
   const toSkillLevel = (level: string | null | undefined): CandidateProfile["skills"][0]["level"] => {
     const v = level?.trim?.();
@@ -158,6 +159,7 @@ export function buildCandidateCardsWithMatch(
         workType: (c.workTypes && c.workTypes[0]) ? c.workTypes[0] : "Full-time",
         skills: skills.map((s) => s.name).join(", "),
         photo: c.photo ?? undefined,
+        age: c.age ?? null,
         profile,
         match,
       };
