@@ -13,6 +13,19 @@ function getAvatarSrc(photoUrl: string | null | undefined): string {
   return AVATAR_PLACEHOLDER;
 }
 
+type MatchApiRow = {
+  matchId?: string;
+  id?: string;
+  vacancyId?: string;
+  candidateProfileId?: string;
+  candidateName?: string;
+  candidatePhotoUrl?: string;
+  vacancyTitle?: string;
+  companyName?: string;
+  matchedAt?: string;
+  createdAt?: string;
+};
+
 type MatchRow = {
   matchId: string;
   vacancyId: string;
@@ -24,6 +37,20 @@ type MatchRow = {
   matchedAt: string | null;
   createdAt: string;
 };
+
+function toMatchRow(m: MatchApiRow): MatchRow {
+  return {
+    matchId: typeof m.matchId === "string" ? m.matchId : typeof m.id === "string" ? m.id : "",
+    vacancyId: typeof m.vacancyId === "string" ? m.vacancyId : "",
+    candidateProfileId: typeof m.candidateProfileId === "string" ? m.candidateProfileId : "",
+    candidateName: typeof m.candidateName === "string" ? m.candidateName : null,
+    candidatePhotoUrl: typeof m.candidatePhotoUrl === "string" ? m.candidatePhotoUrl : null,
+    vacancyTitle: typeof m.vacancyTitle === "string" ? m.vacancyTitle : "",
+    companyName: typeof m.companyName === "string" ? m.companyName : "",
+    matchedAt: typeof m.matchedAt === "string" ? m.matchedAt : null,
+    createdAt: typeof m.createdAt === "string" ? m.createdAt : new Date().toISOString(),
+  };
+}
 
 export default function EmployerMatchesPage() {
   const t = useTranslations("chats");
@@ -38,19 +65,8 @@ export default function EmployerMatchesPage() {
           setMatches([]);
           return;
         }
-        setMatches(
-          data.map((m: Record<string, unknown>) => ({
-            matchId: m.matchId ?? m.id,
-            vacancyId: m.vacancyId,
-            candidateProfileId: m.candidateProfileId,
-            candidateName: (m.candidateName as string) ?? null,
-            candidatePhotoUrl: (m.candidatePhotoUrl as string) ?? null,
-            vacancyTitle: (m.vacancyTitle as string) ?? "",
-            companyName: (m.companyName as string) ?? "",
-            matchedAt: (m.matchedAt as string) ?? null,
-            createdAt: (m.createdAt as string) ?? new Date().toISOString(),
-          }))
-        );
+        const rows = data as MatchApiRow[];
+        setMatches(rows.map(toMatchRow));
       })
       .catch(() => setMatches([]))
       .finally(() => setLoading(false));
