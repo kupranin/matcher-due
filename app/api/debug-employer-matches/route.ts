@@ -26,12 +26,10 @@ export async function GET(request: Request) {
           m.employer_liked,
           m.candidate_liked,
           m.matched_at,
-
           cp.full_name AS candidate_name,
-
+          cp.photo AS candidate_photo_url,
           v.title AS vacancy_title,
           v.company_id,
-
           c.name AS company_name
       FROM public.matches m
       JOIN public."CandidateProfile" cp ON cp.id = m.candidate_profile_id
@@ -40,6 +38,7 @@ export async function GET(request: Request) {
       WHERE v.company_id = ${ctx.companyId}
         AND m.employer_liked = true
         AND m.candidate_liked = true
+      ORDER BY m.matched_at DESC NULLS LAST
     `;
 
     return NextResponse.json({

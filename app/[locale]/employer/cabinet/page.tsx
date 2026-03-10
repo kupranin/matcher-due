@@ -39,16 +39,24 @@ function CandidateCardSkeleton() {
   );
 }
 
+const AVATAR_PLACEHOLDER = "/images/avatar-placeholder.svg";
+
 function SwipeCard({
   candidate,
+  vacancyTitle,
+  companyName,
   onSwipe,
 }: {
   candidate: Candidate;
+  vacancyTitle: string;
+  companyName: string;
   onSwipe: (dir: "left" | "right") => void;
 }) {
   const t = useTranslations("cabinet");
+  const tPage = useTranslations("employerCabinetPage");
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-15, 15]);
+  const photoSrc = candidate.photo && candidate.photo.trim() ? candidate.photo.trim() : AVATAR_PLACEHOLDER;
 
   function handleDragEnd(_: unknown, info: PanInfo) {
     const threshold = 80;
@@ -77,20 +85,23 @@ function SwipeCard({
 
         <div className="space-y-2">
           <div className="relative h-16 w-16 overflow-hidden rounded-2xl bg-gray-100">
-            {candidate.photo ? (
-              <img
-                src={candidate.photo}
-                alt={candidate.name}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span className="flex h-full w-full items-center justify-center text-3xl">👤</span>
-            )}
+            <img
+              src={photoSrc}
+              alt={candidate.name}
+              className="h-full w-full object-cover"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = AVATAR_PLACEHOLDER;
+              }}
+            />
           </div>
           <h2 className="text-xl font-bold text-gray-900">{candidate.name}</h2>
           <p className="text-gray-600">{candidate.job}</p>
           <p className="text-sm text-gray-500">{candidate.location} · {candidate.workType}</p>
           <p className="text-sm text-gray-600">{candidate.skills}</p>
+          <p className="text-xs font-medium text-matcher-dark mt-1">
+            {vacancyTitle} {tPage("at")} {companyName}
+          </p>
         </div>
 
         <p className="text-xs text-gray-400">{t("swipeInstruction")}</p>
@@ -412,10 +423,7 @@ export default function EmployerCabinetPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">{t("candidates")}</h1>
           <p className="mt-1 text-sm font-semibold text-gray-900">
-            {selectedVacancy.title}
-          </p>
-          <p className="text-sm text-gray-600">
-            {selectedVacancy.company}
+            {selectedVacancy.title} {t("at")} {selectedVacancy.company}
           </p>
           <p className="mt-0.5 text-xs text-gray-500">
             {t("recommendedSalary", { amount: getRecommendedSalaryForTitle(selectedVacancy.title).toLocaleString() })}
@@ -448,7 +456,12 @@ export default function EmployerCabinetPage() {
               className="absolute inset-0"
             >
               <div className="relative h-full w-full">
-                <SwipeCard candidate={currentCandidate} onSwipe={likeState === "submitting" ? () => {} : handleSwipe} />
+                <SwipeCard
+                  candidate={currentCandidate}
+                  vacancyTitle={selectedVacancy.title}
+                  companyName={selectedVacancy.company}
+                  onSwipe={likeState === "submitting" ? () => {} : handleSwipe}
+                />
                 {likeState === "submitting" && (
                   <div className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-2xl bg-white/80 backdrop-blur-sm">
                     <div className="h-10 w-10 animate-spin rounded-full border-4 border-matcher border-t-transparent"></div>

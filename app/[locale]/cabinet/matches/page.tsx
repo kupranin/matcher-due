@@ -57,7 +57,8 @@ export default function CandidateMatchesPage() {
         <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-8 text-center sm:p-10 md:p-12">
           <p className="text-5xl">✨</p>
           <h2 className="mt-4 text-xl font-bold text-gray-900">{tChats("noMatchesYet")}</h2>
-          <p className="mt-2 text-gray-600">{tChats("keepSwipingHint")}</p>
+          <p className="mt-2 text-gray-600">{tChats("noMatchesHint")}</p>
+          <p className="mt-4 text-sm text-gray-500">{tChats("keepSwipingHint")}</p>
         </div>
       </div>
     );

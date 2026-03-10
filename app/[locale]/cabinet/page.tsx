@@ -403,7 +403,7 @@ export default function CabinetPage() {
             <p className="mt-2 text-base text-gray-600">
               {t("likedPassed", { liked: liked.length, passed: passed.length })}
             </p>
-            <p className="mt-6 text-sm text-gray-500">{t("checkBackLater")}</p>
+            <p className="mt-6 text-sm text-gray-500">{t("noMoreOpportunities")}</p>
           </motion.div>
         )}
       </div>

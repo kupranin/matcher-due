@@ -489,7 +489,8 @@
     "checkBackLater": "Check back later for new vacancies.",
     "availableToWorkLabel": "Available to work",
     "availableToWorkOn": "You're marked as available to work",
-    "availableToWorkOff": "You're not looking right now"
+    "availableToWorkOff": "You're not looking right now",
+    "checkingMatch": "Checking match..."
   },
   "chats": {
     "noMatchesYet": "No matches yet",
@@ -500,7 +501,9 @@
     "yourMatches": "Your matches",
     "chatHint": "Chat with employers to schedule interviews and next steps.",
     "chatHintEmployer": "Chat with candidates to schedule interviews and next steps.",
-    "chat": "Chat →"
+    "chat": "Chat →",
+    "loadingMatches": "Loading matches…",
+    "startConversation": "Start the conversation"
   },
   "employerPost": {
     "choosePackage": "Choose your package",
@@ -717,13 +720,15 @@
     "noVacanciesHint": "Post your first vacancy and choose a package to see relevant candidates and start matching.",
     "postFirstVacancy": "Post your first vacancy",
     "packageHint": "You'll fill in the vacancy details, then choose a package (1–10 vacancies or unlimited) and complete payment.",
-    "noMoreCandidates": "No more candidates for this vacancy right now.",
+    "noMoreCandidates": "No more candidates",
+    "at": "at",
     "allCaughtUp": "You're all caught up!",
     "likedPassed": "{liked} liked · {passed} passed",
     "viewAnotherVacancy": "View another vacancy",
     "deleteVacancy": "Delete vacancy",
     "deleteVacancyConfirm": "Delete this vacancy? This cannot be undone.",
-    "deleteVacancyError": "Could not delete vacancy. Try again."
+    "deleteVacancyError": "Could not delete vacancy. Try again.",
+    "checkingMatch": "Checking match..."
   },
   "userFlowExtras": {
     "loadingJobs": "Loading jobs…",

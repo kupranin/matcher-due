@@ -1,30 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { computeMatchScore } from "@/lib/matchScore";
-import { getSessionTokenFromRequest } from "@/lib/session";
-
-/**
- * Helper to check employer auth from session.
- */
-async function getEmployerCompanyFromSession(request: Request) {
-  const token = getSessionTokenFromRequest(request);
-  if (!token) return null;
-  const session = await prisma.session.findUnique({
-    where: { token },
-    include: { user: { select: { id: true, role: true } } },
-  });
-  if (!session || session.expiresAt < new Date() || session.user.role !== "EMPLOYER") return null;
-  const company = await prisma.company.findUnique({
-    where: { userId: session.user.id },
-    select: { id: true, name: true, userId: true },
-  });
-  if (!company) return null;
-  return {
-    userId: company.userId,
-    companyId: company.id,
-    company: { id: company.id, name: company.name, userId: company.userId },
-  };
-}
+import { getEmployerCompanyFromSession } from "@/lib/employerAuth";
 
 async function vacancyBelongsToEmployerCompany(vacancyId: string, employerCompanyId: string) {
   const v = await prisma.vacancy.findUnique({ where: { id: vacancyId }, select: { companyId: true } });
