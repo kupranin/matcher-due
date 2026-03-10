@@ -624,6 +624,7 @@
   },
   "profile": {
     "redirecting": "Redirecting to profile...",
+    "loadingProfile": "Loading profile…",
     "title": "My profile",
     "subtitle": "Add details to improve your matching. Employers see this after a match.",
     "photo": "Photo",
@@ -663,7 +664,8 @@
     "languagesOptional": "Languages (optional)",
     "languagesPlaceholder": "e.g. Georgian, English",
     "saved": "Saved!",
-    "saveProfile": "Save profile"
+    "saveProfile": "Save profile",
+    "saving": "Saving…"
   },
   "employerProfile": {
     "redirecting": "Redirecting to company profile...",

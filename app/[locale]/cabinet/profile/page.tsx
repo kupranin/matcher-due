@@ -30,7 +30,10 @@ export default function CabinetProfilePage() {
   const t = useTranslations("profile");
   const tSkillNames = useTranslations("skillNames");
   const skillLabel = (s: string) => (ALL_SKILLS.includes(s) ? (tSkillNames(s) as string) : s);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileSaving, setProfileSaving] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
   const [job, setJob] = useState("");
@@ -50,30 +53,61 @@ export default function CabinetProfilePage() {
 
   useEffect(() => {
     const stored = loadCandidateProfile();
-    if (!stored) return;
-    setFullName(stored.fullName ?? "");
-    setEmail(stored.email ?? "");
-    setPhone(stored.phone ?? "");
-    setBio(stored.bio ?? "");
-    setJob(stored.job ?? "");
-    setLinkedIn(stored.linkedIn ?? "");
-    setLanguages(stored.languages ?? "");
-    const p = stored.profile;
-    if (p) {
-      setLocation("locationCityId" in p && p.locationCityId ? (GEORGIAN_CITIES.find((c) => c.id === p.locationCityId)?.nameEn ?? p.locationCityId) : "");
-      setWillingToRelocate("willingToRelocate" in p ? Boolean(p.willingToRelocate) : false);
-      setSalary(String(p.salaryMin || ""));
-      setExperience(p.experienceMonths ? String(p.experienceMonths) + " months" : "");
-      setWorkTypes(p.workTypes ?? []);
-      setSkills(
-        (p.skills ?? []).map((s) => ({ name: s.name, level: s.level ?? "Intermediate" }))
-      );
+    const userId = getCandidateUserId();
+    if (stored) {
+      setFullName(stored.fullName ?? "");
+      setEmail(stored.email ?? "");
+      setPhone(stored.phone ?? "");
+      setBio(stored.bio ?? "");
+      setJob(stored.job ?? "");
+      setLinkedIn(stored.linkedIn ?? "");
+      setLanguages(stored.languages ?? "");
+      const p = stored.profile;
+      if (p) {
+        setLocation("locationCityId" in p && p.locationCityId ? (GEORGIAN_CITIES.find((c) => c.id === p.locationCityId)?.nameEn ?? p.locationCityId) : "");
+        setWillingToRelocate("willingToRelocate" in p ? Boolean(p.willingToRelocate) : false);
+        setSalary(String(p.salaryMin || ""));
+        setExperience(p.experienceMonths ? String(p.experienceMonths) + " months" : "");
+        setWorkTypes(p.workTypes ?? []);
+        setSkills(
+          (p.skills ?? []).map((s) => ({ name: s.name, level: s.level ?? "Intermediate" }))
+        );
+      }
     }
+    if (!userId) {
+      setProfileLoading(false);
+      return;
+    }
+    fetch(`/api/candidates/profile?userId=${encodeURIComponent(userId)}`)
+      .then((r) => r.json())
+      .then((data: { fullName?: string; email?: string; phone?: string; locationCityId?: string; salaryMin?: number; workTypes?: string[]; willingToRelocate?: boolean; skills?: Array<{ name: string; level: string }>; educationLevel?: string; experienceMonths?: number; jobTitle?: string; photo?: string | null } | null) => {
+        if (data) {
+          if (data.fullName) setFullName(data.fullName);
+          if (data.email != null) setEmail(data.email ?? "");
+          if (data.phone != null) setPhone(data.phone ?? "");
+          if (data.jobTitle != null) setJob(data.jobTitle ?? "");
+          if (data.photo != null) setPhotoUrl(data.photo || null);
+          if (data.locationCityId != null) {
+            const name = GEORGIAN_CITIES.find((c) => c.id === data.locationCityId)?.nameEn ?? data.locationCityId;
+            setLocation(name || "");
+          }
+          if (data.willingToRelocate !== undefined) setWillingToRelocate(data.willingToRelocate);
+          if (data.salaryMin != null) setSalary(String(data.salaryMin));
+          if (data.experienceMonths != null) setExperience(data.experienceMonths ? `${data.experienceMonths} months` : "");
+          if (Array.isArray(data.workTypes)) setWorkTypes(data.workTypes);
+          if (Array.isArray(data.skills)) setSkills(data.skills.map((s) => ({ name: s.name, level: (s.level ?? "Intermediate") as SkillLevel })));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setProfileLoading(false));
   }, []);
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) setPhotoUrl(URL.createObjectURL(file));
+    if (file) {
+      setPhotoFile(file);
+      setPhotoUrl(URL.createObjectURL(file));
+    }
   }
 
   function addSkill() {
@@ -102,7 +136,14 @@ export default function CabinetProfilePage() {
       <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{t("title")}</h1>
       <p className="mt-1 text-gray-600">{t("subtitle")}</p>
 
-      <div className="mt-8 space-y-6">
+      {profileLoading && (
+        <div className="mt-6 flex items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-matcher border-t-transparent" />
+          {t("loadingProfile") || "Loading profile…"}
+        </div>
+      )}
+
+      <div className={`mt-8 space-y-6 ${profileLoading ? "pointer-events-none opacity-60" : ""}`}>
         <section className="rounded-3xl border bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">{t("photo")}</h2>
           <p className="mt-1 text-sm text-gray-500">{t("photoHint")}</p>
@@ -119,7 +160,15 @@ export default function CabinetProfilePage() {
               <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 {photoUrl ? t("changePhoto") : t("addPhoto")}
               </button>
-              {photoUrl && <button type="button" onClick={() => setPhotoUrl(null)} className="ml-2 text-sm text-gray-500 hover:text-red-600">{t("remove")}</button>}
+              {photoUrl && (
+                <button
+                  type="button"
+                  onClick={() => { setPhotoUrl(null); setPhotoFile(null); }}
+                  className="ml-2 text-sm text-gray-500 hover:text-red-600"
+                >
+                  {t("remove")}
+                </button>
+              )}
             </div>
           </div>
         </section>
@@ -242,9 +291,13 @@ export default function CabinetProfilePage() {
         </section>
       </div>
 
-      <div className="mt-8 flex justify-end">
+      <div className="mt-8 flex items-center justify-end gap-3">
+        {profileLoading && (
+          <span className="text-sm text-gray-500">{t("loadingProfile") || "Loading profile…"}</span>
+        )}
         <button
           type="button"
+          disabled={profileLoading || profileSaving}
           onClick={async () => {
             const profile = buildProfileFromProfilePage({
               location,
@@ -265,9 +318,25 @@ export default function CabinetProfilePage() {
               languages: languages.trim() || undefined,
             });
             const userId = getCandidateUserId();
-            if (userId) {
-              const locationCityId = GEORGIAN_CITIES.find((c) => c.nameEn === location.trim())?.id ?? (location.trim() || "");
-              try {
+            setProfileSaving(true);
+            try {
+              let photoToSave: string | null | undefined = undefined;
+              if (photoFile && userId) {
+                const form = new FormData();
+                form.set("photo", photoFile);
+                form.set("userId", userId);
+                const up = await fetch("/api/candidates/profile/photo", { method: "POST", body: form, credentials: "include" });
+                if (up.ok) {
+                  const { url } = await up.json();
+                  photoToSave = url ?? null;
+                }
+              } else if (photoUrl && (photoUrl.startsWith("http://") || photoUrl.startsWith("https://"))) {
+                photoToSave = photoUrl;
+              } else if (!photoUrl && !photoFile) {
+                photoToSave = null;
+              }
+              if (userId) {
+                const locationCityId = GEORGIAN_CITIES.find((c) => c.nameEn === location.trim())?.id ?? (location.trim() || "");
                 await fetch("/api/candidates/profile", {
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
@@ -284,20 +353,20 @@ export default function CabinetProfilePage() {
                     workTypes: workTypes.length ? workTypes : undefined,
                     skills: profile.skills.map((s) => ({ name: s.name, level: s.level })),
                     jobTitle: job.trim() || undefined,
+                    ...(photoToSave !== undefined && { photo: photoToSave }),
                   }),
                 });
-              } catch {
-                // ignore
               }
+              setPhotoFile(null);
+            } catch {
+              // keep form state
+            } finally {
+              setProfileSaving(false);
             }
-            const btn = document.activeElement as HTMLButtonElement;
-            const orig = btn?.textContent;
-            if (btn) btn.textContent = t("saved");
-            setTimeout(() => { if (btn) btn.textContent = orig ?? t("saveProfile"); }, 1500);
           }}
-          className="rounded-2xl bg-matcher px-6 py-3 text-sm font-semibold text-white hover:bg-matcher-dark"
+          className="rounded-2xl bg-matcher px-6 py-3 text-sm font-semibold text-white hover:bg-matcher-dark disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {t("saveProfile")}
+          {profileSaving ? (t("saving") || "Saving…") : t("saveProfile")}
         </button>
       </div>
     </div>

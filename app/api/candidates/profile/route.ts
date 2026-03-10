@@ -41,6 +41,7 @@ export async function GET(request: Request) {
       workTypes: profile.workTypes,
       jobTitle: profile.jobTitle,
       availableToWork: profile.availableToWork,
+      photo: profile.photo?.trim() || null,
       skills: profile.skills.map((s) => ({ name: s.name, level: s.level })),
     });
   } catch (e) {
@@ -69,6 +70,7 @@ export async function PATCH(request: Request) {
     const willingToRelocate = body?.willingToRelocate === true || body?.willingToRelocate === false ? body.willingToRelocate : undefined;
     const jobTitle = typeof body?.jobTitle === "string" ? body.jobTitle.trim() || null : undefined;
     const availableToWork = body?.availableToWork === true || body?.availableToWork === false ? body.availableToWork : undefined;
+    const photo = typeof body?.photo === "string" ? body.photo.trim() || null : body?.photo === null ? null : undefined;
     const skills = Array.isArray(body?.skills)
       ? (body.skills as Array<{ name?: string; level?: string }>)
           .filter((s) => s && typeof s?.name === "string" && (s.name as string).trim().length > 0)
@@ -91,6 +93,7 @@ export async function PATCH(request: Request) {
     if (willingToRelocate !== undefined) update.willingToRelocate = willingToRelocate;
     if (jobTitle !== undefined) update.jobTitle = jobTitle;
     if (availableToWork !== undefined) update.availableToWork = availableToWork;
+    if (photo !== undefined) update.photo = photo;
     await prisma.candidateProfile.update({ where: { userId }, data: update as never });
     if (skills !== undefined) {
       await prisma.candidateSkill.deleteMany({ where: { candidateProfileId: existing.id } });

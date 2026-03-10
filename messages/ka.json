@@ -736,6 +736,7 @@
   },
   "profile": {
     "redirecting": "პროფილზე გადამისამართება...",
+    "loadingProfile": "პროფილი იტვირთება…",
     "title": "ჩემი პროფილი",
     "subtitle": "დაამატე დეტალები — დამსაქმებლები ნახავენ შესაბამისობის შემდეგ.",
     "photo": "ფოტო",
@@ -775,7 +776,8 @@
     "languagesOptional": "ენები (არჩევითი)",
     "languagesPlaceholder": "მაგ. ქართული, ინგლისური",
     "saved": "შენახულია!",
-    "saveProfile": "შენახვა"
+    "saveProfile": "შენახვა",
+    "saving": "იწერება…"
   },
   "employerProfile": {
     "redirecting": "კომპანიის პროფილზე გადამისამართება...",

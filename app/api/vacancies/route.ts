@@ -7,13 +7,28 @@ import { getStockPhotosForJob } from "@/lib/vacancyStockPhotos";
 
 const SKILL_LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
 
-/** GET /api/vacancies — list published vacancies. ?companyId= for employer's vacancies. */
+/** GET /api/vacancies — list published vacancies. ?companyId= for employer's. ?candidateProfileId= to exclude already liked/matched for candidate opportunities. */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get("companyId");
+    const candidateProfileId = searchParams.get("candidateProfileId")?.trim() || null;
+
+    let excludeVacancyIds: string[] = [];
+    if (candidateProfileId) {
+      const likedOrMatched = await prisma.match.findMany({
+        where: { candidateProfileId, candidateLiked: true },
+        select: { vacancyId: true },
+      });
+      excludeVacancyIds = likedOrMatched.map((m) => m.vacancyId);
+    }
+
     const list = await prisma.vacancy.findMany({
-      where: companyId ? { companyId, status: "PUBLISHED" } : { status: "PUBLISHED" },
+      where: companyId
+        ? { companyId, status: "PUBLISHED" }
+        : excludeVacancyIds.length > 0
+          ? { status: "PUBLISHED", id: { notIn: excludeVacancyIds } }
+          : { status: "PUBLISHED" },
       orderBy: { createdAt: "desc" },
       include: {
         company: { select: { name: true } },

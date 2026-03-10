@@ -10,7 +10,6 @@ import { getCandidateProfileForMatch, loadCandidateProfile, getCandidateProfileI
 import { addCandidateLike, type MutualMatch } from "@/lib/matchStorage";
 import MatchCongratulationsModal from "@/components/MatchCongratulationsModal";
 import MatchProgressRing from "@/components/MatchProgressRing";
-import PitchModal from "@/components/PitchModal";
 
 type Vacancy = import("@/lib/vacancyApi").VacancyCardFromApi;
 
@@ -137,16 +136,38 @@ function SwipeCard({
   );
 }
 
+function OpportunitiesSkeleton() {
+  return (
+    <div className="flex h-full min-h-[380px] w-full flex-col overflow-hidden rounded-3xl bg-gray-200/80 shadow-2xl">
+      <div className="aspect-[4/3] w-full shrink-0 animate-pulse bg-gray-300/60" />
+      <div className="flex flex-1 flex-col justify-between p-5">
+        <div className="space-y-2">
+          <div className="h-6 w-3/4 animate-pulse rounded-lg bg-gray-300/60" />
+          <div className="h-4 w-1/2 animate-pulse rounded-lg bg-gray-300/60" />
+          <div className="mt-3 flex gap-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-8 w-16 animate-pulse rounded-lg bg-gray-300/60" />
+            ))}
+          </div>
+        </div>
+        <div className="mt-4 h-3 w-2/3 animate-pulse rounded bg-gray-300/60" />
+      </div>
+    </div>
+  );
+}
+
 export default function CabinetPage() {
   const t = useTranslations("cabinet");
   const router = useRouter();
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
+  const [opportunitiesLoading, setOpportunitiesLoading] = useState(true);
 
   const [availableToWork, setAvailableToWork] = useState(true);
   const [availableToWorkLoading, setAvailableToWorkLoading] = useState(false);
 
   useEffect(() => {
     const profileUserId = getCandidateUserId();
+    const profileId = getCandidateProfileId();
     const loadProfile = () => getCandidateProfileForMatch();
     if (profileUserId) {
       fetch(`/api/candidates/profile?userId=${encodeURIComponent(profileUserId)}`)
@@ -173,17 +194,24 @@ export default function CabinetPage() {
         })
         .catch(() => {});
     }
+    setOpportunitiesLoading(true);
     const stored = loadCandidateProfile();
     const profile = stored?.profile ?? loadProfile();
     const preferredJob = stored?.job ?? undefined;
-    fetch("/api/vacancies")
+    const url = profileId
+      ? `/api/vacancies?candidateProfileId=${encodeURIComponent(profileId)}`
+      : "/api/vacancies";
+    fetch(url)
       .then((r) => r.json())
       .then((list: unknown) => {
         if (Array.isArray(list) && list.length > 0) {
           setVacancies(buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob));
+        } else {
+          setVacancies([]);
         }
       })
-      .catch(() => {});
+      .catch(() => setVacancies([]))
+      .finally(() => setOpportunitiesLoading(false));
   }, []);
   const [liked, setLiked] = useState<Vacancy[]>([]);
   const [passed, setPassed] = useState<Vacancy[]>([]);
@@ -338,7 +366,9 @@ export default function CabinetPage() {
       )}
 
       <div className="relative mx-auto mt-6 aspect-[3/4] max-h-[380px] sm:mt-8 sm:max-h-[440px] md:max-h-[520px]">
-        {current ? (
+        {opportunitiesLoading ? (
+          <OpportunitiesSkeleton />
+        ) : current ? (
           <AnimatePresence mode="wait">
             <motion.div
               key={current.id}

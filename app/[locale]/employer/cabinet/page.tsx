@@ -106,6 +106,7 @@ export default function EmployerCabinetPage() {
   const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
   const [newMatch, setNewMatch] = useState<MutualMatch | null>(null);
 
+  const [vacanciesLoading, setVacanciesLoading] = useState(true);
   const [vacancies, setVacancies] = useState<EmployerVacancy[]>([]);
   const [apiCandidates, setApiCandidates] = useState<
     Array<{
@@ -133,7 +134,12 @@ export default function EmployerCabinetPage() {
 
   function loadVacanciesAndCandidates() {
     const companyId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_id") : null;
-    if (!companyId) return;
+    if (!companyId) {
+      setVacanciesLoading(false);
+      return;
+    }
+    setVacanciesLoading(true);
+    setCandidatesLoading(true);
     fetch(`/api/vacancies?companyId=${encodeURIComponent(companyId)}`)
       .then((r) => r.json())
       .then((list: Array<{ id: string; title: string; company: string; locationCityId: string; salaryMin?: number | null; salaryMax: number; workType: string; isRemote?: boolean; requiredExperienceMonths?: number; requiredEducationLevel?: string; skills?: Array<{ name: string; level?: string; weight?: number }> }>) => {
@@ -153,8 +159,8 @@ export default function EmployerCabinetPage() {
         });
         setVacancies(mapped);
       })
-      .catch(() => {});
-    setCandidatesLoading(true);
+      .catch(() => setVacancies([]))
+      .finally(() => setVacanciesLoading(false));
     fetch("/api/candidates")
       .then((r) => r.json())
       .then((list) => {
@@ -307,8 +313,21 @@ export default function EmployerCabinetPage() {
     router.push("/employer/cabinet/chats");
   }
 
-  // No vacancies — clean slate, prompt to add vacancy and buy subscription
-  if (vacancies.length === 0) {
+  // Initial load or no vacancies
+  if (vacanciesLoading || vacancies.length === 0) {
+    if (vacanciesLoading) {
+      return (
+        <div className="mx-auto max-w-md px-4 py-8">
+          <div className="h-8 w-48 animate-pulse rounded-lg bg-gray-200" />
+          <div className="mt-4 h-4 w-64 animate-pulse rounded bg-gray-100" />
+          <div className="mt-8 flex flex-col gap-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-20 w-full animate-pulse rounded-2xl bg-gray-100" />
+            ))}
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="mx-auto max-w-md px-4 py-16">
         <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-12 text-center">
