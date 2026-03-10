@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useSearchParams } from "next/navigation";
+import { Link, useRouter, usePathname } from "@/i18n/navigation";
 import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence, animate } from "framer-motion";
 import { buildCandidateCardsWithMatch } from "@/lib/vacancyApi";
 import { apiVacancyToProfile } from "@/lib/vacancyApi";
@@ -49,6 +50,7 @@ function CandidateCardSkeleton() {
 
 const AVATAR_PLACEHOLDER = "/images/avatar-placeholder.svg";
 const SWIPE_THRESHOLD = 100;
+const STORAGE_KEY_SELECTED_VACANCY_ID = "matcher_employer_selected_vacancy_id";
 
 function SwipeCard({
   candidate,
@@ -180,6 +182,8 @@ export default function EmployerCabinetPage() {
   const t = useTranslations("employerCabinetPage");
   const tCommon = useTranslations("common");
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
   const [newMatch, setNewMatch] = useState<MutualMatch | null>(null);
 
@@ -258,9 +262,44 @@ export default function EmployerCabinetPage() {
   }, []);
 
   const [selectedVacancy, setSelectedVacancy] = useState<EmployerVacancy | null>(null);
+  const [vacancySwitcherOpen, setVacancySwitcherOpen] = useState(false);
+  const vacancySwitcherRef = useRef<HTMLDivElement>(null);
+
+  // Resolve selected vacancy: URL param > sessionStorage > first. Sync URL and storage.
   useEffect(() => {
-    if (vacancies.length >= 1 && !selectedVacancy) setSelectedVacancy(vacancies[0]);
-  }, [vacancies, selectedVacancy]);
+    if (vacancies.length === 0) return;
+    const urlId = searchParams.get("vacancyId")?.trim() ?? null;
+    const savedId =
+      typeof window !== "undefined"
+        ? window.sessionStorage.getItem(STORAGE_KEY_SELECTED_VACANCY_ID)
+        : null;
+    const validFromUrl = urlId && vacancies.some((v) => v.id === urlId);
+    const validFromSaved = savedId && vacancies.some((v) => v.id === savedId);
+    const resolvedId =
+      validFromUrl ? urlId! : validFromSaved ? savedId! : vacancies[0]!.id;
+    const next = vacancies.find((v) => v.id === resolvedId) ?? vacancies[0]!;
+    setSelectedVacancy(next);
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(STORAGE_KEY_SELECTED_VACANCY_ID, resolvedId);
+    }
+    const wantUrl = `${pathname}?vacancyId=${resolvedId}`;
+    const currentUrl = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+    if (currentUrl !== wantUrl) {
+      router.replace(wantUrl);
+    }
+  }, [vacancies, pathname, router, searchParams]);
+
+  // Close vacancy dropdown when clicking outside
+  useEffect(() => {
+    if (!vacancySwitcherOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (vacancySwitcherRef.current && !vacancySwitcherRef.current.contains(e.target as Node)) {
+        setVacancySwitcherOpen(false);
+      }
+    };
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, [vacancySwitcherOpen]);
   const candidates = useMemo(
     () => (selectedVacancy && apiCandidates.length > 0 ? buildCandidateCardsWithMatch(apiCandidates, selectedVacancy.profile) : []),
     [selectedVacancy, apiCandidates]
@@ -292,15 +331,16 @@ export default function EmployerCabinetPage() {
     return result;
   }
 
-  function handleSelectVacancy(v: EmployerVacancy) {
+  function handleSwitchVacancy(v: EmployerVacancy) {
     setSelectedVacancy(v);
-  }
-
-  function handleChangeVacancy() {
-    setSelectedVacancy(null);
     setCandidateStack([]);
     setLiked([]);
     setPassed([]);
+    setVacancySwitcherOpen(false);
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(STORAGE_KEY_SELECTED_VACANCY_ID, v.id);
+    }
+    router.replace(`${pathname}?vacancyId=${v.id}`);
   }
 
   async function handleDeleteVacancy(e: React.MouseEvent, v: EmployerVacancy) {
@@ -320,10 +360,16 @@ export default function EmployerCabinetPage() {
       }
       setVacancies((prev) => prev.filter((x) => x.id !== v.id));
       if (selectedVacancy?.id === v.id) {
-        setSelectedVacancy(null);
+        const remaining = vacancies.filter((x) => x.id !== v.id);
+        const next = remaining[0] ?? null;
+        setSelectedVacancy(next);
         setCandidateStack([]);
         setLiked([]);
         setPassed([]);
+        if (next && typeof window !== "undefined") {
+          window.sessionStorage.setItem(STORAGE_KEY_SELECTED_VACANCY_ID, next.id);
+          router.replace(`${pathname}?vacancyId=${next.id}`);
+        }
       }
     } catch {
       alert(t("deleteVacancyError"));
@@ -433,81 +479,78 @@ export default function EmployerCabinetPage() {
     );
   }
 
-  // Multiple vacancies — vacancy selection
-  if (!selectedVacancy) {
+  // Still resolving selected vacancy after load
+  if (vacancies.length >= 1 && !selectedVacancy) {
     return (
       <div className="mx-auto max-w-md px-4 py-8">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">{t("chooseVacancy")}</h1>
-        <p className="mt-1 text-gray-600">
-          {t("chooseVacancyHint")}
-        </p>
-
-        <div className="mt-8 space-y-3">
-          {vacancies.map((v) => (
-            <div
-              key={v.id}
-              className="relative flex w-full flex-col items-start rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:border-matcher hover:bg-matcher-mint/50"
-            >
-              <button
-                type="button"
-                onClick={() => handleSelectVacancy(v)}
-                className="flex w-full flex-col items-start text-left"
-              >
-                <span className="font-bold text-gray-900">{v.title}</span>
-                <span className="mt-1 text-sm text-gray-600">
-                  {v.location} · {v.workType}
-                </span>
-                <span className="mt-1 text-sm font-medium text-matcher-dark">{v.salary}</span>
-                <span className="mt-1 text-xs text-gray-500">
-                  {t("recommendedSalary", { amount: getRecommendedSalaryForTitle(v.title).toLocaleString() })}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={(e) => handleDeleteVacancy(e, v)}
-                className="absolute right-3 top-3 rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                aria-label={t("deleteVacancy")}
-                title={t("deleteVacancy")}
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            </div>
+        <div className="h-8 w-48 animate-pulse rounded-lg bg-gray-200" />
+        <div className="mt-4 h-4 w-64 animate-pulse rounded bg-gray-100" />
+        <div className="mt-8 flex flex-col gap-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-20 w-full animate-pulse rounded-2xl bg-gray-100" />
           ))}
         </div>
-
-        <p className="mt-8 text-center text-sm text-gray-500">
-          <Link href="/employer/post?from=cabinet" className="font-medium text-matcher-dark hover:text-matcher">
-            {t("addAnotherVacancy")}
-          </Link>
-        </p>
       </div>
     );
   }
 
-  // Single vacancy or after selection — candidate swipe deck
+  // Candidate swipe deck with vacancy switcher
   const currentCandidate = candidateStack[0];
 
   return (
     <div className="mx-auto max-w-md px-4 py-8">
-      <div className="mb-4 flex items-center justify-between rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-gray-50/80 px-4 py-3 shadow-sm">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-gray-900">{t("candidates")}</h1>
-          <p className="mt-0.5 text-sm font-semibold text-gray-800">
-            {selectedVacancy.title} {t("at")} {selectedVacancy.company}
-          </p>
-          <p className="mt-0.5 text-xs text-gray-500">
-            {selectedVacancy.location} · {t("recommendedSalary", { amount: getRecommendedSalaryForTitle(selectedVacancy.title).toLocaleString() })}
-          </p>
+      <div className="mb-4 rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-gray-50/80 px-4 py-3 shadow-sm">
+        <h1 className="text-xl font-bold tracking-tight text-gray-900">{t("candidates")}</h1>
+        <div className="relative mt-2" ref={vacancySwitcherRef}>
+          <button
+            type="button"
+            onClick={() => setVacancySwitcherOpen((o) => !o)}
+            className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-left text-sm font-medium text-gray-800 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+            aria-expanded={vacancySwitcherOpen}
+            aria-haspopup="listbox"
+          >
+            <span>
+              {selectedVacancy.title} {t("at")} {selectedVacancy.company}
+            </span>
+            <svg
+              className={`h-5 w-5 shrink-0 text-gray-500 transition-transform ${vacancySwitcherOpen ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {vacancySwitcherOpen && (
+            <ul
+              className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-auto rounded-xl border border-gray-200 bg-white py-1 shadow-lg"
+              role="listbox"
+            >
+              {vacancies.map((v) => (
+                <li key={v.id} role="option">
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchVacancy(v)}
+                    className={`w-full px-3 py-2.5 text-left text-sm transition-colors ${
+                      selectedVacancy.id === v.id
+                        ? "bg-matcher-mint font-medium text-matcher-dark"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <span className="block font-medium">{v.title}</span>
+                    <span className="block text-xs text-gray-500">
+                      {v.location} · {v.workType}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={handleChangeVacancy}
-          className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:border-gray-300 transition-colors"
-        >
-          {t("changeVacancy")}
-        </button>
+        <p className="mt-1.5 text-xs text-gray-500">
+          {selectedVacancy.location} · {t("recommendedSalary", { amount: getRecommendedSalaryForTitle(selectedVacancy.title).toLocaleString() })}
+        </p>
       </div>
 
       <div className="relative mx-auto mt-8 aspect-[3/4] max-h-[500px]">
@@ -558,7 +601,7 @@ export default function EmployerCabinetPage() {
             </p>
             <button
               type="button"
-              onClick={handleChangeVacancy}
+              onClick={() => setVacancySwitcherOpen(true)}
               className="mt-6 rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               {t("changeVacancy")}
@@ -573,7 +616,7 @@ export default function EmployerCabinetPage() {
             <p className="mt-4 text-xs text-gray-400">{t("noMoreCandidates")}</p>
             <button
               type="button"
-              onClick={handleChangeVacancy}
+              onClick={() => setVacancySwitcherOpen(true)}
               className="mt-6 rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               {t("viewAnotherVacancy")}

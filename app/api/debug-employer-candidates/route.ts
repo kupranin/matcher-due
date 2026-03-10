@@ -66,9 +66,12 @@ export async function GET(request: Request) {
       candidates = cards.slice(0, 20).map((card) => ({
         candidateProfileId: card.id,
         candidateName: card.name,
+        availableToWork: true,
         hasPhoto: Boolean(card.photo && String(card.photo).trim()),
+        age: card.age ?? null,
         city: card.location,
         preferredRole: card.job,
+        score: card.match,
         matchPercent: card.match,
         excludedReason: null,
       }));
@@ -76,9 +79,12 @@ export async function GET(request: Request) {
       candidates = apiCandidates.slice(0, 20).map((c) => ({
         candidateProfileId: c.id,
         candidateName: c.fullName ?? "Candidate",
+        availableToWork: c.availableToWork !== false,
         hasPhoto: Boolean(c.photo && String(c.photo).trim()),
+        age: c.age ?? null,
         city: c.locationCityId ?? "",
         preferredRole: c.jobTitle ?? "Candidate",
+        score: -1,
         matchPercent: -1,
         excludedReason: !vacancyId
           ? "no_vacancy_id"
