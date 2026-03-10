@@ -123,6 +123,7 @@ export function buildCandidateCardsWithMatch(
     experienceMonths: number;
     educationLevel: string;
     willingToRelocate: boolean;
+    photo?: string | null;
     availableToWork?: boolean;
     skills: Array<{ name: string; level: string }>;
   }>,
@@ -156,6 +157,7 @@ export function buildCandidateCardsWithMatch(
         location: locationCityName(c.locationCityId),
         workType: (c.workTypes && c.workTypes[0]) ? c.workTypes[0] : "Full-time",
         skills: skills.map((s) => s.name).join(", "),
+        photo: c.photo ?? undefined,
         profile,
         match,
       };

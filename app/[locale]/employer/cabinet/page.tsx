@@ -22,6 +22,23 @@ type EmployerVacancy = {
 };
 type Candidate = import("@/lib/matchMockData").CandidateCard & { match: number };
 
+function CandidateCardSkeleton() {
+  return (
+    <div className="flex h-full w-full flex-col justify-between rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
+      <div className="flex items-start justify-between">
+        <div className="h-12 w-12 rounded-full bg-gray-100 animate-pulse" />
+      </div>
+      <div className="space-y-3">
+        <div className="h-16 w-16 rounded-2xl bg-gray-100 animate-pulse" />
+        <div className="h-4 w-40 rounded bg-gray-100 animate-pulse" />
+        <div className="h-3 w-32 rounded bg-gray-100 animate-pulse" />
+        <div className="h-3 w-48 rounded bg-gray-100 animate-pulse" />
+      </div>
+      <div className="h-3 w-24 rounded bg-gray-100 animate-pulse" />
+    </div>
+  );
+}
+
 function SwipeCard({
   candidate,
   onSwipe,
@@ -90,7 +107,23 @@ export default function EmployerCabinetPage() {
   const [newMatch, setNewMatch] = useState<MutualMatch | null>(null);
 
   const [vacancies, setVacancies] = useState<EmployerVacancy[]>([]);
-  const [apiCandidates, setApiCandidates] = useState<Array<{ id: string; fullName: string; jobTitle: string | null; locationCityId: string; salaryMin: number; workTypes: string[]; experienceMonths: number; educationLevel: string; willingToRelocate: boolean; skills: Array<{ name: string; level: string }> }>>([]);
+  const [apiCandidates, setApiCandidates] = useState<
+    Array<{
+      id: string;
+      fullName: string;
+      jobTitle: string | null;
+      locationCityId: string;
+      salaryMin: number;
+      workTypes: string[];
+      experienceMonths: number;
+      educationLevel: string;
+      willingToRelocate: boolean;
+      availableToWork?: boolean;
+      photo?: string | null;
+      skills: Array<{ name: string; level: string }>;
+    }>
+  >([]);
+  const [candidatesLoading, setCandidatesLoading] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -121,10 +154,16 @@ export default function EmployerCabinetPage() {
         setVacancies(mapped);
       })
       .catch(() => {});
+    setCandidatesLoading(true);
     fetch("/api/candidates")
       .then((r) => r.json())
-      .then(setApiCandidates)
-      .catch(() => {});
+      .then((list) => {
+        setApiCandidates(list);
+      })
+      .catch(() => {
+        setApiCandidates([]);
+      })
+      .finally(() => setCandidatesLoading(false));
   }
 
   useEffect(() => {
@@ -159,6 +198,14 @@ export default function EmployerCabinetPage() {
   }, [selectedVacancy, candidates]);
 
   const current = candidateStack[0];
+
+  async function withMinimumDelay<T>(promise: Promise<T>, minimumMs = 2000): Promise<T> {
+    const [result] = await Promise.all([
+      promise,
+      new Promise((resolve) => setTimeout(resolve, minimumMs)),
+    ]);
+    return result;
+  }
 
   function handleSelectVacancy(v: EmployerVacancy) {
     setSelectedVacancy(v);
@@ -206,50 +253,43 @@ export default function EmployerCabinetPage() {
       return;
     }
 
-    setLikeError(null);
-    setLikeState("submitting");
-    const startedAt = Date.now();
-
     try {
-      const res = await fetch("/api/matches", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          vacancyId: selectedVacancy.id,
-          candidateProfileId: current.id,
-          employerLiked: true,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
+      setLikeError(null);
+      setLikeState("submitting");
 
-      const elapsed = Date.now() - startedAt;
-      const delay = Math.max(0, 2000 - elapsed);
-
-      const applyResult = () => {
-        setCandidateStack((prev) => prev.slice(1));
-        setLiked((prev) => [...prev, current]);
-        
-        if (data.isMatch) {
-          setNewMatch({
-            id: data.matchId ?? data.id,
+      const res = await withMinimumDelay(
+        fetch("/api/matches", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
             vacancyId: selectedVacancy.id,
-            candidateId: current.id,
-            candidateName: current.name,
-            vacancyTitle: selectedVacancy.title,
-            company: selectedVacancy.company,
-            createdAt: data.createdAt ? new Date(data.createdAt).getTime() : Date.now(),
-          });
-          setLikeState("matched");
-        } else {
-          setLikeState("notMatched");
-          setTimeout(() => setLikeState("idle"), 50);
-        }
-      };
+            candidateProfileId: current.id,
+            employerLiked: true,
+          }),
+        }),
+        2000
+      );
+      const data = await res.json().catch(() => ({}));
+      setCandidateStack((prev) => prev.slice(1));
+      setLiked((prev) => [...prev, current]);
 
-      if (delay > 0) {
-        setTimeout(applyResult, delay);
+      if (data.isMatch) {
+        setNewMatch({
+          id: data.matchId ?? data.id,
+          vacancyId: selectedVacancy.id,
+          candidateId: current.id,
+          candidateName: current.name,
+          vacancyTitle: selectedVacancy.title,
+          company: selectedVacancy.company,
+          createdAt: data.matchedAt
+            ? new Date(data.matchedAt).getTime()
+            : data.createdAt
+            ? new Date(data.createdAt).getTime()
+            : Date.now(),
+        });
+        setLikeState("matched");
       } else {
-        applyResult();
+        setLikeState("idle");
       }
     } catch {
       setLikeState("error");
@@ -352,8 +392,11 @@ export default function EmployerCabinetPage() {
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">{t("candidates")}</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            {t("candidatesFor")} <span className="font-bold text-matcher-dark">{selectedVacancy.title}</span>
+          <p className="mt-1 text-sm font-semibold text-gray-900">
+            {selectedVacancy.title}
+          </p>
+          <p className="text-sm text-gray-600">
+            {selectedVacancy.company}
           </p>
           <p className="mt-0.5 text-xs text-gray-500">
             {t("recommendedSalary", { amount: getRecommendedSalaryForTitle(selectedVacancy.title).toLocaleString() })}
@@ -374,7 +417,9 @@ export default function EmployerCabinetPage() {
             {likeError}
           </div>
         )}
-        {currentCandidate ? (
+        {candidatesLoading && !currentCandidate ? (
+          <CandidateCardSkeleton />
+        ) : currentCandidate ? (
           <AnimatePresence mode="wait">
             <motion.div
               key={currentCandidate.id}
