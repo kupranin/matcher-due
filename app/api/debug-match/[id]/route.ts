@@ -31,11 +31,8 @@ export async function GET(_request: Request, { params }: Params) {
     // Employer access: does session employer own this vacancy's company?
     let employerCanAccess = false;
     try {
-      const dummyReq = new Request("http://localhost", {});
-      // getEmployerCompanyFromSession expects real request; we can't reuse original easily here
-      // so we conservatively set to false in this debug endpoint.
-      // Caller should primarily use candidateCanAccess for now.
-      void dummyReq;
+      const ctx = await getEmployerCompanyFromSession(_request);
+      employerCanAccess = !!ctx && match.vacancy?.companyId === ctx.companyId;
     } catch {
       employerCanAccess = false;
     }
