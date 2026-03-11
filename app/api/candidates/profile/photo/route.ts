@@ -16,8 +16,26 @@ export async function POST(request: Request) {
     if (file.size > MAX_SIZE_BYTES) return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 400 });
     if (!ALLOWED_TYPES.includes(file.type)) return NextResponse.json({ error: "Only JPEG, PNG, WebP allowed" }, { status: 400 });
 
-    const profile = await prisma.candidateProfile.findUnique({ where: { userId }, select: { id: true } });
-    if (!profile) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    let profile = await prisma.candidateProfile.findUnique({ where: { userId }, select: { id: true } });
+    if (!profile) {
+      // If profile does not exist yet (e.g. user logged in before completing onboarding),
+      // create a minimal profile so that photo uploads still work.
+      profile = await prisma.candidateProfile.create({
+        data: {
+          userId,
+          fullName: "Candidate",
+          phone: null,
+          locationCityId: "tbilisi",
+          salaryMin: 800,
+          willingToRelocate: false,
+          experienceMonths: 0,
+          educationLevel: "High School",
+          workTypes: ["Full-time"],
+          jobTitle: null,
+        },
+        select: { id: true },
+      });
+    }
 
     let supabase;
     try {

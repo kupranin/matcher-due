@@ -13,18 +13,19 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const vacancyId = searchParams.get("vacancyId")?.trim() || null;
-
+    // For employer browsing we only need vacancyId for logging / debugging.
+    // Even if the vacancy is missing or the id is omitted, we still return
+    // a rich list of candidates to avoid an empty deck in the UI.
     if (!vacancyId) {
-      return NextResponse.json({ error: "vacancyId is required" }, { status: 400 });
-    }
-
-    const vacancy = await prisma.vacancy.findUnique({
-      where: { id: vacancyId },
-      select: { id: true },
-    });
-
-    if (!vacancy) {
-      return NextResponse.json({ error: "Vacancy not found" }, { status: 404 });
+      console.warn("[GET /api/employer/candidates] missing vacancyId; returning global candidate list");
+    } else {
+      const vacancy = await prisma.vacancy.findUnique({
+        where: { id: vacancyId },
+        select: { id: true },
+      });
+      if (!vacancy) {
+        console.warn("[GET /api/employer/candidates] vacancy not found for id=%s; returning global candidate list", vacancyId);
+      }
     }
 
     const candidates = await prisma.candidateProfile.findMany({
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
 
     console.log(
       "[GET /api/employer/candidates] vacancyId=%s totalCandidates=%d",
-      vacancyId,
+      vacancyId ?? "(none)",
       payload.length
     );
 

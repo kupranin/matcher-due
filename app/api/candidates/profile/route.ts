@@ -60,7 +60,6 @@ export async function PATCH(request: Request) {
     const userId = typeof body?.userId === "string" ? body.userId.trim() : "";
     if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
     const existing = await prisma.candidateProfile.findUnique({ where: { userId } });
-    if (!existing) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     const fullName = typeof body?.fullName === "string" ? body.fullName.trim() : undefined;
     const phone = typeof body?.phone === "string" ? body.phone.trim() : undefined;
     const locationCityId = typeof body?.locationCityId === "string" ? body.locationCityId.trim() : undefined;
@@ -119,12 +118,35 @@ export async function PATCH(request: Request) {
     if (availableToWork !== undefined) update.availableToWork = availableToWork;
     if (dateOfBirth !== undefined) update.dateOfBirth = dateOfBirth;
     if (photo !== undefined) update.photo = photo;
-    await prisma.candidateProfile.update({ where: { userId }, data: update as never });
+    // If profile exists, update it; otherwise create a new one so first save from the
+    // profile page works even if the user never went through the onboarding flow.
+    const profile = existing
+      ? await prisma.candidateProfile.update({ where: { userId }, data: update as never })
+      : await prisma.candidateProfile.create({
+          data: {
+            userId,
+            fullName: typeof update.fullName === "string" && update.fullName.length > 0 ? (update.fullName as string) : "Candidate",
+            phone: (update.phone as string | undefined) ?? null,
+            locationCityId: (update.locationCityId as string | undefined) ?? "tbilisi",
+            locationDistrictId: (update.locationDistrictId as string | null | undefined) ?? null,
+            salaryMin: (update.salaryMin as number | undefined) ?? 800,
+            willingToRelocate: (update.willingToRelocate as boolean | undefined) ?? false,
+            experienceMonths: (update.experienceMonths as number | undefined) ?? 0,
+            experienceText: (update.experienceText as string | null | undefined) ?? null,
+            educationLevel: (update.educationLevel as string | undefined) ?? "High School",
+            workTypes: (update.workTypes as string[] | undefined) ?? ["Full-time"],
+            jobTitle: (update.jobTitle as string | null | undefined) ?? null,
+            availableToWork: (update.availableToWork as boolean | undefined) ?? true,
+            dateOfBirth: (update.dateOfBirth as Date | null | undefined) ?? null,
+            photo: (update.photo as string | null | undefined) ?? null,
+          },
+        });
+
     if (skills !== undefined) {
-      await prisma.candidateSkill.deleteMany({ where: { candidateProfileId: existing.id } });
+      await prisma.candidateSkill.deleteMany({ where: { candidateProfileId: profile.id } });
       if (skills.length > 0) {
         await prisma.candidateSkill.createMany({
-          data: skills.map((s) => ({ candidateProfileId: existing.id, name: s.name, level: s.level })),
+          data: skills.map((s) => ({ candidateProfileId: profile.id, name: s.name, level: s.level })),
           skipDuplicates: true,
         });
       }
