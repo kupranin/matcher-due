@@ -515,7 +515,9 @@ export default function EmployerCabinetPage() {
             aria-haspopup="listbox"
           >
             <span>
-              {selectedVacancy.title} {t("at")} {selectedVacancy.company}
+              {selectedVacancy
+                ? `${selectedVacancy.title} ${t("at")} ${selectedVacancy.company}`
+                : "Select vacancy"}
             </span>
             <svg
               className={`h-5 w-5 shrink-0 text-gray-500 transition-transform ${vacancySwitcherOpen ? "rotate-180" : ""}`}
@@ -538,7 +540,7 @@ export default function EmployerCabinetPage() {
                     type="button"
                     onClick={() => handleSwitchVacancy(v)}
                     className={`w-full px-3 py-2.5 text-left text-sm transition-colors ${
-                      selectedVacancy.id === v.id
+                      selectedVacancy?.id === v.id
                         ? "bg-matcher-mint font-medium text-matcher-dark"
                         : "text-gray-700 hover:bg-gray-50"
                     }`}
@@ -554,7 +556,9 @@ export default function EmployerCabinetPage() {
           )}
         </div>
         <p className="mt-1.5 text-xs text-gray-500">
-          {selectedVacancy.location} · {t("recommendedSalary", { amount: getRecommendedSalaryForTitle(selectedVacancy.title).toLocaleString() })}
+          {selectedVacancy
+            ? `${selectedVacancy.location} · ${t("recommendedSalary", { amount: getRecommendedSalaryForTitle(selectedVacancy.title).toLocaleString() })}`
+            : null}
         </p>
       </div>
 
@@ -584,8 +588,8 @@ export default function EmployerCabinetPage() {
               <div className="relative h-full w-full">
                 <SwipeCard
                   candidate={currentCandidate}
-                  vacancyTitle={selectedVacancy.title}
-                  companyName={selectedVacancy.company}
+                  vacancyTitle={selectedVacancy?.title ?? ""}
+                  companyName={selectedVacancy?.company ?? ""}
                   onSwipe={likeState === "submitting" ? () => {} : handleSwipe}
                 />
                 {likeState === "submitting" && (
