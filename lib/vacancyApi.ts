@@ -141,7 +141,7 @@ export function buildCandidateCardsWithMatch(
   // Browsing: show all candidates (do not filter by match threshold). Sort by match desc.
   // Optional fields (photo, age, city) use fallbacks so cards still render when null.
   return apiCandidates
-    .filter((c) => c.availableToWork !== false)
+    // Show all candidates; do not hide those with availableToWork=false or null.
     .map((c) => {
       const skills = safeSkills(c);
       const profile: CandidateProfile = {

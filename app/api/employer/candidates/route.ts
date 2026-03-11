@@ -29,10 +29,12 @@ export async function GET(request: Request) {
     }
 
     const candidates = await prisma.candidateProfile.findMany({
-      where: { availableToWork: true },
+      // For now we intentionally do NOT filter by availableToWork. Some legacy
+      // records may have this flag unset, and we prefer to show too many
+      // candidates rather than an empty deck.
       include: { skills: true },
       orderBy: { createdAt: "desc" },
-      take: 50,
+      take: 200,
     });
 
     const payload = candidates.map((c) => ({

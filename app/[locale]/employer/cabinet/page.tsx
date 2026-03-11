@@ -306,16 +306,34 @@ export default function EmployerCabinetPage() {
   useEffect(() => {
     if (!selectedVacancy) return;
     setCandidatesLoading(true);
-    fetch(`/api/employer/candidates?vacancyId=${encodeURIComponent(selectedVacancy.id)}`)
-      .then((r) => r.json())
-      .then((list: unknown) => {
-        if (Array.isArray(list)) setApiCandidates(list as typeof apiCandidates);
-        else setApiCandidates([]);
-      })
-      .catch(() => {
+    async function loadCandidates() {
+      try {
+        // Prefer the employer-scoped endpoint; fall back to the global candidates
+        // list if it fails so the deck is never empty.
+        const primaryRes = await fetch(`/api/employer/candidates?vacancyId=${encodeURIComponent(selectedVacancy.id)}`);
+        if (primaryRes.ok) {
+          const primaryList = (await primaryRes.json().catch(() => [])) as unknown;
+          if (Array.isArray(primaryList) && primaryList.length > 0) {
+            setApiCandidates(primaryList as typeof apiCandidates);
+            return;
+          }
+        }
+
+        const fallbackRes = await fetch("/api/candidates");
+        const fallbackList = (await fallbackRes.json().catch(() => [])) as unknown;
+        if (Array.isArray(fallbackList)) {
+          setApiCandidates(fallbackList as typeof apiCandidates);
+        } else {
+          setApiCandidates([]);
+        }
+      } catch {
         setApiCandidates([]);
-      })
-      .finally(() => setCandidatesLoading(false));
+      } finally {
+        setCandidatesLoading(false);
+      }
+    }
+
+    void loadCandidates();
   }, [selectedVacancy?.id]);
 
   useEffect(() => {

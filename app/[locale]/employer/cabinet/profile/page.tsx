@@ -24,32 +24,11 @@ export default function EmployerCabinetProfilePage() {
   const [linkedIn, setLinkedIn] = useState("");
   const [address, setAddress] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
     const stored = loadEmployerProfile();
-    const userId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_user_id") : null;
-    if (userId) {
-      fetch(`/api/companies?userId=${encodeURIComponent(userId)}`)
-        .then((r) => r.json())
-        .then((company: { name?: string; contactEmail?: string; contactPhone?: string; bio?: string; website?: string; industry?: string; employeeCount?: string; address?: string; linkedIn?: string } | null) => {
-          if (company) {
-            setCompanyName(company.name ?? "");
-            setEmail(company.contactEmail ?? "");
-            setPhone(company.contactPhone ?? "");
-            setBio(company.bio ?? "");
-            setWebsite(company.website ?? "");
-            setIndustry(company.industry ?? "");
-            setEmployeeCount(company.employeeCount ?? "");
-            setAddress(company.address ?? "");
-            setLinkedIn(company.linkedIn ?? "");
-            return;
-          }
-          if (stored) fillFromStored(stored);
-        })
-        .catch(() => { if (stored) fillFromStored(stored); });
-    } else if (stored) {
-      fillFromStored(stored);
-    }
+
     function fillFromStored(s: ReturnType<typeof loadEmployerProfile>) {
       if (!s) return;
       setCompanyName(s.companyName ?? "");
@@ -63,6 +42,70 @@ export default function EmployerCabinetProfilePage() {
       setLinkedIn(s.linkedIn ?? "");
       setAddress(s.address ?? "");
     }
+
+    async function load() {
+      let userId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_user_id") : null;
+
+      if (!userId && typeof window !== "undefined") {
+        try {
+          const res = await fetch("/api/auth/session", { credentials: "include" });
+          const data = (await res.json().catch(() => null)) as { userId?: string | null; user?: { id?: string; role?: string } | null } | null;
+          if (data?.user?.role === "EMPLOYER") {
+            userId = data.user?.id ?? data.userId ?? null;
+            if (userId) {
+              window.sessionStorage.setItem("matcher_employer_user_id", userId);
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (!userId) {
+        if (stored) fillFromStored(stored);
+        setProfileLoading(false);
+        return;
+      }
+
+      try {
+        const r = await fetch(`/api/companies?userId=${encodeURIComponent(userId)}`);
+        const company = (await r.json().catch(() => null)) as {
+          id?: string;
+          name?: string;
+          contactEmail?: string;
+          contactPhone?: string;
+          bio?: string;
+          website?: string;
+          industry?: string;
+          employeeCount?: string;
+          address?: string;
+          linkedIn?: string;
+        } | null;
+        if (company) {
+          setCompanyName(company.name ?? "");
+          setEmail(company.contactEmail ?? "");
+          setPhone(company.contactPhone ?? "");
+          setBio(company.bio ?? "");
+          setWebsite(company.website ?? "");
+          setIndustry(company.industry ?? "");
+          setEmployeeCount(company.employeeCount ?? "");
+          setAddress(company.address ?? "");
+          setLinkedIn(company.linkedIn ?? "");
+          if (company.id && typeof window !== "undefined") {
+            window.sessionStorage.setItem("matcher_employer_company_id", company.id);
+            window.dispatchEvent(new CustomEvent("employer-company-ready"));
+          }
+        } else if (stored) {
+          fillFromStored(stored);
+        }
+      } catch {
+        if (stored) fillFromStored(stored);
+      } finally {
+        setProfileLoading(false);
+      }
+    }
+
+    void load();
   }, []);
 
   function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -75,7 +118,14 @@ export default function EmployerCabinetProfilePage() {
       <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{t("title")}</h1>
       <p className="mt-1 text-gray-600">{t("subtitle")}</p>
 
-      <div className="mt-8 space-y-6">
+      {profileLoading && (
+        <div className="mt-6 flex items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-matcher border-t-transparent" aria-hidden />
+          {t("loadingProfile") ?? "Loading company…"}
+        </div>
+      )}
+
+      <div className={`mt-8 space-y-6 ${profileLoading ? "pointer-events-none opacity-60" : ""}`}>
         <section className="rounded-3xl border bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">{t("companyLogo")}</h2>
           <p className="mt-1 text-sm text-gray-500">{t("logoHint")}</p>

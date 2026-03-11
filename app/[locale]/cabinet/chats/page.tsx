@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
-import { getCandidateProfileId, loadCandidateProfile } from "@/lib/candidateProfileStorage";
+import { getCandidateProfileId, getCandidateUserId, loadCandidateProfile } from "@/lib/candidateProfileStorage";
 import type { MutualMatch } from "@/lib/matchStorage";
 import MatchChatWindow from "@/components/MatchChatWindow";
 
@@ -61,43 +61,80 @@ export default function CandidateChatsPage() {
   const [selectedMatch, setSelectedMatch] = useState<MutualMatch | null>(null);
 
   useEffect(() => {
-    const profileId = getCandidateProfileId();
-    const stored = loadCandidateProfile();
-    if (!profileId) return;
+    async function load() {
+      let profileId = getCandidateProfileId();
+      const stored = loadCandidateProfile();
 
-    fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`)
-      .then((r) => r.json())
-      .then(
-        (
-          list: Array<{
-            id: string;
-            matchId: string;
-            vacancyId: string;
-            candidateProfileId: string;
-            vacancyTitle: string;
-            companyName: string;
-            matchedAt: string | null;
-            createdAt?: string;
-          }>
-        ) => {
-          if (!Array.isArray(list)) return;
-          const mutual = list.map((m) => ({
-            id: m.matchId || m.id,
-            vacancyId: m.vacancyId,
-            candidateId: m.candidateProfileId,
-            candidateName: stored?.fullName ?? "",
-            vacancyTitle: m.vacancyTitle,
-            company: m.companyName,
-            createdAt: m.matchedAt
-              ? new Date(m.matchedAt).getTime()
-              : m.createdAt
-              ? new Date(m.createdAt).getTime()
-              : Date.now(),
-          }));
-          setMatches(mutual);
+      if (!profileId) {
+        let userId = getCandidateUserId();
+        if (!userId) {
+          try {
+            const res = await fetch("/api/auth/session", { credentials: "include" });
+            const data = (await res.json().catch(() => null)) as { userId?: string | null; user?: { id?: string; role?: string | null } | null } | null;
+            if (data?.user?.role === "CANDIDATE") {
+              userId = data.user.id || data.userId || null;
+              if (userId && typeof window !== "undefined") {
+                window.localStorage.setItem("matcher_candidate_user_id", userId);
+              }
+            }
+          } catch {
+            // ignore
+          }
         }
-      )
-      .catch(() => {});
+        if (userId) {
+          try {
+            const res = await fetch(`/api/candidates/profile?userId=${encodeURIComponent(userId)}`);
+            const data = (await res.json().catch(() => null)) as { profileId?: string } | null;
+            if (data?.profileId) {
+              profileId = data.profileId;
+              if (typeof window !== "undefined") {
+                window.localStorage.setItem("matcher_candidate_profile_id", profileId);
+              }
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+
+      if (!profileId) return;
+
+      fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`)
+        .then((r) => r.json())
+        .then(
+          (
+            list: Array<{
+              id: string;
+              matchId: string;
+              vacancyId: string;
+              candidateProfileId: string;
+              vacancyTitle: string;
+              companyName: string;
+              matchedAt: string | null;
+              createdAt?: string;
+            }>
+          ) => {
+            if (!Array.isArray(list)) return;
+            const mutual = list.map((m) => ({
+              id: m.matchId || m.id,
+              vacancyId: m.vacancyId,
+              candidateId: m.candidateProfileId,
+              candidateName: stored?.fullName ?? "",
+              vacancyTitle: m.vacancyTitle,
+              company: m.companyName,
+              createdAt: m.matchedAt
+                ? new Date(m.matchedAt).getTime()
+                : m.createdAt
+                ? new Date(m.createdAt).getTime()
+                : Date.now(),
+            }));
+            setMatches(mutual);
+          }
+        )
+        .catch(() => {});
+    }
+
+    void load();
   }, []);
 
   if (matches.length === 0) {
