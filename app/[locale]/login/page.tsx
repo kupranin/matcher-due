@@ -78,30 +78,30 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="border-b bg-white">
+    <div className="min-h-screen bg-gradient-to-b from-matcher-pale/60 via-white to-white flex flex-col">
+      <header className="border-b bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:py-4">
           <Logo height={72} />
           <div className="flex items-center gap-4">
-            <Link href="/" className="text-sm text-gray-600 hover:text-gray-900">
+            <Link href="/" className="text-sm font-medium text-gray-700 hover:text-gray-900">
               {tCommon("backToHome")}
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-md px-4 py-8 sm:py-12 md:py-16">
-        <div className="rounded-2xl border bg-white p-5 shadow-sm sm:rounded-3xl sm:p-6 md:p-8">
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+      <main className="mx-auto flex w-full max-w-md flex-1 items-center px-4 py-8 sm:py-12 md:py-16">
+        <div className="w-full rounded-3xl border border-gray-100 bg-white/95 p-5 shadow-lg sm:p-6 md:p-8">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-gray-900">
             {t("title")}
           </h1>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-sm sm:text-base text-gray-600">
             {t("subtitle")}
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <div>
-              <label className="text-sm font-medium text-gray-900">{t("iAm")}</label>
+              <label className="text-sm font-semibold text-gray-900">{t("iAm")}</label>
               <div className="mt-2 flex gap-3">
                 <button
                   type="button"
@@ -109,7 +109,7 @@ export default function LoginPage() {
                   className={`flex-1 rounded-2xl border px-4 py-3 text-sm font-medium transition ${
                     userType === "candidate"
                       ? "border-matcher bg-matcher-mint text-matcher-dark"
-                      : "border-gray-200 hover:bg-gray-50 text-gray-700"
+                      : "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
                   }`}
                 >
                   {t("candidate")}
@@ -120,7 +120,7 @@ export default function LoginPage() {
                   className={`flex-1 rounded-2xl border px-4 py-3 text-sm font-medium transition ${
                     userType === "business"
                       ? "border-matcher bg-matcher-mint text-matcher-dark"
-                      : "border-gray-200 hover:bg-gray-50 text-gray-700"
+                      : "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
                   }`}
                 >
                   {t("business")}
@@ -129,13 +129,13 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-900">{t("email")}</label>
+              <label className="text-sm font-semibold text-gray-900">{t("email")}</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30 ${
+                className={`mt-2 w-full rounded-2xl border bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none focus:bg-white focus:ring-2 focus:ring-matcher/30 ${
                   email.length > 0 && !isValidEmail(email) ? "border-red-300" : "border-gray-200"
                 }`}
               />
@@ -145,13 +145,13 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-900">{t("password")}</label>
+              <label className="text-sm font-semibold text-gray-900">{t("password")}</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Your password"
-                className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30 ${
+                className={`mt-2 w-full rounded-2xl border bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none focus:bg-white focus:ring-2 focus:ring-matcher/30 ${
                   password.length > 0 && password.length < 8 ? "border-red-300" : "border-gray-200"
                 }`}
               />
@@ -171,7 +171,7 @@ export default function LoginPage() {
               className={`w-full rounded-2xl px-5 py-3 text-sm font-semibold transition ${
                 canSubmit
                   ? "bg-matcher text-white hover:bg-matcher-dark"
-                  : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
               }`}
             >
               {loading ? (t("loggingIn") || "Signing in…") : t("submit")}

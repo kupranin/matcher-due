@@ -174,13 +174,46 @@ export default function CabinetPage() {
   const [availableToWorkLoading, setAvailableToWorkLoading] = useState(false);
 
   useEffect(() => {
-    const profileUserId = getCandidateUserId();
-    const profileId = getCandidateProfileId();
-    const loadProfile = () => getCandidateProfileForMatch();
-    if (profileUserId) {
-      fetch(`/api/candidates/profile?userId=${encodeURIComponent(profileUserId)}`)
-        .then((r) => r.json())
-        .then((data: { fullName?: string; email?: string; phone?: string; locationCityId?: string; salaryMin?: number; workTypes?: string[]; willingToRelocate?: boolean; skills?: Array<{ name: string; level: string }>; educationLevel?: string; experienceMonths?: number; jobTitle?: string; availableToWork?: boolean } | null) => {
+    async function load() {
+      let profileUserId = getCandidateUserId();
+      let profileId = getCandidateProfileId();
+      const loadProfile = () => getCandidateProfileForMatch();
+
+      // Fallback: derive candidate user id from the authenticated session if
+      // localStorage was never populated (e.g. user registered before this logic existed).
+      if (!profileUserId) {
+        try {
+          const res = await fetch("/api/auth/session", { credentials: "include" });
+          const data = (await res.json().catch(() => null)) as { userId?: string | null; user?: { role?: string | null } | null } | null;
+          if (data?.userId && data.user?.role === "CANDIDATE") {
+            profileUserId = data.userId;
+            if (typeof window !== "undefined") {
+              window.localStorage.setItem("matcher_candidate_user_id", profileUserId);
+            }
+          }
+        } catch {
+          // ignore; we'll fall back to local-only profile
+        }
+      }
+
+      if (profileUserId) {
+        try {
+          const res = await fetch(`/api/candidates/profile?userId=${encodeURIComponent(profileUserId)}`);
+          const data = (await res.json().catch(() => null)) as {
+            profileId?: string;
+            fullName?: string;
+            email?: string;
+            phone?: string;
+            locationCityId?: string;
+            salaryMin?: number;
+            workTypes?: string[];
+            willingToRelocate?: boolean;
+            skills?: Array<{ name: string; level: string }>;
+            educationLevel?: string;
+            experienceMonths?: number;
+            jobTitle?: string;
+            availableToWork?: boolean;
+          } | null;
           if (data && data.fullName) {
             setAvailableToWork(data.availableToWork !== false);
             saveCandidateProfile({
@@ -198,28 +231,41 @@ export default function CabinetPage() {
               phone: data.phone ?? "",
               job: data.jobTitle ?? undefined,
             });
+            if (data.profileId && typeof window !== "undefined") {
+              window.localStorage.setItem("matcher_candidate_profile_id", data.profileId);
+              profileId = data.profileId;
+            }
+          }
+        } catch {
+          // ignore API errors; we'll still show local opportunities
+        }
+      }
+
+      setOpportunitiesLoading(true);
+      const stored = loadCandidateProfile();
+      const profile = stored?.profile ?? loadProfile();
+      const preferredJob = stored?.job ?? undefined;
+      // Re-read profileId from storage in case it was just written.
+      if (!profileId && typeof window !== "undefined") {
+        profileId = window.localStorage.getItem("matcher_candidate_profile_id");
+      }
+      const url = profileId
+        ? `/api/vacancies?candidateProfileId=${encodeURIComponent(profileId)}`
+        : "/api/vacancies";
+      fetch(url)
+        .then((r) => r.json())
+        .then((list: unknown) => {
+          if (Array.isArray(list) && list.length > 0) {
+            setVacancies(buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob));
+          } else {
+            setVacancies([]);
           }
         })
-        .catch(() => {});
+        .catch(() => setVacancies([]))
+        .finally(() => setOpportunitiesLoading(false));
     }
-    setOpportunitiesLoading(true);
-    const stored = loadCandidateProfile();
-    const profile = stored?.profile ?? loadProfile();
-    const preferredJob = stored?.job ?? undefined;
-    const url = profileId
-      ? `/api/vacancies?candidateProfileId=${encodeURIComponent(profileId)}`
-      : "/api/vacancies";
-    fetch(url)
-      .then((r) => r.json())
-      .then((list: unknown) => {
-        if (Array.isArray(list) && list.length > 0) {
-          setVacancies(buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob));
-        } else {
-          setVacancies([]);
-        }
-      })
-      .catch(() => setVacancies([]))
-      .finally(() => setOpportunitiesLoading(false));
+
+    void load();
   }, []);
   const [liked, setLiked] = useState<Vacancy[]>([]);
   const [passed, setPassed] = useState<Vacancy[]>([]);
@@ -229,6 +275,47 @@ export default function CabinetPage() {
   type LikeState = "idle" | "submitting" | "matched" | "notMatched" | "error";
   const [likeState, setLikeState] = useState<LikeState>("idle");
   const [likeError, setLikeError] = useState<string | null>(null);
+
+  // Ensure we have a real candidateProfileId in localStorage so swipes can be
+  // persisted via /api/matches, even for older accounts that predate this key.
+  async function ensureCandidateProfileId(): Promise<string | null> {
+    let profileId = getCandidateProfileId();
+    if (profileId) return profileId;
+
+    let userId = getCandidateUserId();
+    // Fallback: resolve candidate user id from the authenticated session.
+    if (!userId) {
+      try {
+        const res = await fetch("/api/auth/session", { credentials: "include" });
+        const data = (await res.json().catch(() => null)) as { userId?: string | null; user?: { id?: string; role?: string | null } | null } | null;
+        if (data?.user?.role === "CANDIDATE") {
+          userId = data.user.id || data.userId || null;
+          if (userId && typeof window !== "undefined") {
+            window.localStorage.setItem("matcher_candidate_user_id", userId);
+          }
+        }
+      } catch {
+        // ignore; we'll bail below if we still don't have an id
+      }
+    }
+
+    if (!userId) return null;
+
+    try {
+      const res = await fetch(`/api/candidates/profile?userId=${encodeURIComponent(userId)}`);
+      const data = (await res.json().catch(() => null)) as { profileId?: string } | null;
+      if (data?.profileId) {
+        profileId = data.profileId;
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("matcher_candidate_profile_id", profileId);
+        }
+        return profileId;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  }
 
   async function withMinimumDelay<T>(promise: Promise<T>, minimumMs = 2000): Promise<T> {
     const [result] = await Promise.all([
@@ -249,9 +336,14 @@ export default function CabinetPage() {
       return;
     }
 
-    const profileId = getCandidateProfileId();
+    let profileId = getCandidateProfileId();
     if (!profileId) {
-      // Not fully onboarded / logged in: behave like local swipe only.
+      profileId = await ensureCandidateProfileId();
+    }
+    if (!profileId) {
+      // Still no profile id — treat as local-only swipe but surface a gentle error
+      // so we notice in QA.
+      setLikeError("We could not link your profile. Please complete your profile and try again.");
       setExitDir("right");
       setVacancies((prev) => prev.slice(1));
       setLiked((prev) => [...prev, current]);

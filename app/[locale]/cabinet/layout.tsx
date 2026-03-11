@@ -16,14 +16,26 @@ export default function CabinetLayout({
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/session", { credentials: "include" })
       .then((r) => r.json())
-      .then((data: { user: { role: string } | null }) => {
+      .then(async (data: { userId?: string | null; user: { id?: string; role: string } | null }) => {
         setAuthChecked(true);
         if (!data?.user || data.user.role !== "CANDIDATE") {
           router.replace("/login");
+          return;
+        }
+        const userId = data.user.id || data.userId;
+        if (!userId) return;
+        // Try to hydrate candidate name for greeting
+        try {
+          const res = await fetch(`/api/candidates/profile?userId=${encodeURIComponent(userId)}`);
+          const profile = (await res.json().catch(() => null)) as { fullName?: string | null } | null;
+          if (profile?.fullName) setUserName(profile.fullName);
+        } catch {
+          // ignore – greeting is optional
         }
       })
       .catch(() => {
@@ -119,7 +131,17 @@ export default function CabinetLayout({
       </aside>
 
       {/* Main content - padding for mobile bottom nav */}
-      <main className="flex-1 overflow-auto pb-20 md:pb-0">{children}</main>
+      <main className="flex-1 overflow-auto pb-20 md:pb-0">
+        {userName && (
+          <div className="sticky top-0 z-10 border-b border-gray-100 bg-gray-50/95 px-4 py-3 backdrop-blur md:static md:border-none md:bg-transparent">
+            <p className="mx-auto max-w-3xl text-sm font-medium text-gray-800">
+              {tCommon("hello") || "Hello"},{" "}
+              <span className="font-semibold">{userName}</span>
+            </p>
+          </div>
+        )}
+        {children}
+      </main>
 
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-gray-200 bg-white py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">

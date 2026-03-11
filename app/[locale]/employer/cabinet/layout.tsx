@@ -25,6 +25,7 @@ export default function EmployerCabinetLayout({
   const router = useRouter();
   const [hasSubscription, setHasSubscription] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionDisplay | null>(null);
+  const [employerName, setEmployerName] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
 
@@ -43,13 +44,16 @@ export default function EmployerCabinetLayout({
             window.sessionStorage.setItem("matcher_employer_user_id", data.user.id);
             return fetch(`/api/companies?userId=${encodeURIComponent(data.user.id)}`)
               .then((r) => r.json())
-              .then((company: { id?: string } | null) => {
+              .then((company: { id?: string; name?: string } | null) => {
                 if (company?.id) {
                   window.sessionStorage.setItem("matcher_employer_company_id", company.id);
                   if (!window.sessionStorage.getItem("employerHasSubscription")) {
                     window.sessionStorage.setItem("employerHasSubscription", "1");
                   }
                   window.dispatchEvent(new CustomEvent("employer-company-ready"));
+                }
+                if (company?.name) {
+                  setEmployerName(company.name);
                 }
                 setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
               })
@@ -194,7 +198,17 @@ export default function EmployerCabinetLayout({
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto pb-20 md:pb-0">{children}</main>
+      <main className="flex-1 overflow-auto pb-20 md:pb-0">
+        {employerName && (
+          <div className="sticky top-0 z-10 border-b border-gray-100 bg-gray-50/95 px-4 py-3 backdrop-blur md:static md:border-none md:bg-transparent">
+            <p className="mx-auto max-w-4xl text-sm font-medium text-gray-800">
+              {tCabinet("welcomeBack") || "Welcome back"},{" "}
+              <span className="font-semibold">{employerName}</span>
+            </p>
+          </div>
+        )}
+        {children}
+      </main>
 
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-gray-200 bg-white py-2 md:hidden">

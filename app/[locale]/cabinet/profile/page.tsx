@@ -53,55 +53,79 @@ export default function CabinetProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const stored = loadCandidateProfile();
-    const userId = getCandidateUserId();
-    if (stored) {
-      setFullName(stored.fullName ?? "");
-      setEmail(stored.email ?? "");
-      setPhone(stored.phone ?? "");
-      setBio(stored.bio ?? "");
-      setJob(stored.job ?? "");
-      setLinkedIn(stored.linkedIn ?? "");
-      setLanguages(stored.languages ?? "");
-      const p = stored.profile;
-      if (p) {
-        setLocation("locationCityId" in p && p.locationCityId ? (GEORGIAN_CITIES.find((c) => c.id === p.locationCityId)?.nameEn ?? p.locationCityId) : "");
-        setWillingToRelocate("willingToRelocate" in p ? Boolean(p.willingToRelocate) : false);
-        setSalary(String(p.salaryMin || ""));
-        setExperience(p.experienceMonths ? String(p.experienceMonths) + " months" : "");
-        setWorkTypes(p.workTypes ?? []);
-        setSkills(
-          (p.skills ?? []).map((s) => ({ name: s.name, level: s.level ?? "Intermediate" }))
-        );
-      }
-    }
-    if (!userId) {
-      setProfileLoading(false);
-      return;
-    }
-    fetch(`/api/candidates/profile?userId=${encodeURIComponent(userId)}`)
-      .then((r) => r.json())
-      .then((data: { fullName?: string; email?: string; phone?: string; locationCityId?: string; salaryMin?: number; workTypes?: string[]; willingToRelocate?: boolean; skills?: Array<{ name: string; level: string }>; educationLevel?: string; experienceMonths?: number; jobTitle?: string; photo?: string | null; dateOfBirth?: string | null } | null) => {
-        if (data) {
-          if (data.fullName) setFullName(data.fullName);
-          if (data.email != null) setEmail(data.email ?? "");
-          if (data.phone != null) setPhone(data.phone ?? "");
-          if (data.jobTitle != null) setJob(data.jobTitle ?? "");
-          if (data.photo != null) setPhotoUrl(data.photo || null);
-          if (data.locationCityId != null) {
-            const name = GEORGIAN_CITIES.find((c) => c.id === data.locationCityId)?.nameEn ?? data.locationCityId;
-            setLocation(name || "");
-          }
-          if (data.willingToRelocate !== undefined) setWillingToRelocate(data.willingToRelocate);
-          if (data.salaryMin != null) setSalary(String(data.salaryMin));
-          if (data.experienceMonths != null) setExperience(data.experienceMonths ? `${data.experienceMonths} months` : "");
-          if (Array.isArray(data.workTypes)) setWorkTypes(data.workTypes);
-          if (Array.isArray(data.skills)) setSkills(data.skills.map((s) => ({ name: s.name, level: (s.level ?? "Intermediate") as SkillLevel })));
-          if (typeof data.dateOfBirth === "string") setDateOfBirth(data.dateOfBirth);
+    async function load() {
+      const stored = loadCandidateProfile();
+      let userId = getCandidateUserId();
+
+      if (stored) {
+        setFullName(stored.fullName ?? "");
+        setEmail(stored.email ?? "");
+        setPhone(stored.phone ?? "");
+        setBio(stored.bio ?? "");
+        setJob(stored.job ?? "");
+        setLinkedIn(stored.linkedIn ?? "");
+        setLanguages(stored.languages ?? "");
+        const p = stored.profile;
+        if (p) {
+          setLocation("locationCityId" in p && p.locationCityId ? (GEORGIAN_CITIES.find((c) => c.id === p.locationCityId)?.nameEn ?? p.locationCityId) : "");
+          setWillingToRelocate("willingToRelocate" in p ? Boolean(p.willingToRelocate) : false);
+          setSalary(String(p.salaryMin || ""));
+          setExperience(p.experienceMonths ? String(p.experienceMonths) + " months" : "");
+          setWorkTypes(p.workTypes ?? []);
+          setSkills(
+            (p.skills ?? []).map((s) => ({ name: s.name, level: s.level ?? "Intermediate" }))
+          );
         }
-      })
-      .catch(() => {})
-      .finally(() => setProfileLoading(false));
+      }
+
+      // Fallback: resolve candidate id from the authenticated session when
+      // localStorage wasn't populated.
+      if (!userId) {
+        try {
+          const res = await fetch("/api/auth/session", { credentials: "include" });
+          const data = (await res.json().catch(() => null)) as { userId?: string | null; user?: { role?: string | null } | null } | null;
+          if (data?.userId && data.user?.role === "CANDIDATE") {
+            userId = data.userId;
+            if (typeof window !== "undefined") {
+              window.localStorage.setItem("matcher_candidate_user_id", userId);
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (!userId) {
+        setProfileLoading(false);
+        return;
+      }
+
+      fetch(`/api/candidates/profile?userId=${encodeURIComponent(userId)}`)
+        .then((r) => r.json())
+        .then((data: { fullName?: string; email?: string; phone?: string; locationCityId?: string; salaryMin?: number; workTypes?: string[]; willingToRelocate?: boolean; skills?: Array<{ name: string; level: string }>; educationLevel?: string; experienceMonths?: number; jobTitle?: string; photo?: string | null; dateOfBirth?: string | null } | null) => {
+          if (data) {
+            if (data.fullName) setFullName(data.fullName);
+            if (data.email != null) setEmail(data.email ?? "");
+            if (data.phone != null) setPhone(data.phone ?? "");
+            if (data.jobTitle != null) setJob(data.jobTitle ?? "");
+            if (data.photo != null) setPhotoUrl(data.photo || null);
+            if (data.locationCityId != null) {
+              const name = GEORGIAN_CITIES.find((c) => c.id === data.locationCityId)?.nameEn ?? data.locationCityId;
+              setLocation(name || "");
+            }
+            if (data.willingToRelocate !== undefined) setWillingToRelocate(data.willingToRelocate);
+            if (data.salaryMin != null) setSalary(String(data.salaryMin));
+            if (data.experienceMonths != null) setExperience(data.experienceMonths ? `${data.experienceMonths} months` : "");
+            if (Array.isArray(data.workTypes)) setWorkTypes(data.workTypes);
+            if (Array.isArray(data.skills)) setSkills(data.skills.map((s) => ({ name: s.name, level: (s.level ?? "Intermediate") as SkillLevel })));
+            if (typeof data.dateOfBirth === "string") setDateOfBirth(data.dateOfBirth);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setProfileLoading(false));
+    }
+
+    void load();
   }, []);
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
