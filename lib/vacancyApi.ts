@@ -92,7 +92,8 @@ export function buildVacancyCardsWithMatch(
     .filter((v) => vacancyTitleMatchesPreferredJob(v.title, candidatePreferredJob))
     .map((v) => {
       const profile = apiVacancyToProfile(v);
-      if (!passesPreCalcFilter(candidateProfile, profile)) return null;
+      // Always compute a match score; if hard filters fail inside calculateMatch,
+      // the score will be low (0–) but the vacancy will still be shown.
       const match = calculateMatch(candidateProfile, profile);
       const salaryStr = v.salaryMin != null ? `${v.salaryMin.toLocaleString()}–${v.salaryMax.toLocaleString()} GEL` : `${v.salaryMax.toLocaleString()} GEL`;
       return {
@@ -107,7 +108,8 @@ export function buildVacancyCardsWithMatch(
         match,
       };
     })
-    .filter((x): x is VacancyCardFromApi => x != null && x.match >= 70)
+    // Do not hide low-score vacancies; show all and let ranking happen via `match`.
+    .filter((x): x is VacancyCardFromApi => x != null)
     .sort((a, b) => b.match - a.match);
 }
 
