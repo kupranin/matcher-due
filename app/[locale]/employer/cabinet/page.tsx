@@ -212,7 +212,6 @@ export default function EmployerCabinetPage() {
       setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
     }
   }, []);
-
   function loadVacanciesAndCandidates() {
     const companyId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_id") : null;
     if (!companyId) {
@@ -242,16 +241,6 @@ export default function EmployerCabinetPage() {
       })
       .catch(() => setVacancies([]))
       .finally(() => setVacanciesLoading(false));
-    fetch("/api/candidates")
-      .then((r) => r.json())
-      .then((list: unknown) => {
-        if (Array.isArray(list)) setApiCandidates(list);
-        else setApiCandidates([]);
-      })
-      .catch(() => {
-        setApiCandidates([]);
-      })
-      .finally(() => setCandidatesLoading(false));
   }
 
   useEffect(() => {
@@ -312,6 +301,22 @@ export default function EmployerCabinetPage() {
   type LikeState = "idle" | "submitting" | "matched" | "notMatched" | "error";
   const [likeState, setLikeState] = useState<LikeState>("idle");
   const [likeError, setLikeError] = useState<string | null>(null);
+
+  // Reload candidates whenever the selected vacancy changes.
+  useEffect(() => {
+    if (!selectedVacancy) return;
+    setCandidatesLoading(true);
+    fetch(`/api/employer/candidates?vacancyId=${encodeURIComponent(selectedVacancy.id)}`)
+      .then((r) => r.json())
+      .then((list: unknown) => {
+        if (Array.isArray(list)) setApiCandidates(list as typeof apiCandidates);
+        else setApiCandidates([]);
+      })
+      .catch(() => {
+        setApiCandidates([]);
+      })
+      .finally(() => setCandidatesLoading(false));
+  }, [selectedVacancy?.id]);
 
   useEffect(() => {
     if (selectedVacancy && candidates.length > 0) {

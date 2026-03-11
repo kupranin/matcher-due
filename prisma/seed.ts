@@ -40,7 +40,9 @@ async function main() {
   console.log("  Creating candidate profile...");
   const candidateProfile = await prisma.candidateProfile.upsert({
     where: { userId: candidateUser.id },
-    update: {},
+    update: {
+      availableToWork: true,
+    },
     create: {
       userId: candidateUser.id,
       fullName: "Nino K.",
@@ -52,6 +54,7 @@ async function main() {
       educationLevel: "High School",
       workTypes: ["Full-time"],
       jobTitle: "Barista",
+      availableToWork: true,
     },
   });
 
@@ -202,7 +205,9 @@ async function main() {
     });
     const cp = await prisma.candidateProfile.upsert({
       where: { userId: u.id },
-      update: {},
+      update: {
+        availableToWork: true,
+      },
       create: {
         userId: u.id,
         fullName: c.fullName,
@@ -212,12 +217,49 @@ async function main() {
         educationLevel: "High School",
         workTypes: ["Full-time", "Part-time"],
         jobTitle: c.jobTitle,
+        availableToWork: true,
       },
     });
     await prisma.candidateSkill.createMany({
       data: c.skills.map((s) => ({ candidateProfileId: cp.id, ...s })),
       skipDuplicates: true,
     });
+  }
+
+  // Create demo matches for the first 20 candidate profiles with the earliest vacancy
+  // so employer cabinet has initial matches and chats.
+  const earliestVacancy = await prisma.vacancy.findFirst({
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+
+  if (earliestVacancy) {
+    const firstTwentyCandidates = await prisma.candidateProfile.findMany({
+      orderBy: { createdAt: "asc" },
+      take: 20,
+      select: { id: true },
+    });
+
+    for (const c of firstTwentyCandidates) {
+      await prisma.match.upsert({
+        where: {
+          vacancyId_candidateProfileId: {
+            vacancyId: earliestVacancy.id,
+            candidateProfileId: c.id,
+          },
+        },
+        update: {
+          employerLiked: true,
+          candidateLiked: true,
+        },
+        create: {
+          vacancyId: earliestVacancy.id,
+          candidateProfileId: c.id,
+          employerLiked: true,
+          candidateLiked: true,
+        },
+      });
+    }
   }
 
   // ——— Job Role Templates (EN + KA) ———

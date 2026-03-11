@@ -152,7 +152,7 @@ export function buildCandidateCardsWithMatch(
         skills: skills.map((s) => ({ name: s.name, level: toSkillLevel(s.level) })),
       };
       const rawMatch = calculateMatch(profile, vacancyProfile);
-      const match = Number.isFinite(rawMatch) ? Math.min(100, Math.max(0, Math.round(rawMatch))) : 0;
+      const match = Number.isFinite(rawMatch) ? Math.min(100, Math.max(0, Math.round(rawMatch))) : 50;
       return {
         id: c.id,
         name: c.fullName ?? "Candidate",
