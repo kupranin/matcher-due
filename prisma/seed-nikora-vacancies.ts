@@ -98,11 +98,33 @@ const VACANCIES: VacancyInput[] = [
     ],
   },
   {
+    normalizedTitle: "pharmacist_assistant",
+    targetRole: "Pharmacist Assistant",
+    title: "Pharmacist Assistant",
+    salaryMin: 1200,
+    salaryMax: 1600,
+    workType: "Full-time",
+    requiredExperienceMonths: 0,
+    requiredEducationLevel: "High School",
+    description:
+      "Support pharmacists with customer service, organization, and basic pharmacy tasks. Attention to detail and reliability required.",
+    requiredSkills: [
+      { name: "Attention to detail", level: "Intermediate", weight: 5 },
+      { name: "Customer service", level: "Intermediate", weight: 5 },
+      { name: "Communication", level: "Intermediate", weight: 4 },
+      { name: "Organization", level: "Intermediate", weight: 4 },
+      { name: "Reliability", level: "Intermediate", weight: 5 },
+    ],
+    preferredSkills: [
+      { name: "Pharmacy basics", level: "Beginner", weight: 2 },
+    ],
+  },
+  {
     normalizedTitle: "warehouse_worker",
     targetRole: "Warehouse Worker",
     title: "Warehouse Worker",
-    salaryMin: 900,
-    salaryMax: 1200,
+    salaryMin: 1000,
+    salaryMax: 1400,
     workType: "Full-time",
     requiredExperienceMonths: 0,
     requiredEducationLevel: "None",
@@ -172,7 +194,11 @@ async function main() {
     });
 
     if (existing) {
-      console.log(`  Skipping (already exists): ${v.title}`);
+      await prisma.vacancy.update({
+        where: { id: existing.id },
+        data: { salaryMin: v.salaryMin, salaryMax: v.salaryMax },
+      });
+      console.log(`  Updated salary: ${v.title} → ${v.salaryMin}–${v.salaryMax} GEL`);
       continue;
     }
 
@@ -218,23 +244,38 @@ async function main() {
   console.log("\nConfirmation: All new vacancies are PUBLISHED and attached to the existing Nikora company_id:", company.id);
 
   console.log("\n--- Structured JSON (for reference) ---");
+  const tagsByVacancy: Record<string, string[]> = {
+    "Administrative Assistant": ["administration", "office", "assistant", "documentation", "operations"],
+    "Pharmacist Assistant": ["pharmacy", "retail", "healthcare", "support"],
+    Cleaner: ["cleaning", "hygiene", "retail", "support"],
+    Driver: ["driver", "logistics", "delivery", "transport"],
+    "Warehouse Worker": ["warehouse", "logistics", "inventory", "operations"],
+    "Shop Administrator": ["retail", "management", "supervisor", "store"],
+  };
+  const softSkillsByVacancy: Record<string, string[]> = {
+    "Administrative Assistant": ["attention to detail", "responsibility", "time management"],
+    "Pharmacist Assistant": ["attention to detail", "reliability", "communication"],
+    Cleaner: ["punctuality", "discipline"],
+    Driver: ["responsibility", "reliability"],
+    "Warehouse Worker": ["discipline", "responsibility"],
+    "Shop Administrator": ["communication", "decision making", "organization"],
+  };
   const jsonPayload = {
     company_id: company.id,
     company_name: company.name,
+    confirmation: "Vacancies attached to existing Nikora company_id",
     vacancies: VACANCIES.map((v) => ({
       normalizedTitle: v.normalizedTitle,
       targetRole: v.targetRole,
       title: v.title,
+      seniorityLevel: v.requiredExperienceMonths >= 36 ? "Senior" : v.requiredExperienceMonths >= 12 ? "Mid" : "Entry",
       experienceMonths: v.requiredExperienceMonths,
       salaryMin: v.salaryMin,
       salaryMax: v.salaryMax,
       employmentType: v.workType,
       requiredSkills: v.requiredSkills.map((s) => s.name),
-      softSkills: ["Responsibility", "Reliability", "Communication", "Organization", "Attention to detail", "Discipline", "Time management"].filter(
-        (soft) =>
-          [...v.requiredSkills, ...(v.preferredSkills ?? [])].some((s) => s.name.toLowerCase().includes(soft.toLowerCase()))
-      ),
-      tags: [v.normalizedTitle.replace(/_/g, " "), v.targetRole, "retail", "Tbilisi", "onsite"],
+      softSkills: softSkillsByVacancy[v.title] ?? [],
+      tags: tagsByVacancy[v.title] ?? [],
     })),
   };
   console.log(JSON.stringify(jsonPayload, null, 2));
