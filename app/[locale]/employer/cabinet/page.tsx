@@ -305,12 +305,13 @@ export default function EmployerCabinetPage() {
   // Reload candidates whenever the selected vacancy changes.
   useEffect(() => {
     if (!selectedVacancy) return;
+    const vacancyId = selectedVacancy.id;
     setCandidatesLoading(true);
     async function loadCandidates() {
       try {
         // Prefer the employer-scoped endpoint; fall back to the global candidates
         // list if it fails so the deck is never empty.
-        const primaryRes = await fetch(`/api/employer/candidates?vacancyId=${encodeURIComponent(selectedVacancy.id)}`);
+        const primaryRes = await fetch(`/api/employer/candidates?vacancyId=${encodeURIComponent(vacancyId)}`);
         if (primaryRes.ok) {
           const primaryList = (await primaryRes.json().catch(() => [])) as unknown;
           if (Array.isArray(primaryList) && primaryList.length > 0) {
