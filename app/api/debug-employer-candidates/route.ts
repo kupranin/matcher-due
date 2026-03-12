@@ -234,7 +234,7 @@ export async function GET(request: Request) {
         experienceMonths: c.experienceMonths,
         educationLevel: c.educationLevel,
         willingToRelocate: c.willingToRelocate,
-        availableToWork: c.availableToWork,
+        availableToWork: c.availableToWork ?? undefined,
         photo: c.photo,
         age: null,
         skills: c.skills,
