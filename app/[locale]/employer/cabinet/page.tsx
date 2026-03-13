@@ -89,13 +89,13 @@ function SwipeCard({
       dragElastic={0.65}
       onDragEnd={handleDragEnd}
       style={{ x, rotate }}
-      className="absolute inset-0 cursor-grab active:cursor-grabbing"
+      className="absolute inset-0 z-10 cursor-grab active:cursor-grabbing"
     >
-      <div className="absolute -inset-3 flex overflow-hidden rounded-[1.4rem]">
+      <div className="pointer-events-none absolute -inset-3 z-0 flex overflow-hidden rounded-[1.4rem]">
         <motion.div style={{ opacity: bgLeftOpacity }} className="flex-1 bg-rose-400/30" aria-hidden />
         <motion.div style={{ opacity: bgRightOpacity }} className="flex-1 bg-emerald-400/30" aria-hidden />
       </div>
-      <div className="relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+      <div className="relative z-10 flex h-full w-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
         {/* Hero photo */}
         <div className="relative w-full aspect-[4/5] bg-gray-100">
           {photoSrc ? (
@@ -164,12 +164,12 @@ function SwipeCard({
         </div>
       </div>
       {/* Swipe overlays */}
-      <motion.div style={{ opacity: likeOpacity }} className="pointer-events-none absolute inset-0 flex items-center justify-end pr-6 rounded-2xl">
+      <motion.div style={{ opacity: likeOpacity }} className="pointer-events-none absolute inset-0 z-20 flex items-center justify-end pr-6 rounded-2xl">
         <div className="rounded-xl border-2 border-emerald-500 bg-emerald-500/90 px-4 py-2 shadow-lg -rotate-12">
           <span className="text-xl font-black uppercase tracking-wider text-white">{t("like")}</span>
         </div>
       </motion.div>
-      <motion.div style={{ opacity: nopeOpacity }} className="pointer-events-none absolute inset-0 flex items-center justify-start pl-6 rounded-2xl">
+      <motion.div style={{ opacity: nopeOpacity }} className="pointer-events-none absolute inset-0 z-20 flex items-center justify-start pl-6 rounded-2xl">
         <div className="rounded-xl border-2 border-rose-500 bg-rose-500/90 px-4 py-2 shadow-lg rotate-12">
           <span className="text-xl font-black uppercase tracking-wider text-white">{t("nope")}</span>
         </div>

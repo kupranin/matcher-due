@@ -146,6 +146,8 @@ export async function GET(request: Request) {
 
     if (ctx) {
       // Authenticated employer: return matches scoped to their company.
+      // NOTE: Production DB currently lacks CandidateProfile.date_of_birth, so we
+      // do not select it here. Age can be derived elsewhere if needed.
       rawMatches = await prisma.$queryRaw<any[]>`
         SELECT
             m.id AS match_id,
@@ -159,7 +161,6 @@ export async function GET(request: Request) {
 
             cp.full_name AS candidate_name,
             cp.photo AS candidate_photo_url,
-            cp.date_of_birth,
 
             v.title AS vacancy_title,
             v.company_id,
@@ -214,7 +215,6 @@ export async function GET(request: Request) {
 
             cp.full_name AS candidate_name,
             cp.photo AS candidate_photo_url,
-            cp.date_of_birth,
 
             v.title AS vacancy_title,
             v.company_id,
@@ -262,7 +262,7 @@ export async function GET(request: Request) {
         candidateProfileId: m.candidate_profile_id,
         candidateName: m.candidate_name,
         candidatePhotoUrl: m.candidate_photo_url,
-        candidateAge: calculateAge(m.date_of_birth as string | null | undefined),
+        candidateAge: null,
         vacancyTitle: m.vacancy_title,
         companyName: m.company_name,
         matchedAt: m.matched_at,
