@@ -97,7 +97,7 @@ function SwipeCard({
       </div>
       <div className="relative z-10 flex h-full w-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
         {/* Hero photo */}
-        <div className="relative w-full aspect-[4/5] bg-gray-100">
+        <div className="relative w-full aspect-[3/4] bg-gray-100">
           {photoSrc ? (
             <img
               src={photoSrc}
@@ -581,7 +581,7 @@ export default function EmployerCabinetPage() {
         </p>
       </div>
 
-      <div className="relative mx-auto mt-8 aspect-[3/4] max-h-[500px]">
+      <div className="relative mx-auto mt-8 aspect-[3/4] max-h-[460px]">
         {likeError && (
           <div className="absolute -top-12 left-0 right-0 z-10 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800 text-center shadow-md">
             {likeError}
