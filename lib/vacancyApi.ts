@@ -52,20 +52,59 @@ export function apiVacancyToProfile(v: {
   };
 }
 
-/** Normalize job title for matching so Waiter/Waitress and similar pairs match. */
-function normalizeJobTitleForMatch(title: string): string {
+type RoleMatchCategory = "strong" | "related" | "unrelated";
+
+/** Map a free-text role/title into a coarse role family slug. */
+function normalizeRoleToFamily(title: string | null | undefined): string | null {
+  if (!title || typeof title !== "string") return null;
   const t = title.trim().toLowerCase();
-  if (t === "waitress" || t === "waiter") return "waiter";
-  return t;
+
+  if (t.includes("clean") || t.includes("housekeep") || t.includes("janitor")) return "cleaner";
+  if (t.includes("reception") || t.includes("front desk") || t.includes("hostess")) return "receptionist";
+  if (t.includes("cashier") || t.includes("checkout")) return "cashier";
+  if (t.includes("warehouse") || t.includes("stock") || t.includes("inventory")) return "warehouse";
+  if (t.includes("sales") || t.includes("shop assistant") || t.includes("merchandiser")) return "sales";
+  if (t.includes("cook") || t.includes("kitchen")) return "kitchen";
+  if (t.includes("barista") || t.includes("coffee")) return "barista";
+  if (t.includes("security") || t.includes("guard")) return "security";
+  if (t.includes("driver") || t.includes("courier")) return "driver";
+
+  return null;
 }
 
-/** True if vacancy title matches candidate's preferred job (so we don't show Waiter to someone who wants Barista). */
-function vacancyTitleMatchesPreferredJob(vacancyTitle: string, preferredJob: string | null | undefined): boolean {
-  if (!preferredJob || typeof preferredJob !== "string") return true;
-  const want = normalizeJobTitleForMatch(preferredJob);
-  if (!want) return true;
-  const vacancy = normalizeJobTitleForMatch(vacancyTitle);
-  return vacancy.includes(want) || want.includes(vacancy);
+/** Role relevance for employer browsing. */
+function roleMatchCategory(vacancyTitle: string, candidatePreferredRole: string | null | undefined): RoleMatchCategory {
+  const vacancyFamily = normalizeRoleToFamily(vacancyTitle);
+  const candidateFamily = normalizeRoleToFamily(candidatePreferredRole);
+
+  if (!vacancyFamily || !candidateFamily) {
+    // When we can't confidently categorize, treat as related so we don't over-filter.
+    return "related";
+  }
+
+  if (vacancyFamily === candidateFamily) return "strong";
+
+  const RELATED: Record<string, string[]> = {
+    cleaner: ["service", "housekeeping"],
+    reception: ["sales", "customer_service"],
+    receptionist: ["sales", "customer_service"],
+    cashier: ["sales"],
+    warehouse: ["sales", "driver"],
+    sales: ["cashier"],
+    kitchen: ["barista"],
+  };
+
+  if (RELATED[vacancyFamily]?.includes(candidateFamily) || RELATED[candidateFamily]?.includes(vacancyFamily)) {
+    return "related";
+  }
+
+  return "unrelated";
+}
+
+/** Salary compatibility for employer browsing (candidate within +15% of vacancy budget). */
+function isSalaryCompatible(candidateMin: number, vacancyMax: number): boolean {
+  if (!candidateMin || !vacancyMax) return true;
+  return candidateMin <= vacancyMax * 1.15;
 }
 
 /** Build vacancy cards with match % from API list and candidate profile. Only shows vacancies whose title matches candidate's preferred job (e.g. Barista → no Waiter). */
@@ -89,7 +128,10 @@ export function buildVacancyCardsWithMatch(
   candidatePreferredJob?: string | null
 ): VacancyCardFromApi[] {
   return apiVacancies
-    .filter((v) => vacancyTitleMatchesPreferredJob(v.title, candidatePreferredJob))
+    .filter((v) => {
+      const cat = roleMatchCategory(v.title, candidatePreferredJob ?? null);
+      return cat !== "unrelated";
+    })
     .map((v) => {
       const profile = apiVacancyToProfile(v);
       // Always compute a match score; if hard filters fail inside calculateMatch,
@@ -130,7 +172,8 @@ export function buildCandidateCardsWithMatch(
     availableToWork?: boolean;
     skills: Array<{ name: string; level: string }>;
   }>,
-  vacancyProfile: VacancyProfile
+  vacancyProfile: VacancyProfile,
+  vacancyTitle: string
 ): Array<CandidateCard & { match: number; age?: number | null }> {
   const safeSkills = (c: (typeof apiCandidates)[0]) => Array.isArray(c.skills) ? c.skills : [];
   const toSkillLevel = (level: string | null | undefined): CandidateProfile["skills"][0]["level"] => {
@@ -138,10 +181,15 @@ export function buildCandidateCardsWithMatch(
     if (v === "Beginner" || v === "Advanced") return v;
     return "Intermediate";
   };
-  // Browsing: show all candidates (do not filter by match threshold). Sort by match desc.
-  // Optional fields (photo, age, city) use fallbacks so cards still render when null.
+  // Browsing: filter by role relevance & salary; then score and sort by match desc.
   return apiCandidates
-    // Show all candidates; do not hide those with availableToWork=false or null.
+    .filter((c) => {
+      const roleCat = roleMatchCategory(vacancyTitle, c.jobTitle);
+      if (roleCat === "unrelated") {
+        return false;
+      }
+      return isSalaryCompatible(c.salaryMin, vacancyProfile.salaryMax);
+    })
     .map((c) => {
       const skills = safeSkills(c);
       const profile: CandidateProfile = {

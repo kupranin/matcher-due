@@ -240,16 +240,19 @@ export async function GET(request: Request) {
         skills: c.skills,
       }));
 
-      const cards = buildCandidateCardsWithMatch(apiCandidates, vacancyProfile);
+      const cards = buildCandidateCardsWithMatch(apiCandidates, vacancyProfile, selectedVacancy.title);
 
       totalAfterCardBuild = cards.length;
-      sampleFinalCards = cards.slice(0, 20).map((card) => ({
-        candidateProfileId: card.id,
-        candidateName: card.name,
-        city: card.location,
-        preferredRole: apiCandidates.find((c) => c.id === card.id)?.jobTitle ?? null,
-        score: card.match,
-      }));
+      sampleFinalCards = cards.slice(0, 20).map((card) => {
+        const api = apiCandidates.find((c) => c.id === card.id);
+        return {
+          candidateProfileId: card.id,
+          candidateName: card.name,
+          city: card.location,
+          preferredRole: api?.jobTitle ?? null,
+          score: card.match,
+        };
+      });
     }
 
     // Sample raw candidates (pre-filters)

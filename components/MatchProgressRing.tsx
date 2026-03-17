@@ -23,7 +23,10 @@ export default function MatchProgressRing({
   const offset = circumference - (percent / 100) * circumference;
 
   return (
-    <div className={`relative inline-flex shrink-0 items-center justify-center ${className}`} style={{ width: size, height: size }}>
+    <div
+      className={`relative inline-flex shrink-0 items-center justify-center ${className}`}
+      style={{ width: size, height: size }}
+    >
       <svg width={size} height={size} className="absolute inset-0 -rotate-90" aria-hidden>
         <circle
           cx={cx}
@@ -47,7 +50,7 @@ export default function MatchProgressRing({
           className="text-matcher-bright transition-[stroke-dashoffset] duration-500"
         />
       </svg>
-      <div className="relative z-10 flex items-center justify-center text-sm font-bold text-white">
+      <div className="relative z-10 flex items-center justify-center text-sm font-bold text-current">
         {children}
       </div>
     </div>

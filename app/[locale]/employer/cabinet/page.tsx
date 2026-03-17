@@ -120,7 +120,7 @@ function SwipeCard({
           )}
           {/* Match ring overlapping bottom-right of image */}
           <div className="absolute bottom-4 right-4">
-            <MatchProgressRing percent={matchPct} size={52} className="text-matcher">
+            <MatchProgressRing percent={matchPct} size={52} className="text-matcher-dark">
               {matchPct}%
             </MatchProgressRing>
           </div>
@@ -294,7 +294,10 @@ export default function EmployerCabinetPage() {
     return () => document.removeEventListener("click", handleClick);
   }, [vacancySwitcherOpen]);
   const candidates = useMemo(
-    () => (selectedVacancy && apiCandidates.length > 0 ? buildCandidateCardsWithMatch(apiCandidates, selectedVacancy.profile) : []),
+    () =>
+      selectedVacancy && apiCandidates.length > 0
+        ? buildCandidateCardsWithMatch(apiCandidates, selectedVacancy.profile, selectedVacancy.title)
+        : [],
     [selectedVacancy, apiCandidates]
   );
   const [candidateStack, setCandidateStack] = useState<Candidate[]>([]);
