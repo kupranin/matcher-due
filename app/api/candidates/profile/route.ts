@@ -58,6 +58,7 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
+    console.log("[/api/candidates/profile] PATCH body", body);
     const userId = typeof body?.userId === "string" ? body.userId.trim() : "";
     if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
     const existing = await prisma.candidateProfile.findUnique({ where: { userId } });
@@ -152,7 +153,37 @@ export async function PATCH(request: Request) {
         });
       }
     }
-    return NextResponse.json({ ok: true });
+
+    const refreshed = await prisma.candidateProfile.findUnique({
+      where: { id: profile.id },
+      include: { skills: true, user: { select: { email: true } } },
+    });
+
+    if (!refreshed) {
+      return NextResponse.json({ ok: true });
+    }
+
+    return NextResponse.json({
+      profileId: refreshed.id,
+      userId: refreshed.userId,
+      fullName: refreshed.fullName,
+      phone: refreshed.phone,
+      email: refreshed.user.email,
+      locationCityId: refreshed.locationCityId,
+      locationDistrictId: refreshed.locationDistrictId,
+      salaryMin: refreshed.salaryMin,
+      dateOfBirth: refreshed.dateOfBirth ? refreshed.dateOfBirth.toISOString().slice(0, 10) : null,
+      age: calculateAge(refreshed.dateOfBirth),
+      willingToRelocate: refreshed.willingToRelocate,
+      experienceMonths: refreshed.experienceMonths,
+      experienceText: refreshed.experienceText,
+      educationLevel: refreshed.educationLevel,
+      workTypes: refreshed.workTypes,
+      jobTitle: refreshed.jobTitle,
+      availableToWork: refreshed.availableToWork,
+      photo: refreshed.photo?.trim() || null,
+      skills: refreshed.skills.map((s) => ({ name: s.name, level: s.level })),
+    });
   } catch (e) {
     console.error("Candidate profile patch error:", e);
     return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });

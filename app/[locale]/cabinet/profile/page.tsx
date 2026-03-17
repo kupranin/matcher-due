@@ -345,7 +345,7 @@ export default function CabinetProfilePage() {
               workTypes,
               willingToRelocate,
             });
-            saveCandidateProfile({
+            const storedPayload = {
               profile,
               fullName: fullName.trim(),
               email: email.trim(),
@@ -355,7 +355,11 @@ export default function CabinetProfilePage() {
               linkedIn: linkedIn.trim() || undefined,
               languages: languages.trim() || undefined,
               dateOfBirth: dateOfBirth || undefined,
-            });
+            };
+            // Temporary debug: see exactly what we are saving on the client
+            // eslint-disable-next-line no-console
+            console.log("[cabinet/profile] saving profile payload", storedPayload);
+            saveCandidateProfile(storedPayload);
             const userId = getCandidateUserId();
             setProfileSaving(true);
             try {
@@ -376,26 +380,40 @@ export default function CabinetProfilePage() {
               }
               if (userId) {
                 const locationCityId = GEORGIAN_CITIES.find((c) => c.nameEn === location.trim())?.id ?? (location.trim() || "");
-                await fetch("/api/candidates/profile", {
+                const body = {
+                  userId,
+                  fullName: fullName.trim(),
+                  phone: phone.trim() || undefined,
+                  locationCityId: locationCityId || undefined,
+                  willingToRelocate,
+                  salaryMin: Math.max(0, parseInt(salary.replace(/\s/g, ""), 10) || 0) || undefined,
+                  experienceMonths: experience.trim() ? parseExperienceMonths(experience) : undefined,
+                  experienceText: experience.trim() || undefined,
+                  educationLevel: profile.educationLevel,
+                  workTypes: workTypes.length ? workTypes : undefined,
+                  skills: profile.skills.map((s) => ({ name: s.name, level: s.level })),
+                  jobTitle: job.trim() || undefined,
+                  ...(photoToSave !== undefined && { photo: photoToSave }),
+                  ...(dateOfBirth && { dateOfBirth }),
+                };
+                // Temporary debug: log outbound PATCH payload
+                // eslint-disable-next-line no-console
+                console.log("[cabinet/profile] PATCH /api/candidates/profile body", body);
+                const res = await fetch("/api/candidates/profile", {
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    userId,
-                    fullName: fullName.trim(),
-                    phone: phone.trim() || undefined,
-                    locationCityId: locationCityId || undefined,
-                    willingToRelocate,
-                    salaryMin: Math.max(0, parseInt(salary.replace(/\s/g, ""), 10) || 0) || undefined,
-                    experienceMonths: experience.trim() ? parseExperienceMonths(experience) : undefined,
-                    experienceText: experience.trim() || undefined,
-                    educationLevel: profile.educationLevel,
-                    workTypes: workTypes.length ? workTypes : undefined,
-                    skills: profile.skills.map((s) => ({ name: s.name, level: s.level })),
-                    jobTitle: job.trim() || undefined,
-                    ...(photoToSave !== undefined && { photo: photoToSave }),
-                    ...(dateOfBirth && { dateOfBirth }),
-                  }),
+                  body: JSON.stringify(body),
                 });
+                if (!res.ok) {
+                  const err = await res.json().catch(() => ({}));
+                  // eslint-disable-next-line no-console
+                  console.error("[cabinet/profile] failed to save profile", res.status, err);
+                  window.alert(err?.error || "Failed to save profile. Please try again.");
+                  return;
+                }
+                // Optionally log the server response for debugging
+                // eslint-disable-next-line no-console
+                console.log("[cabinet/profile] profile saved successfully");
               }
               setPhotoFile(null);
             } catch {

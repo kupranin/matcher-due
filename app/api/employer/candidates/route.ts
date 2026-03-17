@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { calculateAge } from "@/lib/age";
 
 /**
  * GET /api/employer/candidates?vacancyId=...
@@ -58,6 +59,7 @@ export async function GET(request: Request) {
         willing_to_relocate: boolean;
         available_to_work: boolean | null;
         photo: string | null;
+        date_of_birth: Date | null;
       }>
     >`SELECT "id",
         "full_name",
@@ -69,7 +71,8 @@ export async function GET(request: Request) {
         "education_level",
         "willing_to_relocate",
         "available_to_work",
-        "photo"
+        "photo",
+        "date_of_birth"
       FROM "CandidateProfile"
       ORDER BY "created_at" DESC
       LIMIT 200`;
@@ -108,8 +111,7 @@ export async function GET(request: Request) {
         willingToRelocate: c.willing_to_relocate,
         availableToWork: c.available_to_work,
         photo: c.photo?.trim() || null,
-        // Date of birth column is missing in prod DB, so we cannot compute age here.
-        age: null,
+        age: calculateAge(c.date_of_birth),
         skills: skillsByCandidate.get(c.id) ?? [],
       }));
 
