@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const BUCKET = "candidate-photos";
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
@@ -16,7 +17,10 @@ export async function POST(request: Request) {
     if (file.size > MAX_SIZE_BYTES) return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 400 });
     if (!ALLOWED_TYPES.includes(file.type)) return NextResponse.json({ error: "Only JPEG, PNG, WebP allowed" }, { status: 400 });
 
-    let profile = await prisma.candidateProfile.findUnique({ where: { userId }, select: { id: true } });
+    let profile = await prisma.candidateProfile.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
     if (!profile) {
       // If profile does not exist yet (e.g. user logged in before completing onboarding),
       // create a minimal profile so that photo uploads still work.
@@ -37,13 +41,9 @@ export async function POST(request: Request) {
       });
     }
 
-    let supabase;
-    try {
-      const { createClient } = await import("@/lib/supabase/server");
-      supabase = await createClient();
-    } catch {
-      return NextResponse.json({ error: "Upload not configured" }, { status: 503 });
-    }
+    // Use admin Supabase client (service role) so we can always write to the
+    // private candidate-photos bucket from the backend, regardless of user auth.
+    const supabase = createAdminClient();
 
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
     const key = `${userId}/${profile.id}-${Date.now()}.${ext}`;
@@ -55,7 +55,11 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      console.error("Supabase storage upload error:", error);
+      console.error("[/api/candidates/profile/photo] Supabase upload error", {
+        userId,
+        key,
+        error,
+      });
       return NextResponse.json({ error: "Upload failed" }, { status: 500 });
     }
 
@@ -69,7 +73,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url });
   } catch (e) {
-    console.error("Photo upload error:", e);
+    console.error("[/api/candidates/profile/photo] unexpected error", e);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }
