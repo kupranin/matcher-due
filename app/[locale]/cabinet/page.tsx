@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
@@ -69,6 +70,8 @@ function SwipeCard({
       onDragEnd={handleDragEnd}
       style={{ x, rotate }}
       className="absolute inset-0 cursor-grab active:cursor-grabbing"
+      role="article"
+      aria-label={`${vacancy.title} at ${vacancy.company}`}
     >
       {/* Background hint: green right, red left */}
       <div className="absolute -inset-3 flex rounded-[1.5rem] overflow-hidden">
@@ -78,10 +81,13 @@ function SwipeCard({
       <div className="relative flex h-full w-full flex-col overflow-hidden rounded-3xl bg-gray-900 shadow-2xl shadow-gray-300/50 ring-2 ring-white/20">
         {/* Image block – salary pill top-right, match ring top-left */}
         <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden">
-          <img
+          <Image
             src={vacancy.photo}
-            alt=""
-            className="h-full w-full object-cover"
+            alt={vacancy.title ? `${vacancy.title} at ${vacancy.company}` : "Vacancy photo"}
+            fill
+            priority={false}
+            sizes="(min-width: 768px) 400px, 100vw"
+            className="object-cover"
           />
           {/* High-contrast salary pill – top right, Gen Z scannable */}
           <div className="absolute right-3 top-3 rounded-full bg-matcher-bright px-3 py-1.5 text-sm font-bold tracking-tight text-charcoal shadow-lg sm:right-4 sm:top-4 sm:px-4 sm:py-2 sm:text-base">
@@ -93,6 +99,11 @@ function SwipeCard({
               {vacancy.match}%
             </MatchProgressRing>
           </div>
+          {vacancy.match >= 80 && (
+            <div className="absolute left-3 bottom-3 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-semibold text-white shadow-md sm:left-4 sm:bottom-4">
+              Top match
+            </div>
+          )}
           {/* Swipe overlays */}
           <motion.div
             style={{ opacity: likeOpacity }}
