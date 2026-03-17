@@ -18,9 +18,21 @@ export async function GET(request: Request) {
       select: { id: true, email: true, role: true },
     });
 
-    const candidateProfile = await prisma.candidateProfile.findUnique({
-      where: { userId },
-    });
+    // Use raw SQL to avoid selecting non-existent date_of_birth column
+    const rawProfiles = await prisma.$queryRaw<
+      Array<{
+        id: string;
+        user_id: string;
+        full_name: string;
+        location_city_id: string;
+        salary_min: number;
+      }>
+    >`SELECT "id", "user_id", "full_name", "location_city_id", "salary_min"
+      FROM "CandidateProfile"
+      WHERE "user_id" = ${userId}
+      LIMIT 1`;
+
+    const candidateProfile = rawProfiles[0] ?? null;
 
     console.log("[/api/debug-candidate] user", user);
     console.log("[/api/debug-candidate] candidateProfile", candidateProfile);
@@ -69,4 +81,5 @@ export async function GET(request: Request) {
     );
   }
 }
+
 
