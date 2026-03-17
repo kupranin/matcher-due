@@ -72,6 +72,8 @@ function SwipeCard({
   const bgLeftOpacity = useTransform(x, [0, -120], [0, 0.2]);
   const bgRightOpacity = useTransform(x, [120, 0], [0.2, 0]);
   const photoSrc = candidate.photo && candidate.photo.trim() ? candidate.photo.trim() : AVATAR_PLACEHOLDER;
+  const [firstName, ...restName] = (candidate.name || "").split(" ");
+  const lastInitial = restName[0]?.[0] ? `${restName[0][0]}.` : "";
 
   function handleDragEnd(_: unknown, info: PanInfo) {
     if (info.offset.x > SWIPE_THRESHOLD) onSwipe("right");
@@ -97,7 +99,7 @@ function SwipeCard({
       </div>
       <div className="relative z-10 flex h-full w-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
         {/* Hero photo */}
-        <div className="relative w-full aspect-[3/4] bg-gray-100">
+        <div className="relative w-full aspect-[4/3] bg-gray-100">
           {photoSrc ? (
             <img
               src={photoSrc}
@@ -115,12 +117,12 @@ function SwipeCard({
           )}
         </div>
 
-        <div className="flex flex-1 flex-col justify-between p-6">
+        <div className="flex flex-1 flex-col justify-between p-4">
           {/* Top: match badge + name */}
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 space-y-1">
               <h2 className="text-xl font-bold text-gray-900">
-                {candidate.name}
+                {firstName || candidate.name || "Candidate"} {lastInitial}
                 {typeof candidate.age === "number" && candidate.age > 0 && (
                   <span className="ml-2 text-base font-semibold text-gray-700">
                     {candidate.age}
@@ -128,12 +130,12 @@ function SwipeCard({
                   </span>
                 )}
               </h2>
-              <p className="text-matcher-dark font-medium">{candidate.job}</p>
+              <p className="text-matcher-dark font-medium">
+                {candidate.job || "Not specified"}
+              </p>
               <p className="text-sm text-gray-500">
-                {candidate.location} · {candidate.workType}
-                {typeof candidate.age === "number" && candidate.age > 0 && (
-                  <> · {candidate.age} {tPage("yearsOld") || "years old"}</>
-                )}
+                {candidate.location}
+                {candidate.workType ? <> · {candidate.workType}</> : null}
               </p>
             </div>
             <MatchProgressRing percent={matchPct} size={52} className="text-matcher">
