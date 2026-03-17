@@ -1,7 +1,8 @@
-"use client";
+ "use client";
 
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { getCandidateProfileId, getCandidateUserId, loadCandidateProfile } from "@/lib/candidateProfileStorage";
 import type { MutualMatch } from "@/lib/matchStorage";
@@ -59,6 +60,8 @@ export default function CandidateChatsPage() {
   const t = useTranslations("chats");
   const [matches, setMatches] = useState<MutualMatch[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<MutualMatch | null>(null);
+  const searchParams = useSearchParams();
+  const matchIdFromUrl = searchParams.get("matchId");
 
   useEffect(() => {
     async function load() {
@@ -136,6 +139,12 @@ export default function CandidateChatsPage() {
 
     void load();
   }, []);
+
+  useEffect(() => {
+    if (!matchIdFromUrl || matches.length === 0) return;
+    const match = matches.find((m) => m.id === matchIdFromUrl);
+    if (match) setSelectedMatch(match);
+  }, [matchIdFromUrl, matches]);
 
   if (matches.length === 0) {
     return (

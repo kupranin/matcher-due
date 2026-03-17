@@ -46,6 +46,7 @@
     "cancel": "Cancel"
   },
   "common": {
+    "hello": "Hello",
     "login": "Login",
     "logIn": "Log in",
     "logOut": "Log out",
@@ -474,7 +475,8 @@
     "unlimited": "Unlimited",
     "vacanciesUsed": "vacancies used",
     "validUntil": "Valid until",
-    "overLimit": "You have published more than your plan allows."
+    "overLimit": "You have published more than your plan allows.",
+    "welcomeBack": "Welcome back"
   },
   "cabinet": {
     "yourMatches": "Opportunities for you",

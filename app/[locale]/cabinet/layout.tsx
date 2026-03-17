@@ -18,6 +18,9 @@ export default function CabinetLayout({
   const [authChecked, setAuthChecked] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
 
+  const rawHello = tCommon("hello");
+  const helloLabel = rawHello === "common.hello" || rawHello === "hello" ? "Hello" : rawHello;
+
   useEffect(() => {
     fetch("/api/auth/session", { credentials: "include" })
       .then((r) => r.json())
@@ -135,7 +138,7 @@ export default function CabinetLayout({
         {userName && (
           <div className="sticky top-0 z-10 border-b border-gray-100 bg-gray-50/95 px-4 py-3 backdrop-blur md:static md:border-none md:bg-transparent">
             <p className="mx-auto max-w-3xl text-sm font-medium text-gray-800">
-              {tCommon("hello") || "Hello"},{" "}
+              {helloLabel},{" "}
               <span className="font-semibold">{userName}</span>
             </p>
           </div>

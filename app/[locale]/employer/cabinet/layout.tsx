@@ -22,6 +22,11 @@ export default function EmployerCabinetLayout({
   const tCommon = useTranslations("common");
   const tCabinet = useTranslations("employerCabinet");
   const pathname = usePathname();
+  const rawWelcome = tCabinet("welcomeBack");
+  const welcomeLabel =
+    rawWelcome === "employerCabinet.welcomeBack" || rawWelcome === "welcomeBack"
+      ? "Welcome back"
+      : rawWelcome;
   const router = useRouter();
   const [hasSubscription, setHasSubscription] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionDisplay | null>(null);
@@ -202,7 +207,7 @@ export default function EmployerCabinetLayout({
         {employerName && (
           <div className="sticky top-0 z-10 border-b border-gray-100 bg-gray-50/95 px-4 py-3 backdrop-blur md:static md:border-none md:bg-transparent">
             <p className="mx-auto max-w-4xl text-sm font-medium text-gray-800">
-              {tCabinet("welcomeBack") || "Welcome back"},{" "}
+              {welcomeLabel},{" "}
               <span className="font-semibold">{employerName}</span>
             </p>
           </div>

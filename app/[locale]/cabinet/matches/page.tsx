@@ -1,7 +1,8 @@
-"use client";
+ "use client";
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { getCandidateProfileId, getCandidateUserId, loadCandidateProfile } from "@/lib/candidateProfileStorage";
 import type { MutualMatch } from "@/lib/matchStorage";
 
@@ -121,6 +122,12 @@ export default function CandidateMatchesPage() {
               <p className="font-semibold text-gray-900">{m.company}</p>
               <p className="text-sm text-gray-600">{m.vacancyTitle}</p>
             </div>
+            <Link
+              href={`/cabinet/chats?matchId=${encodeURIComponent(m.id)}`}
+              className="ml-4 rounded-full bg-matcher px-4 py-2 text-sm font-semibold text-white shadow hover:bg-matcher-dark"
+            >
+              {tChats("chat")}
+            </Link>
           </div>
         ))}
       </div>
