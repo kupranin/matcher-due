@@ -32,6 +32,19 @@ export async function GET(request: Request) {
     // Using the Prisma model here would cause a runtime error. To avoid that
     // and still return usable candidates, we query the table via SQL and
     // hydrate skills separately.
+    // Exclude candidates who already have a mutual match with this vacancy (if provided)
+    let matchedCandidateIds: string[] = [];
+    if (vacancyId) {
+      const rows = await prisma.$queryRaw<Array<{ candidate_profile_id: string }>>`
+        SELECT m.candidate_profile_id
+        FROM public.matches m
+        WHERE m.vacancy_id = ${vacancyId}
+          AND m.employer_liked = true
+          AND m.candidate_liked = true
+      `;
+      matchedCandidateIds = rows.map((r) => r.candidate_profile_id);
+    }
+
     const rawCandidates = await prisma.$queryRaw<
       Array<{
         id: string;
@@ -81,27 +94,30 @@ export async function GET(request: Request) {
       skillsByCandidate.set(s.candidateProfileId, list);
     }
 
-    const payload = rawCandidates.map((c) => ({
-      id: c.id,
-      fullName: c.full_name,
-      jobTitle: c.job_title,
-      locationCityId: c.location_city_id,
-      salaryMin: c.salary_min,
-      workTypes: c.work_types ?? [],
-      experienceMonths: c.experience_months,
-      educationLevel: c.education_level,
-      willingToRelocate: c.willing_to_relocate,
-      availableToWork: c.available_to_work,
-      photo: c.photo?.trim() || null,
-      // Date of birth column is missing in prod DB, so we cannot compute age here.
-      age: null,
-      skills: skillsByCandidate.get(c.id) ?? [],
-    }));
+    const payload = rawCandidates
+      .filter((c) => !matchedCandidateIds.includes(c.id))
+      .map((c) => ({
+        id: c.id,
+        fullName: c.full_name,
+        jobTitle: c.job_title,
+        locationCityId: c.location_city_id,
+        salaryMin: c.salary_min,
+        workTypes: c.work_types ?? [],
+        experienceMonths: c.experience_months,
+        educationLevel: c.education_level,
+        willingToRelocate: c.willing_to_relocate,
+        availableToWork: c.available_to_work,
+        photo: c.photo?.trim() || null,
+        // Date of birth column is missing in prod DB, so we cannot compute age here.
+        age: null,
+        skills: skillsByCandidate.get(c.id) ?? [],
+      }));
 
     console.log(
-      "[GET /api/employer/candidates] vacancyId=%s totalCandidates=%d",
+      "[GET /api/employer/candidates] vacancyId=%s totalCandidates=%d totalMatchedCandidateIdsExcluded=%d",
       vacancyId ?? "(none)",
-      payload.length
+      payload.length,
+      matchedCandidateIds.length
     );
 
     return NextResponse.json(payload);

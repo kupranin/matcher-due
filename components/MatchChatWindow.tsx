@@ -25,6 +25,7 @@ export default function MatchChatWindow({
 }) {
   const t = useTranslations("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(true);
   const [input, setInput] = useState("");
   const [showScheduler, setShowScheduler] = useState(false);
   const [scheduleDate, setScheduleDate] = useState("");
@@ -38,12 +39,22 @@ export default function MatchChatWindow({
   const defaultTitle = `Interview: ${match.vacancyTitle} with ${otherName}`;
 
   useEffect(() => {
+    setLoadingMessages(true);
     fetch(`/api/chat?matchId=${encodeURIComponent(match.id)}`)
       .then((r) => r.json())
       .then((list: Array<{ id: string; matchId: string; sender: string; text: string; createdAt: number }>) => {
-        setMessages(list.map((m) => ({ id: m.id, matchId: m.matchId, sender: m.sender as "candidate" | "employer", text: m.text, createdAt: m.createdAt })));
+        setMessages(
+          list.map((m) => ({
+            id: m.id,
+            matchId: m.matchId,
+            sender: m.sender as "candidate" | "employer",
+            text: m.text,
+            createdAt: m.createdAt,
+          }))
+        );
       })
-      .catch(() => setMessages([]));
+      .catch(() => setMessages([]))
+      .finally(() => setLoadingMessages(false));
   }, [match.id]);
 
   useEffect(() => {
@@ -253,7 +264,16 @@ export default function MatchChatWindow({
 
       {/* Messages */}
       <div className="flex min-h-[200px] max-h-[50vh] flex-col overflow-y-auto p-4 sm:max-h-[280px] md:h-80 md:max-h-[320px]">
-        {messages.length === 0 ? (
+        {loadingMessages ? (
+          <div className="flex flex-1 flex-col justify-center gap-3">
+            <div className="h-3 w-24 animate-pulse rounded bg-gray-200" />
+            <div className="space-y-2">
+              <div className="h-9 w-2/3 animate-pulse rounded-2xl bg-gray-100" />
+              <div className="h-9 w-1/2 animate-pulse rounded-2xl bg-gray-100" />
+              <div className="h-9 w-3/4 animate-pulse rounded-2xl bg-gray-100" />
+            </div>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center py-4">
             <p className="text-sm font-medium text-gray-700">You matched! Start the conversation.</p>
             <p className="text-xs text-gray-500">Say hi or pick a suggestion below.</p>

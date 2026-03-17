@@ -99,7 +99,7 @@ function SwipeCard({
       </div>
       <div className="relative z-10 flex h-full w-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
         {/* Hero image section */}
-        <div className="relative w-full h-56 sm:h-64 bg-gray-100">
+        <div className="relative w-full h-56 sm:h-64 bg-matcher-pale">
           {photoSrc ? (
             <img
               src={photoSrc}
@@ -111,8 +111,8 @@ function SwipeCard({
               }}
             />
           ) : (
-            <div className="flex h-full w-full flex-col items-center justify-center bg-gray-100 text-gray-500">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 text-2xl font-semibold">
+            <div className="flex h-full w-full flex-col items-center justify-center bg-matcher-pale text-matcher-dark">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/80 text-2xl font-semibold shadow">
                 {(firstName && firstName[0]) || "👤"}
               </div>
               <p className="mt-2 text-xs font-medium text-gray-500">No photo</p>
