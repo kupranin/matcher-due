@@ -639,6 +639,8 @@
     "changePhoto": "Change photo",
     "addPhoto": "Add photo",
     "basicInfo": "Basic info",
+    "dateOfBirth": "Date of birth",
+    "dateOfBirthHint": "We only show your age, not your full birth date.",
     "fullName": "Full name",
     "fullNamePlaceholder": "e.g. Nino Kuprashvili",
     "aboutMe": "About me",
