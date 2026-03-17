@@ -52,49 +52,122 @@ export function apiVacancyToProfile(v: {
   };
 }
 
-type RoleMatchCategory = "strong" | "related" | "unrelated";
+export type RoleFamily =
+  | "cleaning"
+  | "reception"
+  | "cashier"
+  | "retail_sales"
+  | "warehouse"
+  | "hospitality_service"
+  | "admin_support";
 
-/** Map a free-text role/title into a coarse role family slug. */
-function normalizeRoleToFamily(title: string | null | undefined): string | null {
+export type RoleMatchCategory = "strong" | "related" | "unrelated";
+
+/** Normalize a free-text role/title into a coarse role family. */
+export function getRoleFamily(title: string | null | undefined): RoleFamily | null {
   if (!title || typeof title !== "string") return null;
   const t = title.trim().toLowerCase();
 
-  if (t.includes("clean") || t.includes("housekeep") || t.includes("janitor")) return "cleaner";
-  if (t.includes("reception") || t.includes("front desk") || t.includes("hostess")) return "receptionist";
-  if (t.includes("cashier") || t.includes("checkout")) return "cashier";
-  if (t.includes("warehouse") || t.includes("stock") || t.includes("inventory")) return "warehouse";
-  if (t.includes("sales") || t.includes("shop assistant") || t.includes("merchandiser")) return "sales";
-  if (t.includes("cook") || t.includes("kitchen")) return "kitchen";
-  if (t.includes("barista") || t.includes("coffee")) return "barista";
-  if (t.includes("security") || t.includes("guard")) return "security";
-  if (t.includes("driver") || t.includes("courier")) return "driver";
+  // CLEANING_FAMILY
+  if (
+    t.includes("clean") ||
+    t.includes("housekeep") ||
+    t.includes("janitor") ||
+    t.includes("sanitation")
+  )
+    return "cleaning";
+
+  // RECEPTION_FAMILY
+  if (
+    t.includes("reception") ||
+    t.includes("front desk") ||
+    t.includes("hostess") ||
+    t.includes("host ") ||
+    t.includes("guest relations") ||
+    t.includes("appointment")
+  )
+    return "reception";
+
+  // CASHIER_FAMILY
+  if (t.includes("cashier") || t.includes("checkout") || t.includes("pos "))
+    return "cashier";
+
+  // RETAIL_SALES_FAMILY
+  if (
+    t.includes("sales consultant") ||
+    t.includes("sales assistant") ||
+    t.includes("shop assistant") ||
+    t.includes("store consultant") ||
+    t.includes("promoter") ||
+    t.includes("merchandiser") ||
+    t.includes("retail")
+  )
+    return "retail_sales";
+
+  // WAREHOUSE_FAMILY
+  if (
+    t.includes("warehouse") ||
+    t.includes("stock clerk") ||
+    t.includes("inventory") ||
+    t.includes("stockroom") ||
+    t.includes("logistics")
+  )
+    return "warehouse";
+
+  // HOSPITALITY_SERVICE_FAMILY
+  if (
+    t.includes("waiter") ||
+    t.includes("waitress") ||
+    t.includes("server") ||
+    t.includes("barista") ||
+    t.includes("kitchen") ||
+    t.includes("dishwasher") ||
+    t.includes("assistant cook")
+  )
+    return "hospitality_service";
+
+  // ADMIN_SUPPORT_FAMILY
+  if (
+    t.includes("administrative assistant") ||
+    t.includes("office assistant") ||
+    t.includes("support operator") ||
+    t.includes("customer support") ||
+    t.includes("finance assistant") ||
+    t.includes("admin ")
+  )
+    return "admin_support";
 
   return null;
 }
 
 /** Role relevance for employer browsing. */
-function roleMatchCategory(vacancyTitle: string, candidatePreferredRole: string | null | undefined): RoleMatchCategory {
-  const vacancyFamily = normalizeRoleToFamily(vacancyTitle);
-  const candidateFamily = normalizeRoleToFamily(candidatePreferredRole);
+export function roleMatchCategoryFromTitles(
+  vacancyTitle: string,
+  candidatePreferredRole: string | null | undefined
+): RoleMatchCategory {
+  const vacancyFamily = getRoleFamily(vacancyTitle);
+  const candidateFamily = getRoleFamily(candidatePreferredRole);
 
-  if (!vacancyFamily || !candidateFamily) {
-    // When we can't confidently categorize, treat as related so we don't over-filter.
-    return "related";
-  }
+  // If we can't classify either side, treat as unrelated to avoid obviously wrong roles.
+  if (!vacancyFamily || !candidateFamily) return "unrelated";
 
   if (vacancyFamily === candidateFamily) return "strong";
 
-  const RELATED: Record<string, string[]> = {
-    cleaner: ["service", "housekeeping"],
-    reception: ["sales", "customer_service"],
-    receptionist: ["sales", "customer_service"],
-    cashier: ["sales"],
-    warehouse: ["sales", "driver"],
-    sales: ["cashier"],
-    kitchen: ["barista"],
+  // Explicit adjacency rules (none for cleaning → hospitality; cleaner should be strict).
+  const RELATED: Record<RoleFamily, RoleFamily[]> = {
+    cleaning: [], // cleaner should only see cleaning roles
+    reception: ["admin_support"],
+    cashier: ["retail_sales"],
+    retail_sales: ["cashier"],
+    warehouse: ["retail_sales"],
+    hospitality_service: [],
+    admin_support: ["reception"],
   };
 
-  if (RELATED[vacancyFamily]?.includes(candidateFamily) || RELATED[candidateFamily]?.includes(vacancyFamily)) {
+  if (
+    RELATED[vacancyFamily]?.includes(candidateFamily) ||
+    RELATED[candidateFamily]?.includes(vacancyFamily)
+  ) {
     return "related";
   }
 
@@ -104,6 +177,7 @@ function roleMatchCategory(vacancyTitle: string, candidatePreferredRole: string 
 /** Salary compatibility for employer browsing (candidate within +15% of vacancy budget). */
 function isSalaryCompatible(candidateMin: number, vacancyMax: number): boolean {
   if (!candidateMin || !vacancyMax) return true;
+  // Product rule: candidate's minimum expectation is not more than 15% above vacancy budget.
   return candidateMin <= vacancyMax * 1.15;
 }
 
@@ -129,7 +203,7 @@ export function buildVacancyCardsWithMatch(
 ): VacancyCardFromApi[] {
   return apiVacancies
     .filter((v) => {
-      const cat = roleMatchCategory(v.title, candidatePreferredJob ?? null);
+      const cat = roleMatchCategoryFromTitles(v.title, candidatePreferredJob ?? null);
       return cat !== "unrelated";
     })
     .map((v) => {
@@ -184,7 +258,7 @@ export function buildCandidateCardsWithMatch(
   // Browsing: filter by role relevance & salary; then score and sort by match desc.
   return apiCandidates
     .filter((c) => {
-      const roleCat = roleMatchCategory(vacancyTitle, c.jobTitle);
+      const roleCat = roleMatchCategoryFromTitles(vacancyTitle, c.jobTitle);
       if (roleCat === "unrelated") {
         return false;
       }

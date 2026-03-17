@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { apiVacancyToProfile, buildCandidateCardsWithMatch } from "@/lib/vacancyApi";
+import { apiVacancyToProfile, buildCandidateCardsWithMatch, getRoleFamily, roleMatchCategoryFromTitles } from "@/lib/vacancyApi";
 
 type DebugResponse = {
   authUserId: string | null;
@@ -38,6 +38,9 @@ type DebugResponse = {
     city: string;
     preferredRole: string | null;
     score: number;
+    vacancyRoleFamily?: string | null;
+    candidateRoleFamily?: string | null;
+    roleRelevant?: boolean;
   }>;
 };
 
@@ -243,14 +246,20 @@ export async function GET(request: Request) {
       const cards = buildCandidateCardsWithMatch(apiCandidates, vacancyProfile, selectedVacancy.title);
 
       totalAfterCardBuild = cards.length;
+      const vacancyRoleFamily = getRoleFamily(selectedVacancy.title);
       sampleFinalCards = cards.slice(0, 20).map((card) => {
         const api = apiCandidates.find((c) => c.id === card.id);
+        const candidateRoleFamily = getRoleFamily(api?.jobTitle ?? null);
+        const roleCat = roleMatchCategoryFromTitles(selectedVacancy.title, api?.jobTitle ?? null);
         return {
           candidateProfileId: card.id,
           candidateName: card.name,
           city: card.location,
           preferredRole: api?.jobTitle ?? null,
           score: card.match,
+          vacancyRoleFamily,
+          candidateRoleFamily,
+          roleRelevant: roleCat !== "unrelated",
         };
       });
     }
