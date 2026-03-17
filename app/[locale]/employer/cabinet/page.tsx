@@ -581,7 +581,7 @@ export default function EmployerCabinetPage() {
         </p>
       </div>
 
-      <div className="relative mx-auto mt-8 aspect-[3/4] max-h-[460px]">
+      <div className="relative mx-auto mt-8 aspect-[3/4] max-h-[380px] sm:mt-8 sm:max-h-[440px] md:max-h-[520px]">
         {likeError && (
           <div className="absolute -top-12 left-0 right-0 z-10 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800 text-center shadow-md">
             {likeError}
