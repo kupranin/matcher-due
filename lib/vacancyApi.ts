@@ -18,6 +18,8 @@ export type VacancyCardFromApi = {
   photo: string;
   profile: VacancyProfile;
   match: number;
+  /** Optional short description for candidate-side card. */
+  description?: string | null;
 };
 
 function locationCityName(cityId: string): string {
@@ -196,6 +198,7 @@ export function buildVacancyCardsWithMatch(
     requiredEducationLevel?: string;
     skills?: Array<{ name: string; level?: string; weight?: number }>;
     photo?: string | null;
+    description?: string | null;
   }>,
   candidateProfile: CandidateProfile,
   /** Candidate's preferred job title (e.g. "Barista"). Vacancies not matching this are excluded. */
@@ -222,6 +225,7 @@ export function buildVacancyCardsWithMatch(
         photo: v.photo?.trim() || getStockPhotosForJob(v.title)[0] || "https://images.unsplash.com/photo-1521737711867-e3b97395f902?w=800&q=80",
         profile,
         match,
+        description: v.description ?? null,
       };
     })
     // Do not hide low-score vacancies; show all and let ranking happen via `match`.

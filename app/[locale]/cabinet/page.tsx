@@ -117,9 +117,9 @@ function SwipeCard({
           <div>
             <h2 className="font-heading text-2xl font-bold">{vacancy.title}</h2>
             <p className="mt-0.5 text-lg font-medium text-white/90">{vacancy.company}</p>
-            {vacancy.profile?.description && (
+            {vacancy.description && (
               <p className="mt-2 text-sm text-gray-300 line-clamp-2">
-                {vacancy.profile.description}
+                {vacancy.description}
               </p>
             )}
             {Array.isArray(vacancy.profile?.skills) && vacancy.profile.skills.length > 0 && (
