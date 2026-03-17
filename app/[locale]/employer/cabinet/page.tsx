@@ -98,8 +98,8 @@ function SwipeCard({
         <motion.div style={{ opacity: bgRightOpacity }} className="flex-1 bg-emerald-400/30" aria-hidden />
       </div>
       <div className="relative z-10 flex h-full w-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
-        {/* Hero photo */}
-        <div className="relative w-full aspect-[4/3] bg-gray-100">
+        {/* Hero image section */}
+        <div className="relative w-full h-56 sm:h-64 bg-gray-100">
           {photoSrc ? (
             <img
               src={photoSrc}
@@ -111,58 +111,60 @@ function SwipeCard({
               }}
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gray-100 text-4xl text-gray-400">
-              <span>👤</span>
+            <div className="flex h-full w-full flex-col items-center justify-center bg-gray-100 text-gray-500">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 text-2xl font-semibold">
+                {(firstName && firstName[0]) || "👤"}
+              </div>
+              <p className="mt-2 text-xs font-medium text-gray-500">No photo</p>
             </div>
           )}
-        </div>
-
-        <div className="flex flex-1 flex-col justify-between p-4">
-          {/* Top: match badge + name */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 space-y-1">
-              <h2 className="text-xl font-bold text-gray-900">
-                {firstName || candidate.name || "Candidate"} {lastInitial}
-                {typeof candidate.age === "number" && candidate.age > 0 && (
-                  <span className="ml-2 text-base font-semibold text-gray-700">
-                    {candidate.age}
-                    <span className="ml-1 text-xs font-normal text-gray-500">{tPage("yearsOldShort") || "yrs"}</span>
-                  </span>
-                )}
-              </h2>
-              <p className="text-matcher-dark font-medium">
-                {candidate.job || "Not specified"}
-              </p>
-              <p className="text-sm text-gray-500">
-                {candidate.location}
-                {candidate.workType ? <> · {candidate.workType}</> : null}
-              </p>
-            </div>
+          {/* Match ring overlapping bottom-right of image */}
+          <div className="absolute bottom-4 right-4">
             <MatchProgressRing percent={matchPct} size={52} className="text-matcher">
               {matchPct}%
             </MatchProgressRing>
           </div>
+        </div>
+
+        {/* Content section */}
+        <div className="flex flex-1 flex-col justify-between p-5 space-y-3">
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold text-gray-900">
+              {firstName || candidate.name || "Candidate"} {lastInitial}
+              {typeof candidate.age === "number" && candidate.age > 0 && (
+                <span className="ml-2 text-base font-semibold text-gray-700">
+                  {candidate.age}
+                  <span className="ml-1 text-xs font-normal text-gray-500">{tPage("yearsOldShort") || "yrs"}</span>
+                </span>
+              )}
+            </h2>
+            <p className="text-matcher-dark font-medium">
+              {candidate.job || "Not specified"}
+            </p>
+            <p className="text-sm text-gray-500">
+              {candidate.location || "-"}
+              {candidate.workType ? <> · {candidate.workType}</> : null}
+              {typeof candidate.age === "number" && candidate.age > 0 && (
+                <> · {candidate.age} {tPage("yearsOld") || "years old"}</>
+              )}
+            </p>
+          </div>
 
           {/* Skills */}
           {skillList.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
+            <div className="mt-1 flex flex-wrap gap-1.5">
               {skillList.map((s) => (
-                <span key={s} className="rounded-full bg-matcher-pale px-2.5 py-0.5 text-xs font-medium text-matcher-dark">
+                <span
+                  key={s}
+                  className="rounded-full bg-matcher-pale px-2.5 py-0.5 text-xs font-medium text-matcher-dark"
+                >
                   {s}
                 </span>
               ))}
             </div>
           )}
 
-          {/* Context: vacancy & company */}
-          <div className="mt-4 rounded-xl bg-gray-50 px-3 py-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Vacancy</p>
-            <p className="font-medium text-gray-900">{vacancyTitle}</p>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-gray-500">Company</p>
-            <p className="text-sm text-gray-700">{companyName}</p>
-          </div>
-
-          <p className="mt-3 text-xs text-gray-400">{t("swipeInstruction")}</p>
+          <p className="mt-1 text-xs text-gray-400">{t("swipeInstruction")}</p>
         </div>
       </div>
       {/* Swipe overlays */}
