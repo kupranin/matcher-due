@@ -21,7 +21,11 @@ type EmployerVacancy = {
   company: string;
   profile: import("@/lib/matchCalculation").VacancyProfile;
 };
-type Candidate = import("@/lib/matchMockData").CandidateCard & { match: number; age?: number | null };
+type Candidate = import("@/lib/matchMockData").CandidateCard & {
+  match: number;
+  age?: number | null;
+  matchedSkills?: string[];
+};
 
 function CandidateCardSkeleton() {
   return (
@@ -82,7 +86,9 @@ function SwipeCard({
   }
 
   const matchPct = Number.isFinite(Number(candidate.match)) ? Math.min(100, Math.max(0, Math.round(Number(candidate.match)))) : 0;
-  const skillList = candidate.skills ? candidate.skills.split(", ").slice(0, 4) : [];
+  const matchedSkills = Array.isArray(candidate.matchedSkills)
+    ? candidate.matchedSkills.filter((s) => typeof s === "string" && s.trim().length > 0).slice(0, 5)
+    : [];
 
   return (
     <motion.div
@@ -131,36 +137,38 @@ function SwipeCard({
           <div className="space-y-1">
             <h2 className="text-xl font-bold text-gray-900">
               {firstName || candidate.name || "Candidate"} {lastInitial}
-              {typeof candidate.age === "number" && candidate.age > 0 && (
-                <span className="ml-2 text-base font-semibold text-gray-700">
-                  {candidate.age}
-                  <span className="ml-1 text-xs font-normal text-gray-500">{tPage("yearsOldShort") || "yrs"}</span>
-                </span>
-              )}
             </h2>
+            {typeof candidate.age === "number" && candidate.age > 0 && (
+              <div className="font-bold text-gray-900">
+                {candidate.age}{" "}
+                <span className="font-normal text-gray-800">years old</span>
+              </div>
+            )}
             <p className="text-matcher-dark font-medium">
               {candidate.job || "Not specified"}
             </p>
             <p className="text-sm text-gray-500">
               {candidate.location || "-"}
               {candidate.workType ? <> · {candidate.workType}</> : null}
-              {typeof candidate.age === "number" && candidate.age > 0 && (
-                <> · {candidate.age} {tPage("yearsOld") || "years old"}</>
-              )}
             </p>
           </div>
 
-          {/* Skills */}
-          {skillList.length > 0 && (
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              {skillList.map((s) => (
-                <span
-                  key={s}
-                  className="rounded-full bg-matcher-pale px-2.5 py-0.5 text-xs font-medium text-matcher-dark"
-                >
-                  {s}
-                </span>
-              ))}
+          {/* Matched skills */}
+          {matchedSkills.length > 0 && (
+            <div className="mt-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Matched skills
+              </p>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {matchedSkills.map((s) => (
+                  <span
+                    key={s}
+                    className="rounded-full bg-matcher-pale px-2.5 py-0.5 text-xs font-medium text-matcher-dark border border-matcher/40"
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
 

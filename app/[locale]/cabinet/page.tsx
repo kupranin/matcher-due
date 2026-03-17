@@ -112,11 +112,28 @@ function SwipeCard({
           </motion.div>
         </div>
 
-        {/* Dark info block – title, company, vibe row, location */}
+        {/* Dark info block – title, company, description, skills, vibe row, location */}
         <div className="flex flex-1 flex-col justify-between p-5 text-white">
           <div>
             <h2 className="font-heading text-2xl font-bold">{vacancy.title}</h2>
             <p className="mt-0.5 text-lg font-medium text-white/90">{vacancy.company}</p>
+            {vacancy.profile?.description && (
+              <p className="mt-2 text-sm text-gray-300 line-clamp-2">
+                {vacancy.profile.description}
+              </p>
+            )}
+            {Array.isArray(vacancy.profile?.skills) && vacancy.profile.skills.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {vacancy.profile.skills.slice(0, 3).map((s) => (
+                  <span
+                    key={s.name}
+                    className="px-2 py-1 text-xs bg-white/15 rounded-md text-white/95"
+                  >
+                    {s.name}
+                  </span>
+                ))}
+              </div>
+            )}
             {/* Vibe row: icons for No CV, Flexible Hours, Weekly Pay */}
             <div className="mt-3 flex flex-wrap items-center gap-3">
               {vibes.map((v) => (

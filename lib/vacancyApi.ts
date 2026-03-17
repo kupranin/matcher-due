@@ -248,7 +248,7 @@ export function buildCandidateCardsWithMatch(
   }>,
   vacancyProfile: VacancyProfile,
   vacancyTitle: string
-): Array<CandidateCard & { match: number; age?: number | null }> {
+): Array<CandidateCard & { match: number; age?: number | null; matchedSkills?: string[] }> {
   const safeSkills = (c: (typeof apiCandidates)[0]) => Array.isArray(c.skills) ? c.skills : [];
   const toSkillLevel = (level: string | null | undefined): CandidateProfile["skills"][0]["level"] => {
     const v = level?.trim?.();
@@ -275,6 +275,24 @@ export function buildCandidateCardsWithMatch(
         workTypes: c.workTypes?.length ? c.workTypes : ["Full-time"],
         skills: skills.map((s) => ({ name: s.name, level: toSkillLevel(s.level) })),
       };
+
+      // Compute matched skills as overlap between vacancy required skills and candidate skills.
+      const vacancySkillNames = (vacancyProfile.skills ?? []).map((s) =>
+        s.name.trim().toLowerCase()
+      );
+      const candidateSkillNames = skills.map((s) => s.name.trim().toLowerCase());
+      const seen = new Set<string>();
+      const matchedSkills: string[] = [];
+      for (let i = 0; i < candidateSkillNames.length; i++) {
+        const cand = candidateSkillNames[i];
+        if (!cand) continue;
+        if (!vacancySkillNames.includes(cand)) continue;
+        if (seen.has(cand)) continue;
+        seen.add(cand);
+        matchedSkills.push(skills[i]!.name);
+        if (matchedSkills.length >= 5) break;
+      }
+
       const rawMatch = calculateMatch(profile, vacancyProfile);
       const match = Number.isFinite(rawMatch) ? Math.min(100, Math.max(0, Math.round(rawMatch))) : 50;
       return {
@@ -286,6 +304,7 @@ export function buildCandidateCardsWithMatch(
         skills: skills.map((s) => s.name).join(", "),
         photo: c.photo ?? undefined,
         age: c.age ?? null,
+        matchedSkills: matchedSkills,
         profile,
         match,
       };
