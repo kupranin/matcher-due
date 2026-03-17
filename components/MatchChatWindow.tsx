@@ -14,6 +14,49 @@ const SUGGESTED_MESSAGES = [
   "Looking forward to connecting!",
 ];
 
+function isValidUrl(value: string): boolean {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function renderMessageText(text: string) {
+  const lines = text.split("\n");
+  return lines.map((line, idx) => {
+    const trimmed = line.trim();
+    const lower = trimmed.toLowerCase();
+
+    if (lower.startsWith("location:")) {
+      const raw = trimmed.slice("location:".length).trim();
+      if (isValidUrl(raw)) {
+        return (
+          <p key={idx} className="text-sm leading-snug">
+            Location:{" "}
+            <a
+              href={raw}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-matcher-dark underline"
+            >
+              Join meeting
+            </a>
+          </p>
+        );
+      }
+    }
+
+    return (
+      <p key={idx} className="text-sm leading-snug">
+        {line}
+      </p>
+    );
+  });
+}
+
 export default function MatchChatWindow({
   match,
   userRole,
@@ -370,7 +413,7 @@ export default function MatchChatWindow({
                       : "rounded-bl-md bg-gray-100 text-gray-900"
                   }`}
                 >
-                  <p className="text-sm leading-snug">{m.text}</p>
+                  {renderMessageText(m.text)}
                   <p className={`mt-1 text-[10px] ${m.sender === userRole ? "text-white/80" : "text-gray-400"}`}>
                     {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </p>
