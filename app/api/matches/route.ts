@@ -123,6 +123,11 @@ export async function GET(request: Request) {
         },
         orderBy: [{ matchedAt: "desc" }, { createdAt: "desc" }],
       });
+      console.log(
+        "[/api/matches] candidateProfileId=%s matches=%d",
+        candidateProfileId,
+        list.length
+      );
       return NextResponse.json(
         list.map((m) => ({
           id: m.id,

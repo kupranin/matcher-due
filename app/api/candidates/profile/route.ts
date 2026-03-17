@@ -25,6 +25,7 @@ export async function GET(request: Request) {
       where: { userId },
       include: { skills: true, user: { select: { email: true } } },
     });
+    console.log("[/api/candidates/profile] userId", userId, "profile", profile?.id ?? null);
     if (!profile) return NextResponse.json(null);
     return NextResponse.json({
       profileId: profile.id,
