@@ -60,11 +60,13 @@ export default function CandidateChatsPage() {
   const t = useTranslations("chats");
   const [matches, setMatches] = useState<MutualMatch[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<MutualMatch | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const searchParams = useSearchParams();
   const matchIdFromUrl = searchParams.get("matchId");
 
   useEffect(() => {
     async function load() {
+      setIsLoading(true);
       let profileId = getCandidateProfileId();
       const stored = loadCandidateProfile();
 
@@ -100,7 +102,10 @@ export default function CandidateChatsPage() {
         }
       }
 
-      if (!profileId) return;
+      if (!profileId) {
+        setIsLoading(false);
+        return;
+      }
 
       fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`)
         .then((r) => r.json())
@@ -134,7 +139,10 @@ export default function CandidateChatsPage() {
             setMatches(mutual);
           }
         )
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => {
+          setIsLoading(false);
+        });
     }
 
     void load();
@@ -145,6 +153,21 @@ export default function CandidateChatsPage() {
     const match = matches.find((m) => m.id === matchIdFromUrl);
     if (match) setSelectedMatch(match);
   }, [matchIdFromUrl, matches]);
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-10 sm:py-14 md:py-16">
+        <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-8 text-center sm:p-10 md:p-12">
+          <p className="text-5xl">💬</p>
+          <div className="mt-4 space-y-3">
+            <div className="mx-auto h-5 w-48 animate-pulse rounded-full bg-gray-200" />
+            <div className="mx-auto h-4 w-64 animate-pulse rounded-full bg-gray-200" />
+            <div className="mx-auto h-3 w-56 animate-pulse rounded-full bg-gray-200" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (matches.length === 0) {
     return (

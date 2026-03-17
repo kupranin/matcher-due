@@ -11,9 +11,11 @@ type MatchSummary = MutualMatch;
 export default function CandidateMatchesPage() {
   const tChats = useTranslations("chats");
   const [matches, setMatches] = useState<MatchSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
+      setIsLoading(true);
       let profileId = getCandidateProfileId();
       const stored = loadCandidateProfile();
 
@@ -50,7 +52,10 @@ export default function CandidateMatchesPage() {
         }
       }
 
-      if (!profileId) return;
+      if (!profileId) {
+        setIsLoading(false);
+        return;
+      }
 
       fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`)
         .then((r) => r.json())
@@ -84,11 +89,31 @@ export default function CandidateMatchesPage() {
             setMatches(mapped);
           }
         )
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => {
+          setIsLoading(false);
+        });
     }
 
     void load();
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-10 sm:py-14 md:py-16">
+        <div className="rounded-3xl border-2 border-dashed border-gray-200 bg-gradient-to-b from-white to-gray-50/50 p-10 text-center shadow-sm sm:p-12">
+          <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-matcher-pale/80 text-5xl">
+            ✨
+          </div>
+          <div className="mt-6 space-y-3">
+            <div className="mx-auto h-5 w-40 animate-pulse rounded-full bg-gray-200" />
+            <div className="mx-auto h-4 w-64 animate-pulse rounded-full bg-gray-200" />
+            <div className="mx-auto h-3 w-56 animate-pulse rounded-full bg-gray-200" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (matches.length === 0) {
     return (

@@ -14,7 +14,7 @@ const SUGGESTED_MESSAGES = [
   "Looking forward to connecting!",
 ];
 
-function isValidUrl(value: string): boolean {
+function isSafeHttpUrl(value: string): boolean {
   if (!value) return false;
   try {
     const url = new URL(value);
@@ -32,7 +32,7 @@ function renderMessageText(text: string) {
 
     if (lower.startsWith("location:")) {
       const raw = trimmed.slice("location:".length).trim();
-      if (isValidUrl(raw)) {
+      if (isSafeHttpUrl(raw)) {
         return (
           <p key={idx} className="text-sm leading-snug">
             Location:{" "}
@@ -47,6 +47,28 @@ function renderMessageText(text: string) {
           </p>
         );
       }
+    }
+
+    // Generic URL detection in the line (first http/https URL gets linkified)
+    const urlMatch = trimmed.match(/https?:\/\/\S+/);
+    if (urlMatch && isSafeHttpUrl(urlMatch[0])) {
+      const url = urlMatch[0];
+      const before = trimmed.slice(0, trimmed.indexOf(url));
+      const after = trimmed.slice(trimmed.indexOf(url) + url.length);
+      return (
+        <p key={idx} className="text-sm leading-snug">
+          {before}
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-matcher-dark underline"
+          >
+            🔗 Join meeting
+          </a>
+          {after}
+        </p>
+      );
     }
 
     return (
