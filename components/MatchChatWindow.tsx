@@ -97,20 +97,86 @@ export default function MatchChatWindow({
     }
   }
 
-  function handleOpenCalendar() {
+  async function handleOpenCalendar() {
+    // Basic validation
+    if (!scheduleDate) return;
     const [year, month, day] = scheduleDate.split("-").map(Number);
     const [hour, min] = scheduleTime.split(":").map(Number);
-    const start = new Date(year, month - 1, day, hour, min);
+    const start = new Date(year, month - 1, day, hour || 0, min || 0);
     const end = new Date(start.getTime() + scheduleDuration * 60 * 1000);
     const title = scheduleTitle.trim() || defaultTitle;
+    const location = scheduleLocation.trim();
+
+    // 1) Send structured system-like message into chat
+    const humanDate = start.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+    });
+    const humanTime = start.toLocaleTimeString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const lines = [
+      "📅 Interview scheduled",
+      "",
+      `Candidate: ${match.candidateName ?? otherName}`,
+      `Date: ${humanDate}`,
+      `Time: ${humanTime}`,
+      `Duration: ${scheduleDuration} min`,
+      location ? `Location: ${location}` : "",
+    ].filter(Boolean);
+
+    const systemText = lines.join("\n");
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          matchId: match.id,
+          sender: userRole, // treated as employer-side system note when called from employer
+          text: systemText,
+          type: "system",
+        }),
+      });
+      const msg = await res.json();
+      if (msg.id) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: msg.id,
+            matchId: msg.matchId,
+            sender: msg.sender as "candidate" | "employer",
+            text: msg.text,
+            createdAt: msg.createdAt,
+          },
+        ]);
+      }
+    } catch {
+      // If API fails, still show the message locally so employer has context
+      const fallback: ChatMessage = {
+        id: `sys-${Date.now()}`,
+        matchId: match.id,
+        sender: userRole,
+        text: systemText,
+        createdAt: Date.now(),
+      };
+      setMessages((prev) => [...prev, fallback]);
+    }
+
+    // 2) Open Google Calendar event in a new tab
     const url = buildGoogleCalendarUrl({
       title,
       startDate: start,
       endDate: end,
       details: `${match.vacancyTitle} — Chat with ${otherName}`,
-      location: scheduleLocation.trim() || undefined,
+      location: location || undefined,
     });
     window.open(url, "_blank", "noopener,noreferrer");
+
+    // 3) Close modal, keep user in chat
     setShowScheduler(false);
   }
 
