@@ -8,6 +8,14 @@ import type { CandidateCard } from "./matchMockData";
 import { GEORGIAN_CITIES } from "./georgianLocations";
 import { getStockPhotosForJob } from "./vacancyStockPhotos";
 
+/**
+ * Shape of a vacancy card as used on the candidate side.
+ *
+ * NOTE: `description` is optional because not all vacancies in the API
+ * necessarily provide it. When present, we normalize it to `string | null`
+ * (never `undefined`) at construction time so render code can safely treat
+ * "missing" as falsy.
+ */
 export type VacancyCardFromApi = {
   id: string;
   title: string;
@@ -18,8 +26,7 @@ export type VacancyCardFromApi = {
   photo: string;
   profile: VacancyProfile;
   match: number;
-  /** Optional short description for candidate-side card. */
-  description?: string | null;
+  description: string | null;
 };
 
 function locationCityName(cityId: string): string {
@@ -198,7 +205,8 @@ export function buildVacancyCardsWithMatch(
     requiredEducationLevel?: string;
     skills?: Array<{ name: string; level?: string; weight?: number }>;
     photo?: string | null;
-    description?: string | null;
+    // The raw API vacancy may or may not include description.
+    description?: string | null | undefined;
   }>,
   candidateProfile: CandidateProfile,
   /** Candidate's preferred job title (e.g. "Barista"). Vacancies not matching this are excluded. */
@@ -214,7 +222,11 @@ export function buildVacancyCardsWithMatch(
       // Always compute a match score; if hard filters fail inside calculateMatch,
       // the score will be low (0–) but the vacancy will still be shown.
       const match = calculateMatch(candidateProfile, profile);
-      const salaryStr = v.salaryMin != null ? `${v.salaryMin.toLocaleString()}–${v.salaryMax.toLocaleString()} GEL` : `${v.salaryMax.toLocaleString()} GEL`;
+      const salaryStr =
+        v.salaryMin != null
+          ? `${v.salaryMin.toLocaleString()}–${v.salaryMax.toLocaleString()} GEL`
+          : `${v.salaryMax.toLocaleString()} GEL`;
+
       return {
         id: v.id,
         title: v.title,
@@ -222,14 +234,18 @@ export function buildVacancyCardsWithMatch(
         location: locationCityName(v.locationCityId),
         workType: v.workType,
         salary: salaryStr,
-        photo: v.photo?.trim() || getStockPhotosForJob(v.title)[0] || "https://images.unsplash.com/photo-1521737711867-e3b97395f902?w=800&q=80",
+        photo:
+          v.photo?.trim() ||
+          getStockPhotosForJob(v.title)[0] ||
+          "https://images.unsplash.com/photo-1521737711867-e3b97395f902?w=800&q=80",
         profile,
         match,
+        // Normalize to `string | null` so card code never sees `undefined`.
         description: v.description ?? null,
       };
     })
     // Do not hide low-score vacancies; show all and let ranking happen via `match`.
-    .filter((x): x is VacancyCardFromApi => x != null)
+    // Mapper above never returns `null`, so no explicit type predicate filter is needed.
     .sort((a, b) => b.match - a.match);
 }
 
