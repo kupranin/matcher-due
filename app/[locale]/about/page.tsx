@@ -8,6 +8,7 @@ import Logo from "@/components/Logo";
 import Footer from "@/components/Footer";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { aboutSections } from "@/config/aboutSections";
+import { SwipeTeamCarousel, type TeamMember } from "@/components/FlippingTeamCard";
 
 type AboutSection = (typeof aboutSections)[number];
 
@@ -90,6 +91,33 @@ export default function AboutPage() {
   const [sections, setSections] = useState<AboutSection[]>(initialSections);
   const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
   const current = sections[0];
+
+  const teamMembers: TeamMember[] = [
+    {
+      id: "founder-1",
+      name: "Nino",
+      role: "Founder",
+      photo: "/team/nino.png",
+      tags: ["#Product", "#Hiring", "#Georgia", "#Execution"],
+      why: "I built Matcher to make finding work feel as easy and respectful as swiping — with real outcomes, not endless forms.",
+    },
+    {
+      id: "eng-1",
+      name: "David",
+      role: "Lead Engineer",
+      photo: "/team/david.png",
+      tags: ["#NextJS", "#Prisma", "#Supabase", "#Performance", "#DX"],
+      why: "I wanted a matching system that’s fast, transparent, and trustworthy — where the product feels instant on mobile.",
+    },
+    {
+      id: "ops-1",
+      name: "Ketevan",
+      role: "Operations",
+      photo: "/team/ketevan.png",
+      tags: ["#Community", "#Part-time", "#Support", "#Quality"],
+      why: "We built Matcher to reduce friction for candidates and help employers hire without wasting weeks.",
+    },
+  ];
 
   function handleSwipe(dir: "left" | "right") {
     if (!current) return;
@@ -225,6 +253,13 @@ export default function AboutPage() {
             </motion.div>
           )}
         </section>
+
+        {/* Swipe the Team (flip carousel) */}
+        <SwipeTeamCarousel
+          title="Swipe the Team"
+          subtitle="Tap a card to flip. Swipe/scroll horizontally to explore."
+          members={teamMembers}
+        />
       </main>
 
       <Footer />

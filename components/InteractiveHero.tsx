@@ -1,0 +1,490 @@
+"use client";
+
+import Image from "next/image";
+import { useMemo, useState } from "react";
+import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform, animate } from "framer-motion";
+import { Briefcase, User, Sparkles, X as XIcon, Heart } from "lucide-react";
+import { Link } from "@/i18n/navigation";
+
+type Audience = "candidate" | "employer";
+
+export type DemoJobCard = {
+  id: string;
+  title: string;
+  company: string;
+  salary: string;
+  location: string;
+  workType: string;
+  tech: string[];
+  description: string;
+  photo: string;
+};
+
+function SegmentedAudienceControl({
+  value,
+  onChange,
+}: {
+  value: Audience;
+  onChange: (v: Audience) => void;
+}) {
+  return (
+    <div className="inline-flex items-center rounded-full border border-white/20 bg-white/10 p-1 backdrop-blur-md">
+      <button
+        type="button"
+        onClick={() => onChange("candidate")}
+        className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition ${
+          value === "candidate"
+            ? "bg-white text-gray-900 shadow-sm"
+            : "text-white/85 hover:text-white"
+        }`}
+        aria-pressed={value === "candidate"}
+      >
+        <User className="h-4 w-4" />
+        I’m a Candidate
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("employer")}
+        className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition ${
+          value === "employer"
+            ? "bg-white text-gray-900 shadow-sm"
+            : "text-white/85 hover:text-white"
+        }`}
+        aria-pressed={value === "employer"}
+      >
+        <Briefcase className="h-4 w-4" />
+        I’m an Employer
+      </button>
+    </div>
+  );
+}
+
+function DemoSwipeCard({
+  card,
+  onSwipe,
+  zIndex,
+}: {
+  card: DemoJobCard;
+  onSwipe: (dir: "left" | "right") => void;
+  zIndex: number;
+}) {
+  const x = useMotionValue(0);
+  const rotate = useTransform(x, [-220, 220], [-14, 14]);
+  const likeOpacity = useTransform(x, [0, 60, 110], [0, 0.4, 1]);
+  const nopeOpacity = useTransform(x, [-110, -60, 0], [1, 0.4, 0]);
+  const bgLeftOpacity = useTransform(x, [0, -120], [0, 0.25]);
+  const bgRightOpacity = useTransform(x, [120, 0], [0.25, 0]);
+
+  const [expanded, setExpanded] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  function handleDragEnd(_: unknown, info: PanInfo) {
+    const threshold = 90;
+    if (info.offset.x > threshold) onSwipe("right");
+    else if (info.offset.x < -threshold) onSwipe("left");
+    else animate(x, 0, { type: "spring", stiffness: 280, damping: 28 });
+  }
+
+  return (
+    <motion.div
+      drag="x"
+      dragConstraints={{ left: -200, right: 200 }}
+      dragElastic={0.7}
+      onDragEnd={handleDragEnd}
+      style={{ x, rotate, zIndex }}
+      className="absolute inset-0 touch-none cursor-grab active:cursor-grabbing"
+      role="article"
+      aria-label={`${card.title} at ${card.company}`}
+    >
+      {/* drag background hint */}
+      <div className="absolute -inset-3 flex overflow-hidden rounded-[1.5rem]">
+        <motion.div style={{ opacity: bgLeftOpacity }} className="flex-1 bg-rose-500/35" aria-hidden />
+        <motion.div style={{ opacity: bgRightOpacity }} className="flex-1 bg-emerald-500/35" aria-hidden />
+      </div>
+
+      <div className="relative flex h-full w-full flex-col overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-2xl shadow-black/15 backdrop-blur-md">
+        <div className="relative aspect-[4/3] w-full overflow-hidden">
+          {/* skeleton */}
+          {!imgLoaded && <div className="absolute inset-0 animate-pulse bg-white/10" aria-hidden />}
+          <Image
+            src={card.photo}
+            alt=""
+            fill
+            className={`object-cover transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+            sizes="(min-width: 768px) 420px, 90vw"
+            onLoadingComplete={() => setImgLoaded(true)}
+            priority={zIndex > 1}
+          />
+          <div className="absolute right-3 top-3 rounded-full bg-matcher-bright px-3 py-1.5 text-sm font-bold text-charcoal shadow-lg">
+            {card.salary}
+          </div>
+
+          {/* LIKE / NOPE stamps */}
+          <motion.div style={{ opacity: likeOpacity }} className="pointer-events-none absolute inset-0 flex items-center justify-end pr-8">
+            <div className="rounded-2xl border-4 border-matcher bg-matcher/90 px-6 py-3 shadow-xl -rotate-12">
+              <span className="text-3xl font-black uppercase tracking-wider text-white">LIKE</span>
+            </div>
+          </motion.div>
+          <motion.div style={{ opacity: nopeOpacity }} className="pointer-events-none absolute inset-0 flex items-center justify-start pl-8">
+            <div className="rounded-2xl border-4 border-rose-400 bg-rose-500/90 px-6 py-3 shadow-xl rotate-12">
+              <span className="text-3xl font-black uppercase tracking-wider text-white">NOPE</span>
+            </div>
+          </motion.div>
+        </div>
+
+        <div className="flex flex-1 flex-col justify-between p-5 text-white">
+          <div>
+            <h3 className="text-xl font-bold tracking-tight">{card.title}</h3>
+            <p className="mt-0.5 text-white/85">{card.company}</p>
+
+            {/* quick view */}
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-full bg-white/15 px-3 py-1 font-semibold">{card.location}</span>
+              <span className="rounded-full bg-white/15 px-3 py-1 font-semibold">{card.workType}</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setExpanded((e) => !e)}
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/15"
+              aria-expanded={expanded}
+            >
+              {expanded ? "Hide details" : "Tap to expand"}
+              <span aria-hidden className="text-white/70">
+                {expanded ? "▴" : "▾"}
+              </span>
+            </button>
+
+            <AnimatePresence initial={false}>
+              {expanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-3 space-y-3 rounded-2xl bg-white/10 p-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-white/70">Job description</p>
+                      <p className="mt-1 text-sm text-white/90">{card.description}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-white/70">Tech stack</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {card.tech.map((t) => (
+                          <span key={t} className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/90">
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <p className="mt-4 text-sm font-medium text-white/80">Swipe right to like, left to pass.</p>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function MatchOverlay({
+  open,
+  onClose,
+  ctaHref,
+}: {
+  open: boolean;
+  onClose: () => void;
+  ctaHref: string;
+}) {
+  const confetti = useMemo(() => {
+    return Array.from({ length: 18 }).map((_, i) => ({
+      id: i,
+      left: `${Math.round(Math.random() * 100)}%`,
+      delay: Math.random() * 0.2,
+      duration: 0.8 + Math.random() * 0.6,
+      rotate: -20 + Math.random() * 40,
+      bg: i % 3 === 0 ? "bg-matcher" : i % 3 === 1 ? "bg-matcher-bright" : "bg-rose-500",
+    }));
+  }, [open]);
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+        >
+          <motion.div
+            initial={{ scale: 0.96, y: 10, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.98, y: 6, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 340, damping: 26 }}
+            className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 text-white shadow-2xl shadow-black/20 backdrop-blur-md"
+          >
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute right-3 top-3 rounded-full bg-white/10 p-2 text-white/90 hover:bg-white/15"
+              aria-label="Close"
+            >
+              <XIcon className="h-5 w-5" />
+            </button>
+
+            {/* confetti */}
+            <div className="pointer-events-none absolute inset-0" aria-hidden>
+              {confetti.map((c) => (
+                <motion.span
+                  key={c.id}
+                  initial={{ y: -20, opacity: 0 }}
+                  animate={{ y: 220, opacity: [0, 1, 1, 0] }}
+                  transition={{ delay: c.delay, duration: c.duration, ease: "easeOut" }}
+                  className={`absolute top-0 h-2.5 w-2.5 rounded-sm ${c.bg}`}
+                  style={{ left: c.left, rotate: c.rotate }}
+                />
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10">
+                <Sparkles className="h-6 w-6 text-matcher-bright" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white/80">It’s a Match!</p>
+                <h4 className="text-xl font-bold tracking-tight">Ready to do this for real?</h4>
+              </div>
+            </div>
+
+            <div className="mt-5 flex gap-3">
+              <Link
+                href={ctaHref}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-matcher px-5 py-3 text-sm font-semibold text-white hover:bg-matcher-dark"
+              >
+                <Heart className="h-4 w-4" />
+                Sign up
+              </Link>
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white/90 hover:bg-white/15"
+              >
+                Keep swiping
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+export default function InteractiveHero({
+  candidateCopy,
+  employerCopy,
+  candidateHowItWorks,
+  employerHowItWorks,
+}: {
+  candidateCopy: { eyebrow: string; title: string; subtitle: string; ctaPrimary: string; ctaSecondary: string };
+  employerCopy: { eyebrow: string; title: string; subtitle: string; ctaPrimary: string; ctaSecondary: string };
+  candidateHowItWorks: Array<{ title: string; text: string }>;
+  employerHowItWorks: Array<{ title: string; text: string }>;
+}) {
+  const [audience, setAudience] = useState<Audience>("candidate");
+  const [deck, setDeck] = useState<DemoJobCard[]>(() => [
+    {
+      id: "react-dev",
+      title: "Senior React Developer",
+      company: "Tbilisi Product Studio",
+      salary: "₾8k–₾12k",
+      location: "Tbilisi",
+      workType: "Hybrid",
+      tech: ["React", "Next.js", "TypeScript", "GraphQL"],
+      description: "Build a fast, swipe-first marketplace experience. Own UI performance and component quality.",
+      photo: "https://images.unsplash.com/photo-1521737711867-e3b97395f902?w=1200&q=80",
+    },
+    {
+      id: "designer",
+      title: "Product Designer",
+      company: "Matcher Labs",
+      salary: "₾5k–₾7k",
+      location: "Remote",
+      workType: "Remote",
+      tech: ["Figma", "Design Systems", "UX Research"],
+      description: "Design high-conversion onboarding and swipe flows. Turn trust and clarity into retention.",
+      photo: "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=1200&q=80",
+    },
+    {
+      id: "pm",
+      title: "Associate Product Manager",
+      company: "GeoCommerce",
+      salary: "₾3k–₾4k",
+      location: "Tbilisi",
+      workType: "Full-time",
+      tech: ["Roadmaps", "Analytics", "Experimentation"],
+      description: "Ship weekly. Instrument the matching funnel and iterate on copy, cards, and conversation triggers.",
+      photo: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&q=80",
+    },
+  ]);
+  const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
+  const [matchOpen, setMatchOpen] = useState(false);
+
+  const copy = audience === "candidate" ? candidateCopy : employerCopy;
+  const steps = audience === "candidate" ? candidateHowItWorks : employerHowItWorks;
+  const ctaHref = audience === "candidate" ? "/userFlow/1" : "/employer/register";
+
+  const current = deck[0] ?? null;
+
+  function swipe(dir: "left" | "right") {
+    if (!current) return;
+    setExitDir(dir);
+    setDeck((prev) => prev.slice(1));
+    if (dir === "right") setMatchOpen(true);
+    setTimeout(() => setExitDir(null), 80);
+  }
+
+  return (
+    <section className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-4 py-10 sm:px-6 sm:py-14 md:grid-cols-2 md:gap-12 md:py-18">
+      <div>
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
+          <div className="inline-flex items-center gap-3">
+            <span className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-white/90 backdrop-blur-md">
+              {copy.eyebrow}
+            </span>
+            <SegmentedAudienceControl value={audience} onChange={setAudience} />
+          </div>
+          <h1 className="mt-5 text-balance text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+            {copy.title}
+          </h1>
+          <p className="mt-4 max-w-xl text-balance text-base text-white/80 sm:text-lg">
+            {copy.subtitle}
+          </p>
+
+          <div className="mt-7 flex flex-wrap gap-3">
+            <Link
+              href={ctaHref}
+              className="inline-flex items-center justify-center rounded-xl bg-matcher px-6 py-3 font-semibold text-white hover:bg-matcher-dark"
+            >
+              {copy.ctaPrimary}
+            </Link>
+            <Link
+              href={audience === "candidate" ? "/employer" : "/userFlow/1"}
+              className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-6 py-3 font-semibold text-white/90 backdrop-blur-md hover:bg-white/15"
+            >
+              {copy.ctaSecondary}
+            </Link>
+          </div>
+        </motion.div>
+
+        {/* Matching logic infographic */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.45 }}
+          className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3"
+        >
+          {[
+            { label: "Your Profile", icon: <User className="h-5 w-5 text-white/90" /> },
+            { label: "Algorithm", icon: <Sparkles className="h-5 w-5 text-white/90" /> },
+            { label: "Perfect Match", icon: <Heart className="h-5 w-5 text-white/90" /> },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-white/90 backdrop-blur-md"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
+                {item.icon}
+              </div>
+              <p className="text-sm font-semibold">{item.label}</p>
+            </div>
+          ))}
+        </motion.div>
+
+        {/* How it works */}
+        <div className="mt-10">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">How it works</p>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {steps.slice(0, 3).map((s) => (
+              <div
+                key={s.title}
+                className="rounded-2xl border border-white/20 bg-white/10 p-4 text-white/90 backdrop-blur-md"
+              >
+                <p className="text-sm font-semibold">{s.title}</p>
+                <p className="mt-1 text-sm text-white/75">{s.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Live swipe demo */}
+      <div className="relative">
+        <div className="absolute -inset-6 -z-10 rounded-[2.5rem] bg-gradient-to-br from-matcher/20 via-white/5 to-matcher-teal/20 blur-2xl" />
+
+        <div className="relative mx-auto aspect-[3/4] max-h-[520px] w-full max-w-[420px]">
+          <AnimatePresence mode="wait">
+            {current ? (
+              <motion.div
+                key={current.id}
+                initial={{ opacity: 0, y: 18, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{
+                  opacity: 0,
+                  x: exitDir === "right" ? 420 : exitDir === "left" ? -420 : 0,
+                  rotate: exitDir === "right" ? 18 : exitDir === "left" ? -18 : 0,
+                  transition: { duration: 0.25, ease: [0.4, 0, 0.2, 1] },
+                }}
+                className="absolute inset-0"
+              >
+                <DemoSwipeCard card={current} onSwipe={swipe} zIndex={3} />
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex h-full flex-col items-center justify-center rounded-3xl border border-white/20 bg-white/10 p-8 text-center text-white backdrop-blur-md"
+              >
+                <p className="text-4xl font-extrabold">No more demo cards</p>
+                <p className="mt-3 text-white/80">Ready to swipe for real?</p>
+                <Link href={ctaHref} className="mt-6 rounded-xl bg-matcher px-6 py-3 font-semibold text-white hover:bg-matcher-dark">
+                  Get started
+                </Link>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div className="mt-6 flex justify-center gap-6">
+          <button
+            type="button"
+            onClick={() => swipe("left")}
+            disabled={!current}
+            className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-lg shadow-rose-300/40 disabled:opacity-50"
+            aria-label="Pass"
+          >
+            <XIcon className="h-7 w-7" />
+          </button>
+          <button
+            type="button"
+            onClick={() => swipe("right")}
+            disabled={!current}
+            className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-matcher to-matcher-teal text-white shadow-lg shadow-matcher/35 disabled:opacity-50"
+            aria-label="Like"
+          >
+            <Heart className="h-7 w-7" />
+          </button>
+        </div>
+
+        <MatchOverlay open={matchOpen} onClose={() => setMatchOpen(false)} ctaHref={ctaHref} />
+      </div>
+    </section>
+  );
+}
+
