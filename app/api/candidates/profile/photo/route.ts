@@ -42,8 +42,18 @@ export async function POST(request: Request) {
     }
 
     // Use admin Supabase client (service role) so we can always write to the
-    // private candidate-photos bucket from the backend, regardless of user auth.
-    const supabase = createAdminClient();
+    // candidate-photos bucket from the backend, regardless of user auth.
+    // If env is missing on a deployment, surface a clear 503 error.
+    let supabase;
+    try {
+      supabase = createAdminClient();
+    } catch (e) {
+      console.error("[/api/candidates/profile/photo] admin client misconfigured", e);
+      return NextResponse.json(
+        { error: "Upload not configured (missing Supabase service role key)" },
+        { status: 503 }
+      );
+    }
 
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
     const key = `${userId}/${profile.id}-${Date.now()}.${ext}`;
@@ -60,11 +70,26 @@ export async function POST(request: Request) {
         key,
         error,
       });
-      return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+      return NextResponse.json(
+        { error: `Upload failed: ${error.message}` },
+        { status: 500 }
+      );
     }
 
     const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
     const url = urlData?.publicUrl ?? "";
+    if (!url) {
+      console.error("[/api/candidates/profile/photo] missing public URL", {
+        userId,
+        key,
+        path: data.path,
+        urlData,
+      });
+      return NextResponse.json(
+        { error: "Upload succeeded but public URL was not generated" },
+        { status: 500 }
+      );
+    }
 
     await prisma.candidateProfile.update({
       where: { userId },
@@ -74,6 +99,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ url });
   } catch (e) {
     console.error("[/api/candidates/profile/photo] unexpected error", e);
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    // Surface a helpful message to the client (without leaking secrets).
+    const message =
+      e instanceof Error && typeof e.message === "string" && e.message.trim().length > 0
+        ? e.message
+        : "Upload failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

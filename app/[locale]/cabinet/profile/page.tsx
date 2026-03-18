@@ -131,6 +131,13 @@ export default function CabinetProfilePage() {
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
+      // Temporary debug: verify file selection
+      // eslint-disable-next-line no-console
+      console.log("[cabinet/profile] selected photo file", {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+      });
       setPhotoFile(file);
       setPhotoUrl(URL.createObjectURL(file));
     }
@@ -361,10 +368,19 @@ export default function CabinetProfilePage() {
             console.log("[cabinet/profile] saving profile payload", storedPayload);
             saveCandidateProfile(storedPayload);
             const userId = getCandidateUserId();
+            // Temporary debug: verify upload branch inputs
+            // eslint-disable-next-line no-console
+            console.log("[cabinet/profile] before save", {
+              userId,
+              hasPhotoFile: !!photoFile,
+              photoUrl: photoUrl?.slice(0, 40) ?? null,
+            });
             setProfileSaving(true);
             try {
               let photoToSave: string | null | undefined = undefined;
               if (photoFile && userId) {
+                // eslint-disable-next-line no-console
+                console.log("[cabinet/profile] uploading photo via /api/candidates/profile/photo");
                 const form = new FormData();
                 form.set("photo", photoFile);
                 form.set("userId", userId);
