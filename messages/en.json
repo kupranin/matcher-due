@@ -157,27 +157,37 @@
     "swipeNext": "Next",
     "swipePrev": "Skip",
     "swipeHint": "Swipe or tap to meet the team.",
+    "swipeTeam": {
+      "title": "Swipe the Team",
+      "subtitle": "Tap a card to flip. Swipe/scroll horizontally to explore."
+    },
     "members": {
       "ketevan": {
         "name": "Ketevan Ioseliani",
         "role": "Legal & Administration",
         "expertise": "Legal, compliance, organizational leadership",
         "reasonToBelieve": "20+ years in legal & admin. Built trust and long-term sustainability into Matcher.",
-        "text": "Ketevan brings 20+ years of experience in legal, administrative, and organizational leadership. She ensures Matcher is built on strong foundations of trust, compliance, and long-term sustainability — for both job seekers and employers."
+        "text": "Ketevan brings 20+ years of experience in legal, administrative, and organizational leadership. She ensures Matcher is built on strong foundations of trust, compliance, and long-term sustainability — for both job seekers and employers.",
+        "tags": ["#Legal", "#Operations", "#Compliance", "#Trust", "#Execution"],
+        "why": "I built Matcher so candidates and employers can trust the process — simple, transparent, and safe."
       },
       "nino": {
         "name": "Nino Kuprashvili",
         "role": "Product & Strategy",
         "expertise": "Product, growth, UX",
         "reasonToBelieve": "20+ years building trusted platforms in Georgia. Keeps Matcher radically simple.",
-        "text": "Founder and product-driven entrepreneur with 20+ years of experience in business, marketing, and building trusted platforms in Georgia. Nino leads Matcher's vision, user experience, and growth — keeping the product radically simple and built for real people."
+        "text": "Founder and product-driven entrepreneur with 20+ years of experience in business, marketing, and building trusted platforms in Georgia. Nino leads Matcher's vision, user experience, and growth — keeping the product radically simple and built for real people.",
+        "tags": ["#Product", "#UX", "#Growth", "#Georgia", "#Clarity"],
+        "why": "I built Matcher to make finding work feel easy and respectful — real outcomes, not endless forms."
       },
       "david": {
         "name": "David Tskhvariashvili",
         "role": "Engineering Lead",
         "expertise": "Full-stack, scalability, infrastructure",
         "reasonToBelieve": "Senior-of-seniors. Turns vision into reliable, production-grade product.",
-        "text": "Senior-of-seniors full-stack developer with deep expertise in building scalable, production-grade platforms. David leads Matcher's engineering execution, architecture, and infrastructure — turning a fast-moving vision into a reliable product ready to scale."
+        "text": "Senior-of-seniors full-stack developer with deep expertise in building scalable, production-grade platforms. David leads Matcher's engineering execution, architecture, and infrastructure — turning a fast-moving vision into a reliable product ready to scale.",
+        "tags": ["#NextJS", "#Prisma", "#Performance", "#DX", "#Reliability"],
+        "why": "I built Matcher so the experience feels instant on mobile — fast matching, clear signals, trustworthy UX."
       }
     },
     "closingHeading": "Building for the next generation of work",
@@ -247,7 +257,7 @@
           "workType": "Hybrid",
           "tech": ["React", "Next.js", "TypeScript", "GraphQL"],
           "description": "Build a fast, swipe-first marketplace experience. Own UI performance and component quality.",
-          "photo": "https://images.unsplash.com/photo-1521737711867-e3b97395f902?w=1200&q=80"
+          "photo": "/hero/react-dev.jpg"
         },
         {
           "id": "designer",
@@ -258,7 +268,7 @@
           "workType": "Remote",
           "tech": ["Figma", "Design Systems", "UX Research"],
           "description": "Design high-conversion onboarding and swipe flows. Turn trust and clarity into retention.",
-          "photo": "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=1200&q=80"
+          "photo": "/hero/designer.jpg"
         },
         {
           "id": "pm",
@@ -269,7 +279,7 @@
           "workType": "Full-time",
           "tech": ["Roadmaps", "Analytics", "Experimentation"],
           "description": "Ship weekly. Instrument the matching funnel and iterate on copy, cards, and conversation triggers.",
-          "photo": "https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&q=80"
+          "photo": "/hero/pm.jpg"
         }
       ]
     },
@@ -286,7 +296,7 @@
       "matcherDemoCard": {
         "title": "Senior React Developer",
         "company": "Tbilisi Product Studio",
-        "photo": "https://images.unsplash.com/photo-1521737711867-e3b97395f902?w=1200&q=80",
+        "photo": "/hero/anti-resume.jpg",
         "chips": ["React", "Next.js", "TypeScript", "Great salary"],
         "footerLeft": "Swipe-style matching",
         "footerRight": "92% match"

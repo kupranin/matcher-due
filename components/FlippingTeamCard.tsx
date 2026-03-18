@@ -16,16 +16,27 @@ export type TeamMember = {
 
 export function FlippingTeamCard({
   member,
+  theme = "light",
+  onFlipChange,
 }: {
   member: TeamMember;
+  theme?: "light" | "dark";
+  onFlipChange?: (flipped: boolean) => void;
 }) {
+  const isDark = theme === "dark";
   const [flipped, setFlipped] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   return (
     <button
       type="button"
-      onClick={() => setFlipped((f) => !f)}
+      onClick={() =>
+        setFlipped((f) => {
+          const next = !f;
+          onFlipChange?.(next);
+          return next;
+        })
+      }
       className="group relative w-[260px] shrink-0 text-left sm:w-[300px]"
       aria-pressed={flipped}
       aria-label={`Team member: ${member.name}. Tap to flip.`}
@@ -40,17 +51,34 @@ export function FlippingTeamCard({
         >
           {/* FRONT */}
           <div className="absolute inset-0 [backface-visibility:hidden]">
-            <div className="h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-xl shadow-black/10 backdrop-blur-md">
-              <div className="relative h-[68%] w-full overflow-hidden bg-white/5">
-                {!imgLoaded && <div className="absolute inset-0 animate-pulse bg-white/10" aria-hidden />}
-                <Image
-                  src={member.photo}
-                  alt={member.name}
-                  fill
-                  sizes="(min-width: 768px) 300px, 260px"
-                  className={`object-cover transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
-                  onLoadingComplete={() => setImgLoaded(true)}
+            <div
+              className={
+                isDark
+                  ? "h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-xl shadow-black/10 backdrop-blur-md"
+                  : "h-full overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-lg"
+              }
+            >
+              <div className={isDark ? "relative h-[68%] w-full overflow-hidden bg-white/5" : "relative h-[68%] w-full overflow-hidden bg-gray-100"}>
+                {/* Always-visible placeholder so we never show a blank rectangle */}
+                <div
+                  className={
+                    isDark
+                      ? "absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-white/10"
+                      : "absolute inset-0 bg-gradient-to-br from-matcher-pale via-white to-matcher-mint/40"
+                  }
+                  aria-hidden
                 />
+                <div className={isDark ? "absolute inset-0 bg-white/5" : "absolute inset-0 bg-white/40"} aria-hidden />
+                {!imgError && (
+                  <Image
+                    src={member.photo}
+                    alt={member.name}
+                    fill
+                    sizes="(min-width: 768px) 300px, 260px"
+                    className="object-cover"
+                    onError={() => setImgError(true)}
+                  />
+                )}
                 <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent" aria-hidden />
                 <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
                   <p className="text-lg font-bold leading-tight">{member.name}</p>
@@ -58,9 +86,9 @@ export function FlippingTeamCard({
                 </div>
               </div>
               <div className="p-4">
-                <p className="text-sm font-semibold text-white/90">Tap to flip</p>
-                <p className="mt-1 text-sm text-white/75">
-                  Skill tags + why we built Matcher.
+                <p className={isDark ? "text-sm font-semibold text-white/90" : "text-sm font-semibold text-gray-900"}>Tap to flip</p>
+                <p className={isDark ? "mt-1 text-sm text-white/75" : "mt-1 text-sm text-gray-600"}>
+                  Skills + why we built Matcher.
                 </p>
               </div>
             </div>
@@ -68,27 +96,37 @@ export function FlippingTeamCard({
 
           {/* BACK */}
           <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)]">
-            <div className="h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-xl shadow-black/10 backdrop-blur-md">
-              <div className="flex h-full flex-col p-5 text-white">
+            <div
+              className={
+                isDark
+                  ? "h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-xl shadow-black/10 backdrop-blur-md"
+                  : "h-full overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-lg"
+              }
+            >
+              <div className={isDark ? "flex h-full flex-col p-5 text-white" : "flex h-full flex-col p-5 text-gray-900"}>
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10">
-                    <Sparkles className="h-5 w-5 text-matcher-bright" />
+                  <div className={isDark ? "flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10" : "flex h-10 w-10 items-center justify-center rounded-2xl bg-matcher-pale"}>
+                    <Sparkles className={isDark ? "h-5 w-5 text-matcher-bright" : "h-5 w-5 text-matcher"} />
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-base font-bold">{member.name}</p>
-                    <p className="truncate text-sm font-semibold text-white/75">{member.role}</p>
+                    <p className={isDark ? "truncate text-sm font-semibold text-white/75" : "truncate text-sm font-semibold text-gray-600"}>{member.role}</p>
                   </div>
                 </div>
 
                 <div className="mt-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
+                  <p className={isDark ? "text-xs font-semibold uppercase tracking-[0.18em] text-white/70" : "text-xs font-semibold uppercase tracking-[0.18em] text-gray-500"}>
                     Skill tags
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {member.tags.slice(0, 12).map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-white/85"
+                        className={
+                          isDark
+                            ? "rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-white/85"
+                            : "rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-700"
+                        }
                       >
                         {tag.startsWith("#") ? tag : `#${tag}`}
                       </span>
@@ -97,10 +135,10 @@ export function FlippingTeamCard({
                 </div>
 
                 <div className="mt-6 flex-1">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
+                  <p className={isDark ? "text-xs font-semibold uppercase tracking-[0.18em] text-white/70" : "text-xs font-semibold uppercase tracking-[0.18em] text-gray-500"}>
                     Why I built Matcher
                   </p>
-                  <p className="mt-2 text-sm leading-relaxed text-white/85">
+                  <p className={isDark ? "mt-2 text-sm leading-relaxed text-white/85" : "mt-2 text-sm leading-relaxed text-gray-700"}>
                     {member.why}
                   </p>
                 </div>
@@ -111,7 +149,7 @@ export function FlippingTeamCard({
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 6 }}
-                      className="mt-4 text-xs font-semibold text-white/70"
+                      className={isDark ? "mt-4 text-xs font-semibold text-white/70" : "mt-4 text-xs font-semibold text-gray-500"}
                     >
                       Tap to flip back
                     </motion.p>
@@ -130,21 +168,29 @@ export function SwipeTeamCarousel({
   members,
   title,
   subtitle,
+  theme = "light",
+  onActiveMemberChange,
 }: {
   members: TeamMember[];
   title: string;
   subtitle?: string;
+  theme?: "light" | "dark";
+  onActiveMemberChange?: (member: TeamMember | null) => void;
 }) {
+  const isDark = theme === "dark";
+  const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
+  const activeMember = activeMemberId ? members.find((m) => m.id === activeMemberId) ?? null : null;
+
   return (
     <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
       <div className="flex items-end justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+          <h2 className={isDark ? "text-2xl font-bold tracking-tight text-white sm:text-3xl" : "text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl"}>
             {title}
           </h2>
-          {subtitle ? <p className="mt-2 text-gray-600">{subtitle}</p> : null}
+          {subtitle ? <p className={isDark ? "mt-2 text-white/70" : "mt-2 text-gray-600"}>{subtitle}</p> : null}
         </div>
-        <p className="hidden text-sm font-semibold text-gray-500 sm:block">
+        <p className={isDark ? "hidden text-sm font-semibold text-white/60 sm:block" : "hidden text-sm font-semibold text-gray-500 sm:block"}>
           Swipe or tap to flip
         </p>
       </div>
@@ -152,10 +198,56 @@ export function SwipeTeamCarousel({
       <div className="mt-8 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch]">
         <div className="flex gap-4 pr-6">
           {members.map((m) => (
-            <FlippingTeamCard key={m.id} member={m} />
+            <FlippingTeamCard
+              key={m.id}
+              member={m}
+              theme={theme}
+              onFlipChange={(open) => {
+                const nextId = open ? m.id : null;
+                setActiveMemberId(nextId);
+                const nextMember = open ? m : null;
+                onActiveMemberChange?.(nextMember);
+              }}
+            />
           ))}
         </div>
       </div>
+
+      {/* Text appears after flipping */}
+      <AnimatePresence initial={false}>
+        {activeMember ? (
+          <motion.div
+            key={activeMember.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className={
+              isDark
+                ? "mt-8 rounded-3xl border border-white/10 bg-white/5 p-6 text-white shadow-xl shadow-black/20"
+                : "mt-8 rounded-3xl border border-gray-200 bg-white p-6 text-gray-900 shadow-sm"
+            }
+          >
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className={isDark ? "text-xs font-semibold uppercase tracking-[0.18em] text-white/60" : "text-xs font-semibold uppercase tracking-[0.18em] text-gray-500"}>
+                  After flip
+                </p>
+                <h3 className="mt-1 text-lg font-bold">{activeMember.name}</h3>
+                <p className={isDark ? "text-sm font-semibold text-white/70" : "text-sm font-semibold text-gray-600"}>{activeMember.role}</p>
+              </div>
+              <p className={isDark ? "mt-3 text-sm text-white/60 sm:mt-0" : "mt-3 text-sm text-gray-500 sm:mt-0"}>
+                Tip: tap the card again to close.
+              </p>
+            </div>
+
+            <div className="mt-4">
+              <p className={isDark ? "text-sm leading-relaxed text-white/80" : "text-sm leading-relaxed text-gray-700"}>
+                {activeMember.why}
+              </p>
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </section>
   );
 }

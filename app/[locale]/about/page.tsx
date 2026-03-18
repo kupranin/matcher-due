@@ -7,8 +7,9 @@ import { motion, useMotionValue, useTransform, animate, PanInfo, AnimatePresence
 import Logo from "@/components/Logo";
 import Footer from "@/components/Footer";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import ThemeToggle from "@/components/theme/ThemeToggle";
+import { useTheme } from "@/components/theme/ThemeProvider";
 import { aboutSections } from "@/config/aboutSections";
-import { SwipeTeamCarousel, type TeamMember } from "@/components/FlippingTeamCard";
 
 type AboutSection = (typeof aboutSections)[number];
 
@@ -18,12 +19,14 @@ function SwipeCard({
   text,
   onSwipe,
   t,
+  isDark,
 }: {
   section: AboutSection;
   title: string;
   text: string;
   onSwipe: (dir: "left" | "right") => void;
   t: (key: string) => string;
+  isDark: boolean;
 }) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-12, 12]);
@@ -47,7 +50,9 @@ function SwipeCard({
       className="absolute inset-0 cursor-grab active:cursor-grabbing"
     >
       <div
-        className={`relative h-full w-full overflow-hidden rounded-2xl border border-gray-100 border-l-4 bg-white p-6 shadow-lg ${section.accent}`}
+        className={`relative h-full w-full overflow-hidden rounded-3xl border border-l-4 p-7 shadow-xl ${section.accent} ${
+          isDark ? "border-white/10 bg-white/5 text-white" : "border-gray-100 bg-white text-gray-900"
+        }`}
       >
         <div className="absolute right-5 top-5 opacity-90">
           <Logo href="" height={40} />
@@ -75,8 +80,8 @@ function SwipeCard({
             {section.icon}
           </span>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 sm:text-xl">{title}</h2>
-            <p className="mt-2 text-sm text-gray-600 leading-relaxed sm:text-base">{text}</p>
+            <h2 className="text-lg font-semibold sm:text-xl">{title}</h2>
+            <p className={isDark ? "mt-2 text-sm leading-relaxed text-white/75 sm:text-base" : "mt-2 text-sm leading-relaxed text-gray-600 sm:text-base"}>{text}</p>
           </div>
         </div>
       </div>
@@ -88,36 +93,11 @@ const initialSections: AboutSection[] = Array.from(aboutSections);
 
 export default function AboutPage() {
   const t = useTranslations("about");
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const [sections, setSections] = useState<AboutSection[]>(initialSections);
   const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
   const current = sections[0];
-
-  const teamMembers: TeamMember[] = [
-    {
-      id: "founder-1",
-      name: "Nino",
-      role: "Founder",
-      photo: "/team/nino.png",
-      tags: ["#Product", "#Hiring", "#Georgia", "#Execution"],
-      why: "I built Matcher to make finding work feel as easy and respectful as swiping — with real outcomes, not endless forms.",
-    },
-    {
-      id: "eng-1",
-      name: "David",
-      role: "Lead Engineer",
-      photo: "/team/david.png",
-      tags: ["#NextJS", "#Prisma", "#Supabase", "#Performance", "#DX"],
-      why: "I wanted a matching system that’s fast, transparent, and trustworthy — where the product feels instant on mobile.",
-    },
-    {
-      id: "ops-1",
-      name: "Ketevan",
-      role: "Operations",
-      photo: "/team/ketevan.png",
-      tags: ["#Community", "#Part-time", "#Support", "#Quality"],
-      why: "We built Matcher to reduce friction for candidates and help employers hire without wasting weeks.",
-    },
-  ];
 
   function handleSwipe(dir: "left" | "right") {
     if (!current) return;
@@ -127,25 +107,36 @@ export default function AboutPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-white">
+    <div className={isDark ? "relative min-h-screen overflow-hidden bg-[#070B12] text-white" : "relative min-h-screen overflow-hidden bg-white text-gray-900"}>
       {/* Background gradient */}
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-matcher-pale via-matcher-mint/20 to-white" />
+      <div
+        className={
+          isDark
+            ? "pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,rgba(139,195,74,0.18),transparent_55%),radial-gradient(ellipse_at_bottom,rgba(0,173,181,0.14),transparent_55%)]"
+            : "pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-matcher-pale via-matcher-mint/20 to-white"
+        }
+      />
 
       {/* Decorative blobs */}
       <div className="pointer-events-none absolute -left-32 top-32 h-64 w-64 rounded-full bg-matcher/5 blur-3xl" />
       <div className="pointer-events-none absolute -right-32 top-96 h-80 w-80 rounded-full bg-matcher-teal/5 blur-3xl" />
       <div className="pointer-events-none absolute bottom-1/3 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full bg-matcher-amber/5 blur-3xl" />
 
-      <header className="border-b border-gray-100/80 bg-white/60 backdrop-blur-sm">
+      <header className={isDark ? "border-b border-white/10 bg-black/30 backdrop-blur-sm" : "border-b border-gray-100/80 bg-white/60 backdrop-blur-sm"}>
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <Link href="/" className="transition-opacity hover:opacity-90 shrink-0">
             <Logo height={56} />
           </Link>
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
+            <ThemeToggle />
             <Link
               href="/"
-              className="shrink-0 rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-matcher hover:bg-matcher-pale hover:text-matcher-dark"
+              className={
+                isDark
+                  ? "shrink-0 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
+                  : "shrink-0 rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-matcher hover:bg-matcher-pale hover:text-matcher-dark"
+              }
             >
               {t("backToHome")}
             </Link>
@@ -161,16 +152,22 @@ export default function AboutPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
-            <span className="inline-block rounded-full bg-matcher/10 px-4 py-1.5 text-sm font-medium text-matcher-dark">
+            <span
+              className={
+                isDark
+                  ? "inline-block rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/85"
+                  : "inline-block rounded-full bg-matcher/10 px-4 py-1.5 text-sm font-medium text-matcher-dark"
+              }
+            >
               {t("badge")}
             </span>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl lg:text-5xl">
+            <h1 className={isDark ? "mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl" : "mt-4 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl lg:text-5xl"}>
               {t("title")}
             </h1>
-            <p className="mt-4 text-base text-gray-600 sm:text-lg">
+            <p className={isDark ? "mt-4 text-base text-white/70 sm:text-lg" : "mt-4 text-base text-gray-600 sm:text-lg"}>
               {t("subtitle")}
             </p>
-            <p className="mt-3 text-sm text-gray-500">{t("swipeHint")}</p>
+            <p className={isDark ? "mt-3 text-sm text-white/60" : "mt-3 text-sm text-gray-500"}>{t("swipeHint")}</p>
           </motion.div>
         </section>
 
@@ -196,6 +193,7 @@ export default function AboutPage() {
                     text={t(`sections.${current.key}.text`)}
                     onSwipe={handleSwipe}
                     t={t}
+                    isDark={isDark}
                   />
                 </motion.div>
               </AnimatePresence>
@@ -254,12 +252,7 @@ export default function AboutPage() {
           )}
         </section>
 
-        {/* Swipe the Team (flip carousel) */}
-        <SwipeTeamCarousel
-          title={t("swipeTeam.title")}
-          subtitle={t("swipeTeam.subtitle")}
-          members={teamMembers}
-        />
+        {/* Team carousel moved to /team */}
       </main>
 
       <Footer />
