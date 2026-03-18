@@ -322,7 +322,7 @@ export default function Home() {
       </section>
 
       {/* Testimonials */}
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 md:py-20">
+      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 md:py-18">
         <h2 className={headingClass}>{t("testimonialsTitle")}</h2>
         <div className="mt-8 grid grid-cols-1 gap-4 sm:mt-10 sm:gap-5 md:grid-cols-3 md:gap-6 md:mt-12">
           {[
@@ -354,11 +354,9 @@ export default function Home() {
       </section>
 
       {/* Trusted – social proof */}
-      <section className={`${isDark ? "border-t border-white/10" : "border-t border-gray-200"} py-12 sm:py-14 md:py-16`}>
+      <section className={`${isDark ? "border-t border-white/10" : "border-t border-gray-200"} py-10 sm:py-14 md:py-16`}>
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
-          <p className={isDark ? "font-heading text-center text-xs font-extrabold uppercase tracking-[0.25em] text-white/70" : "font-heading text-center text-xs font-extrabold uppercase tracking-[0.25em] text-gray-600"}>
-            {t("socialProofTitle")}
-          </p>
+          <h2 className={headingClass}>{t("socialProofTitle")}</h2>
           <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-4 sm:gap-8">
             <motion.div
               initial={{ opacity: 0, y: 12 }}
@@ -421,7 +419,7 @@ export default function Home() {
       </section>
 
       {/* Final CTA */}
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 md:py-20">
+      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 md:py-18">
         <div
           className={
             isDark

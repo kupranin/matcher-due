@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { motion, useMotionValue, useTransform, animate, PanInfo, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import Logo from "@/components/Logo";
 import Footer from "@/components/Footer";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -12,6 +13,15 @@ import { useTheme } from "@/components/theme/ThemeProvider";
 import { aboutSections } from "@/config/aboutSections";
 
 type AboutSection = (typeof aboutSections)[number];
+
+const aboutSectionPhotos: Record<AboutSection["key"], string> = {
+  time: "/hero/react-dev.jpg",
+  simplicity: "/hero/designer.jpg",
+  global: "/hero/pm.jpg",
+  life: "/hero/anti-resume.jpg",
+  mission: "/hero/react-dev.jpg",
+  future: "/hero/pm.jpg",
+};
 
 function SwipeCard({
   section,
@@ -34,6 +44,7 @@ function SwipeCard({
   const nopeOpacity = useTransform(x, [-160, -80, 0], [1, 0.5, 0]);
   const bgLeftOpacity = useTransform(x, [0, -120], [0, 0.25]);
   const bgRightOpacity = useTransform(x, [120, 0], [0.25, 0]);
+  const photoSrc = aboutSectionPhotos[section.key] ?? "/hero/anti-resume.jpg";
 
   function handleDragEnd(_: unknown, info: PanInfo) {
     const threshold = 80;
@@ -66,15 +77,23 @@ function SwipeCard({
       >
         {/* Top “photo” area (premium, like real card) */}
         <div className={isDark ? "relative h-[56%] w-full overflow-hidden bg-white/5" : "relative h-[56%] w-full overflow-hidden bg-gray-100"}>
+          <Image
+            src={photoSrc}
+            alt={title}
+            fill
+            priority
+            unoptimized
+            className="object-cover"
+          />
           <div
             className={
               isDark
-                ? "absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(139,195,74,0.18),transparent_55%),radial-gradient(circle_at_bottom,rgba(0,173,181,0.14),transparent_55%)]"
-                : "absolute inset-0 bg-gradient-to-br from-matcher-pale via-white to-matcher-mint/40"
+                ? "absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(139,195,74,0.28),transparent_60%),radial-gradient(circle_at_bottom,rgba(0,173,181,0.18),transparent_60%)]"
+                : "absolute inset-0 bg-gradient-to-br from-matcher-pale/60 via-white/40 to-matcher-mint/40"
             }
             aria-hidden
           />
-          <div className="absolute inset-0 opacity-70 [filter:url(#noise)]" aria-hidden />
+          <div className="absolute inset-0 opacity-60 [filter:url(#noise)]" aria-hidden />
 
           <div className="absolute left-4 top-4 flex items-center gap-2">
             <span className={isDark ? "rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/85" : "rounded-full bg-matcher-pale px-3 py-1 text-xs font-bold text-matcher-dark"}>
@@ -101,10 +120,7 @@ function SwipeCard({
         {/* Content area */}
         <div className={isDark ? "flex h-[44%] flex-col justify-between p-5 text-white" : "flex h-[44%] flex-col justify-between p-5 text-gray-900"}>
           <div>
-            <p className={isDark ? "text-xs font-semibold uppercase tracking-[0.2em] text-white/60" : "text-xs font-semibold uppercase tracking-[0.2em] text-gray-500"}>
-              {t("swipeHint")}
-            </p>
-            <p className={isDark ? "mt-2 text-sm leading-relaxed text-white/80" : "mt-2 text-sm leading-relaxed text-gray-700"}>
+            <p className={isDark ? "mt-1 text-sm leading-relaxed text-white/80" : "mt-1 text-sm leading-relaxed text-gray-700"}>
               {text}
             </p>
           </div>
@@ -223,7 +239,7 @@ export default function AboutPage() {
         </section>
 
         {/* Card deck - one visible at a time */}
-        <section className="mx-auto max-w-2xl px-4 pb-24 sm:px-6">
+        <section className="mx-auto max-w-2xl px-4 pb-16 sm:px-6 sm:pb-20">
           <div className="relative mx-auto aspect-[3/4] max-h-[520px]">
             {current ? (
               <AnimatePresence mode="wait">

@@ -69,7 +69,7 @@ export default function TeamPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-20 md:py-24">
+      <main className="mx-auto max-w-2xl px-4 py-14 sm:px-6 sm:py-18 md:py-20">
         {/* Hero */}
         <section className="text-center">
           <h1 className={isDark ? "text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl" : "text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl md:text-5xl"}>
@@ -84,7 +84,7 @@ export default function TeamPage() {
         </section>
 
         {/* Section 1: Why we started */}
-        <section className="mt-20 sm:mt-24">
+        <section className="mt-14 sm:mt-16 md:mt-18">
           <h2 className={isDark ? "text-xl font-semibold text-white sm:text-2xl" : "text-xl font-semibold text-gray-900 sm:text-2xl"}>
             {t("whyHeading")}
           </h2>
@@ -94,7 +94,7 @@ export default function TeamPage() {
         </section>
 
         {/* Section 2: Globally local */}
-        <section className="mt-20 sm:mt-24">
+        <section className="mt-14 sm:mt-16 md:mt-18">
           <h2 className={isDark ? "text-xl font-semibold text-white sm:text-2xl" : "text-xl font-semibold text-gray-900 sm:text-2xl"}>
             {t("globalHeading")}
           </h2>
@@ -113,7 +113,7 @@ export default function TeamPage() {
         </section>
 
         {/* Section 3: What we believe */}
-        <section className="mt-20 sm:mt-24">
+        <section className="mt-14 sm:mt-16 md:mt-18">
           <h2 className={isDark ? "text-xl font-semibold text-white sm:text-2xl" : "text-xl font-semibold text-gray-900 sm:text-2xl"}>
             {t("beliefsHeading")}
           </h2>
@@ -129,7 +129,7 @@ export default function TeamPage() {
         </section>
 
         {/* Section 4: Swipe the Team – flip carousel (moved from About) */}
-        <section className="mt-20 sm:mt-24">
+        <section className="mt-16 sm:mt-18 md:mt-20">
           <SwipeTeamCarousel
             title={t("swipeTeam.title")}
             subtitle={t("swipeTeam.subtitle")}
@@ -139,7 +139,7 @@ export default function TeamPage() {
         </section>
 
         {/* Closing section */}
-        <section className="mt-20 sm:mt-24">
+        <section className="mt-16 sm:mt-18 md:mt-20">
           <h2 className={isDark ? "text-xl font-semibold text-white sm:text-2xl" : "text-xl font-semibold text-gray-900 sm:text-2xl"}>
             {t("closingHeading")}
           </h2>
