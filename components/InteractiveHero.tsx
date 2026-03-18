@@ -331,6 +331,7 @@ export default function InteractiveHero({
   employerHowItWorks,
   labels,
   demoCards,
+  theme = "dark",
 }: {
   candidateCopy: { eyebrow: string; title: string; subtitle: string; ctaPrimary: string; ctaSecondary: string };
   employerCopy: { eyebrow: string; title: string; subtitle: string; ctaPrimary: string; ctaSecondary: string };
@@ -338,7 +339,9 @@ export default function InteractiveHero({
   employerHowItWorks: Array<{ title: string; text: string }>;
   labels: InteractiveHeroLabels;
   demoCards: DemoJobCard[];
+  theme?: "light" | "dark";
 }) {
+  const isDark = theme === "dark";
   const [audience, setAudience] = useState<Audience>("candidate");
   const [deck, setDeck] = useState<DemoJobCard[]>(() => demoCards);
   const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
@@ -363,7 +366,13 @@ export default function InteractiveHero({
       <div>
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
           <div className="inline-flex items-center gap-3">
-            <span className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-white/90 backdrop-blur-md">
+            <span
+              className={
+                isDark
+                  ? "rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-white/90 backdrop-blur-md"
+                  : "rounded-full bg-matcher-pale px-4 py-1.5 text-sm font-semibold text-matcher-dark"
+              }
+            >
               {copy.eyebrow}
             </span>
             <SegmentedAudienceControl
@@ -375,10 +384,16 @@ export default function InteractiveHero({
               }}
             />
           </div>
-          <h1 className="mt-5 text-balance text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+          <h1
+            className={
+              isDark
+                ? "mt-5 text-balance text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
+                : "mt-5 text-balance text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl"
+            }
+          >
             {copy.title}
           </h1>
-          <p className="mt-4 max-w-xl text-balance text-base text-white/80 sm:text-lg">
+          <p className={isDark ? "mt-4 max-w-xl text-balance text-base text-white/80 sm:text-lg" : "mt-4 max-w-xl text-balance text-base text-gray-600 sm:text-lg"}>
             {copy.subtitle}
           </p>
 
@@ -391,7 +406,11 @@ export default function InteractiveHero({
             </Link>
             <Link
               href={audience === "candidate" ? "/employer" : "/userFlow/1"}
-              className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-6 py-3 font-semibold text-white/90 backdrop-blur-md hover:bg-white/15"
+              className={
+                isDark
+                  ? "inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-6 py-3 font-semibold text-white/90 backdrop-blur-md hover:bg-white/15"
+                  : "inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-800 hover:bg-gray-50"
+              }
             >
               {copy.ctaSecondary}
             </Link>
@@ -412,9 +431,13 @@ export default function InteractiveHero({
           ].map((item) => (
             <div
               key={item.label}
-              className="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-white/90 backdrop-blur-md"
+              className={
+                isDark
+                  ? "flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-white/90 backdrop-blur-md"
+                  : "flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-gray-800 shadow-sm"
+              }
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
+              <div className={isDark ? "flex h-9 w-9 items-center justify-center rounded-xl bg-white/10" : "flex h-9 w-9 items-center justify-center rounded-xl bg-gray-50"}>
                 {item.icon}
               </div>
               <p className="text-sm font-semibold">{item.label}</p>
@@ -424,15 +447,21 @@ export default function InteractiveHero({
 
         {/* How it works */}
         <div className="mt-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">{labels.howItWorks}</p>
+          <p className={isDark ? "text-xs font-semibold uppercase tracking-[0.2em] text-white/70" : "text-xs font-semibold uppercase tracking-[0.2em] text-gray-500"}>
+            {labels.howItWorks}
+          </p>
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
             {steps.slice(0, 3).map((s) => (
               <div
                 key={s.title}
-                className="rounded-2xl border border-white/20 bg-white/10 p-4 text-white/90 backdrop-blur-md"
+                className={
+                  isDark
+                    ? "rounded-2xl border border-white/20 bg-white/10 p-4 text-white/90 backdrop-blur-md"
+                    : "rounded-2xl border border-gray-200 bg-white p-4 text-gray-900 shadow-sm"
+                }
               >
                 <p className="text-sm font-semibold">{s.title}</p>
-                <p className="mt-1 text-sm text-white/75">{s.text}</p>
+                <p className={isDark ? "mt-1 text-sm text-white/75" : "mt-1 text-sm text-gray-600"}>{s.text}</p>
               </div>
             ))}
           </div>

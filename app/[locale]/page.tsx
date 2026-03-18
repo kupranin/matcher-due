@@ -83,7 +83,7 @@ export default function Home() {
         <Logo height={108} />
         <div className="flex items-center gap-3">
           <LanguageSwitcher />
-          <ThemeToggle className="hidden sm:inline-flex" />
+          <ThemeToggle />
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Link
               href="/login"
@@ -126,6 +126,7 @@ export default function Home() {
         ]}
         labels={liveHeroLabels}
         demoCards={demoCards}
+        theme={isDark ? "dark" : "light"}
       />
 
       {/* Anti-Resume comparison */}
@@ -293,52 +294,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Value proposition – stats */}
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 md:py-20">
-        <h2 className={headingClass}>{t("valuePropositionTitle")}</h2>
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 md:gap-6 sm:mt-10 md:mt-12">
-            {(["stat_1", "stat_2", "stat_3", "stat_4"] as const).map((key, i) => (
-              <motion.div
-                key={key}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-40px" }}
-                transition={{
-                  duration: 0.5,
-                  delay: i * 0.08,
-                  ease: [0.25, 0.46, 0.45, 0.94],
-                }}
-                whileHover={{
-                  y: -6,
-                  scale: 1.03,
-                  transition: { duration: 0.2 },
-                }}
-                whileTap={{ scale: 0.98 }}
-                className={`stats-value-prop relative overflow-hidden rounded-2xl border p-4 text-center transition sm:p-5 md:p-6 ${glassCard}`}
-              >
-                <motion.span
-                  className={isDark ? "block text-3xl font-extrabold tracking-tight text-white sm:text-4xl" : "block text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl"}
-                  initial={{ scale: 0.9 }}
-                  whileInView={{ scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: i * 0.08 + 0.1 }}
-                >
-                  {t(`stats.${key}_value`)}
-                </motion.span>
-                <motion.div
-                  className={`mt-1.5 text-sm font-semibold leading-relaxed ${isDark ? "text-white/70" : "text-gray-600"}`}
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: i * 0.08 + 0.2 }}
-                >
-                  {t(`stats.${key}_desc`)}
-                </motion.div>
-              </motion.div>
-            ))}
-          </div>
-      </section>
-
       {/* Testimonials */}
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 md:py-20">
         <h2 className={headingClass}>{t("testimonialsTitle")}</h2>
@@ -368,51 +323,6 @@ export default function Home() {
               <p className={isDark ? "text-sm font-semibold text-white/60" : "text-sm text-gray-500"}>{item.role}</p>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section className={`${isDark ? "border-t border-white/10" : "border-t border-gray-200"} py-12 sm:py-16 md:py-20`}>
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <h2 className={headingClass}>{t("howItWorksTitle")}</h2>
-          <div className="mt-8 grid grid-cols-1 gap-5 sm:mt-10 sm:gap-6 md:grid-cols-3 md:gap-8 md:mt-12">
-            {[
-              {
-                step: 1,
-                icon: "✏️",
-                title: t("howItWorks.step1Title"),
-                text: t("howItWorks.step1Text"),
-                bg: "bg-matcher-mint/50 border-matcher/30",
-              },
-              {
-                step: 2,
-                icon: "⚡",
-                title: t("howItWorks.step2Title"),
-                text: t("howItWorks.step2Text"),
-                bg: "bg-matcher-pale/80 border-matcher-dark/20",
-              },
-              {
-                step: 3,
-                icon: "✓",
-                title: t("howItWorks.step3Title"),
-                text: t("howItWorks.step3Text"),
-                bg: "bg-matcher-mint/40 border-matcher/30",
-              },
-            ].map((item) => (
-              <div
-                key={item.step}
-                className={`rounded-2xl border p-5 text-center sm:p-6 ${glassCard}`}
-              >
-                <span className="text-2xl">{item.icon}</span>
-                <p className={isDark ? "mt-3 text-base font-bold text-white" : "mt-3 text-base font-semibold text-gray-900"}>
-                  {item.title}
-                </p>
-                <p className={isDark ? "mt-1 text-sm font-semibold text-white/70" : "mt-1 text-sm text-gray-600"}>
-                  {item.text}
-                </p>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 

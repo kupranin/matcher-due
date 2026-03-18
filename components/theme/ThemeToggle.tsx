@@ -19,7 +19,11 @@ export default function ThemeToggle({
       onClick={toggle}
       whileTap={{ scale: 0.96 }}
       whileHover={{ scale: 1.02 }}
-      className={`inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/90 backdrop-blur-md hover:bg-white/15 ${className}`}
+      className={`inline-flex h-10 w-10 items-center justify-center rounded-full border backdrop-blur-md ${
+        isDark
+          ? "border-white/20 bg-white/10 text-white/90 hover:bg-white/15"
+          : "border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50"
+      } ${className}`}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       title={isDark ? "Light mode" : "Dark mode"}
     >

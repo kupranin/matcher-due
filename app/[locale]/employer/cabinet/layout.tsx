@@ -6,6 +6,7 @@ import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import Logo from "@/components/Logo";
 import { performEmployerLogout } from "@/lib/logoutUtils";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import ThemeToggle from "@/components/theme/ThemeToggle";
 
 type SubscriptionDisplay = {
   packageLabel: string;
@@ -118,6 +119,7 @@ export default function EmployerCabinetLayout({
         <Logo height={56} />
         <div className="flex items-center gap-2">
           <LanguageSwitcher />
+          <ThemeToggle />
           <button
             type="button"
             onClick={() => setMobileMenuOpen((o) => !o)}

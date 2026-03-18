@@ -6,6 +6,7 @@ import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import Logo from "@/components/Logo";
 import { performCandidateLogout } from "@/lib/logoutUtils";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import ThemeToggle from "@/components/theme/ThemeToggle";
 
 export default function CabinetLayout({
   children,
@@ -76,6 +77,7 @@ export default function CabinetLayout({
         <Logo height={56} />
         <div className="flex items-center gap-2">
           <LanguageSwitcher />
+          <ThemeToggle />
           <button
             type="button"
             onClick={() => setMobileMenuOpen((o) => !o)}
