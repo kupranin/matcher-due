@@ -446,9 +446,10 @@
       "subtitle": "No problem either way — this just improves matching.",
       "yes": "Yes",
       "no": "No",
-      "experienceLabel": "What experience do you have?",
-      "experiencePlaceholder": "Example: 6 months as a cashier, summer job in a cafe, internship…",
-      "experienceHint": "Keep it short — 1–2 lines is enough for MVP."
+      "experienceLabel": "How many months of experience do you have?",
+      "experiencePlaceholder": "e.g. 6",
+      "experienceHint": "A rough number is enough — this only improves matching.",
+      "months": "months"
     },
     "step3": {
       "title": "What schedule do you want?",

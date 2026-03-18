@@ -6,6 +6,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import Logo from "@/components/Logo";
 import { useTheme } from "@/components/theme/ThemeProvider";
+import ThemeToggle from "@/components/theme/ThemeToggle";
 import {
   GEORGIAN_REGIONS,
   GEORGIAN_CITIES,
@@ -143,7 +144,8 @@ export default function UserFlow1Page() {
 
   // Step 2
   const [experience, setExperience] = useState<ExperienceAnswer>(null);
-  const [experienceText, setExperienceText] = useState("");
+  // Represent experience as a simple period (months) instead of free text.
+  const [experienceMonthsText, setExperienceMonthsText] = useState("");
 
   // Step 3
   const [workType, setWorkType] = useState<WorkType>(null);
@@ -207,7 +209,15 @@ export default function UserFlow1Page() {
   const displayJobTitle = job === "other" ? customJobTitle.trim() : (selectedRole?.title ?? job ?? "");
   const skillLabel = (s: string) => (ALL_SKILLS.includes(s) ? (tSkillNames(s) as string) : s);
   const workTypeLabel = (key: string) => t(`workTypeLabels.${key}` as any);
-  const workTypeDesc = (key: string) => t(`step3.${key}Desc` as any);
+  const workTypeDesc = (key: string) => {
+    const map: Record<string, string> = {
+      "full-time": "fullTimeDesc",
+      "part-time": "partTimeDesc",
+      temp: "tempDesc",
+      remote: "remoteDesc",
+    };
+    return t(`step3.${map[key] ?? "fullTimeDesc"}` as any);
+  };
   const skillLevelLabel = (level: string) => t(`skillLevels.${level}` as any);
   const cityName = (c: { nameEn: string; nameKa?: string }) => (apiLocale === "ka" && c.nameKa ? c.nameKa : c.nameEn);
 
@@ -266,7 +276,10 @@ export default function UserFlow1Page() {
     if (step === 1) return job === "other" ? customJobTitle.trim().length >= 2 : Boolean(job);
     if (step === 2) {
       if (experience === "no") return true;
-      if (experience === "yes") return experienceText.trim().length >= 2;
+      if (experience === "yes") {
+        const n = parseInt(experienceMonthsText.replace(/[^\d]/g, ""), 10);
+        return !isNaN(n) && n > 0;
+      }
       return false;
     }
     if (step === 3) return Boolean(workType);
@@ -286,7 +299,7 @@ export default function UserFlow1Page() {
       );
     }
     return false;
-  }, [step, job, customJobTitle, experience, experienceText, workType, skills, locationCityId, salary, fullName, email, phone, password]);
+  }, [step, job, customJobTitle, experience, experienceMonthsText, workType, skills, locationCityId, salary, fullName, email, phone, password]);
 
   function next() {
     if (!canContinue) return;
@@ -350,7 +363,7 @@ export default function UserFlow1Page() {
     const profile = buildProfileFromUserFlow({
       job,
       experience,
-      experienceText,
+      experienceText: experienceMonthsText,
       workType,
       skills,
       locationCityId,
@@ -382,7 +395,7 @@ export default function UserFlow1Page() {
           willingToRelocate: profile.willingToRelocate,
           salaryMin: profile.salaryMin,
           experienceMonths: profile.experienceMonths,
-          experienceText: experienceText.trim() || undefined,
+          experienceText: experienceMonthsText.trim() || undefined,
           educationLevel: profile.educationLevel,
           workTypes: profile.workTypes,
           skills: profile.skills.map((s) => ({ name: s.name, level: s.level })),
@@ -478,8 +491,11 @@ export default function UserFlow1Page() {
 
           <Logo height={64} />
 
-          <div className={classNames("text-sm tabular-nums", isDark ? "text-white/60" : "text-gray-500")}>
-            {t("step")} <span className={classNames("font-semibold", isDark ? "text-white" : "text-gray-900")}>{step}</span>/8
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <div className={classNames("text-sm tabular-nums", isDark ? "text-white/60" : "text-gray-500")}>
+              {t("step")} <span className={classNames("font-semibold", isDark ? "text-white" : "text-gray-900")}>{step}</span>/8
+            </div>
           </div>
         </div>
 
@@ -508,7 +524,12 @@ export default function UserFlow1Page() {
         </div>
 
         {/* Main card */}
-        <section className={classNames("relative mx-auto rounded-3xl border p-5 shadow-sm sm:p-7", isDark ? "border-white/10 bg-white/5" : "border-gray-200 bg-white")}>
+        <section
+          className={classNames(
+            "relative mx-auto rounded-3xl border p-5 shadow-sm sm:p-7",
+            isDark ? "border-white/10 bg-white/5 text-white" : "border-gray-200 bg-white text-gray-900"
+          )}
+        >
           {/* Elegant stepper */}
           <div className="mb-5 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -670,17 +691,21 @@ export default function UserFlow1Page() {
             {/* STEP 2 */}
             {step === 2 && (
               <div className="animate-[fadeIn_240ms_ease-out]">
-                <h1 className="text-2xl font-semibold tracking-tight">{t("step2.title")}</h1>
-                <p className="mt-2 text-gray-600">{t("step2.subtitle")}</p>
+                <h1 className={classNames("text-2xl font-semibold tracking-tight sm:text-3xl", isDark ? "text-white" : "text-gray-900")}>{t("step2.title")}</h1>
+                <p className={classNames("mt-2", isDark ? "text-white/70" : "text-gray-600")}>{t("step2.subtitle")}</p>
 
                 <div className="mt-5 flex gap-3">
                   <button
                     onClick={() => setExperience("yes")}
                     className={classNames(
-                      "flex-1 rounded-2xl border px-4 py-3 text-sm font-medium transition",
+                      "flex-1 rounded-2xl border px-4 py-3 text-sm font-semibold transition",
                       experience === "yes"
-                        ? "border-matcher bg-matcher-mint"
-                        : "border-gray-200 hover:bg-gray-50"
+                        ? isDark
+                          ? "border-matcher/60 bg-matcher/15 text-matcher-bright"
+                          : "border-matcher bg-matcher-mint text-matcher-dark"
+                        : isDark
+                          ? "border-white/15 bg-white/5 text-white/85 hover:bg-white/10"
+                          : "border-gray-200 text-gray-900 hover:bg-gray-50"
                     )}
                   >
                     {t("step2.yes")}
@@ -688,13 +713,17 @@ export default function UserFlow1Page() {
                   <button
                     onClick={() => {
                       setExperience("no");
-                      setExperienceText("");
+                      setExperienceMonthsText("");
                     }}
                     className={classNames(
-                      "flex-1 rounded-2xl border px-4 py-3 text-sm font-medium transition",
+                      "flex-1 rounded-2xl border px-4 py-3 text-sm font-semibold transition",
                       experience === "no"
-                        ? "border-matcher bg-matcher-mint"
-                        : "border-gray-200 hover:bg-gray-50"
+                        ? isDark
+                          ? "border-matcher/60 bg-matcher/15 text-matcher-bright"
+                          : "border-matcher bg-matcher-mint text-matcher-dark"
+                        : isDark
+                          ? "border-white/15 bg-white/5 text-white/85 hover:bg-white/10"
+                          : "border-gray-200 text-gray-900 hover:bg-gray-50"
                     )}
                   >
                     {t("step2.no")}
@@ -703,15 +732,36 @@ export default function UserFlow1Page() {
 
                 {experience === "yes" && (
                   <div className="mt-4">
-                    <label className="text-sm font-medium text-gray-900">{t("step2.experienceLabel")}</label>
-                    <textarea
-                      value={experienceText}
-                      onChange={(e) => setExperienceText(e.target.value)}
-                      placeholder={t("step2.experiencePlaceholder")}
-                      className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
-                      rows={4}
-                    />
-                    <p className="mt-2 text-xs text-gray-500">{t("step2.experienceHint")}</p>
+                    <label className={classNames("text-sm font-medium", isDark ? "text-white/80" : "text-gray-900")}>
+                      {t("step2.experienceLabel")}
+                    </label>
+                    <div className="mt-2 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+                      <input
+                        inputMode="numeric"
+                        value={experienceMonthsText}
+                        onChange={(e) => setExperienceMonthsText(e.target.value.replace(/[^\d]/g, ""))}
+                        placeholder={t("step2.experiencePlaceholder")}
+                        className={classNames(
+                          "w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none transition",
+                          isDark
+                            ? "border-white/10 bg-white/5 text-white placeholder:text-white/40 focus:border-matcher/60 focus:ring-4 focus:ring-matcher/15"
+                            : "border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:border-matcher/60 focus:ring-4 focus:ring-matcher/10 focus:shadow-md"
+                        )}
+                        aria-label={t("step2.experienceLabel")}
+                      />
+                      <div
+                        className={classNames(
+                          "rounded-2xl border px-4 py-3 text-sm font-semibold",
+                          isDark ? "border-white/10 bg-white/5 text-white/80" : "border-gray-200 bg-gray-50 text-gray-700"
+                        )}
+                        aria-hidden
+                      >
+                        {t("step2.months")}
+                      </div>
+                    </div>
+                    <p className={classNames("mt-2 text-xs", isDark ? "text-white/55" : "text-gray-500")}>
+                      {t("step2.experienceHint")}
+                    </p>
                   </div>
                 )}
               </div>
@@ -720,8 +770,8 @@ export default function UserFlow1Page() {
             {/* STEP 3 */}
             {step === 3 && (
               <div className="animate-[fadeIn_240ms_ease-out]">
-                <h1 className="text-2xl font-semibold tracking-tight">{t("step3.title")}</h1>
-                <p className="mt-2 text-gray-600">{t("step3.subtitle")}</p>
+                <h1 className={classNames("text-2xl font-semibold tracking-tight sm:text-3xl", isDark ? "text-white" : "text-gray-900")}>{t("step3.title")}</h1>
+                <p className={classNames("mt-2", isDark ? "text-white/70" : "text-gray-600")}>{t("step3.subtitle")}</p>
 
                 <div className="mt-5 grid gap-2 sm:grid-cols-2">
                   {[
@@ -738,12 +788,16 @@ export default function UserFlow1Page() {
                         className={classNames(
                           "rounded-2xl border px-4 py-3 text-left text-sm transition",
                           active
-                            ? "border-matcher bg-matcher-mint"
-                            : "border-gray-200 hover:bg-gray-50"
+                            ? isDark
+                              ? "border-matcher/60 bg-matcher/15"
+                              : "border-matcher bg-matcher-mint"
+                            : isDark
+                              ? "border-white/15 bg-white/5 hover:bg-white/10"
+                              : "border-gray-200 hover:bg-gray-50"
                         )}
                       >
-                        <div className="font-medium text-gray-900">{workTypeLabel(w.key)}</div>
-                        <div className="mt-0.5 text-xs text-gray-500">{workTypeDesc(w.key)}</div>
+                        <div className={classNames("font-medium", isDark ? "text-white" : "text-gray-900")}>{workTypeLabel(w.key)}</div>
+                        <div className={classNames("mt-0.5 text-xs", isDark ? "text-white/60" : "text-gray-500")}>{workTypeDesc(w.key)}</div>
                       </button>
                     );
                   })}
@@ -1086,7 +1140,7 @@ export default function UserFlow1Page() {
                       {t("step6.averageFor")} <span className="font-bold text-matcher-dark">{displayJobTitle}</span> {t("step6.averageInGeorgia")}
                     </p>
                     <p className="mt-1 text-2xl font-semibold text-matcher-dark">
-                      {recommendedSalary.toLocaleString()} ₾ <span className="text-base font-normal text-matcher-dark">{t("step7.perMonth")}</span>
+                      {recommendedSalary.toLocaleString()} ₾ <span className="text-base font-normal text-matcher-dark">{t("step8.perMonth")}</span>
                     </p>
                     <p className="mt-2 text-xs text-matcher-dark">
                       {t("step6.basedOnCurrent")}
@@ -1232,7 +1286,13 @@ export default function UserFlow1Page() {
                       </li>
                       <li>
                         <span className="text-gray-500">{t("step8.experience")}:</span>{" "}
-                        {experience === "yes" ? experienceText : experience === "no" ? t("step2.no") : "—"}
+                        {experience === "yes"
+                          ? experienceMonthsText.trim()
+                            ? `${experienceMonthsText.trim()} ${t("step2.months")}`
+                            : "—"
+                          : experience === "no"
+                            ? t("step2.no")
+                            : "—"}
                       </li>
                       <li>
                         <span className="text-gray-500">{t("step8.schedule")}:</span> {workType ? workTypeLabel(workType) : "—"}

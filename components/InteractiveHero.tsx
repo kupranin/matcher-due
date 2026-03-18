@@ -611,7 +611,7 @@ export default function InteractiveHero({
                     rotate: exitDir === "right" ? 18 : exitDir === "left" ? -18 : 0,
                     transition: { duration: 0.25, ease: [0.4, 0, 0.2, 1] },
                   }}
-                  className="absolute inset-0"
+                  className="absolute inset-0 z-10"
                 >
                   <DemoSwipeCard
                     card={current}
@@ -649,7 +649,7 @@ export default function InteractiveHero({
             </AnimatePresence>
 
             {/* Swipe buttons integrated */}
-            <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
+            <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
               <div
                 className={`pointer-events-auto inline-flex items-center gap-4 rounded-full border px-4 py-3 shadow-lg ${
                   isDark ? "border-white/15 bg-white/10 backdrop-blur-md" : "border-gray-200 bg-white"
