@@ -142,62 +142,97 @@ export default function Home() {
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className={`relative overflow-hidden rounded-3xl border p-6 shadow-sm ${isDark ? "border-white/15 bg-white/5 text-white/90 shadow-black/15 backdrop-blur-md" : "border-gray-200 bg-white text-gray-900"}`}
+            className={`relative overflow-hidden rounded-3xl border p-6 shadow-sm ${
+              isDark ? "border-white/15 bg-white/5 text-white/90 shadow-black/15 backdrop-blur-md" : "border-gray-200 bg-white text-gray-900"
+            }`}
           >
-            {isDark ? (
-              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" aria-hidden />
-            ) : null}
-            <div className="relative flex items-start justify-between gap-4">
-              <div>
-                <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${isDark ? "text-white/60" : "text-gray-500"}`}>
-                  {t("antiResume.oldSchool")}
-                </p>
-                <h2 className="font-heading mt-2 text-2xl font-extrabold tracking-tight">
-                  {t("antiResume.resumeTitle")}
-                </h2>
-                <p className={`mt-2 text-sm ${isDark ? "text-white/70" : "text-gray-600"}`}>
-                  {t("antiResume.resumeSubtitle")}
-                </p>
+            {isDark ? <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" aria-hidden /> : null}
+            <div className="relative flex flex-col gap-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${isDark ? "text-white/60" : "text-gray-500"}`}>
+                    {t("antiResume.oldSchool")}
+                  </p>
+                  <h2 className="font-heading mt-2 text-2xl font-extrabold tracking-tight">
+                    {t("antiResume.resumeTitle")}
+                  </h2>
+                  <p className={`mt-2 text-sm ${isDark ? "text-white/70" : "text-gray-600"}`}>
+                    {t("antiResume.resumeSubtitle")}
+                  </p>
+                </div>
+                <motion.div
+                  animate={{ rotate: [0, -4, 4, -3, 3, 0] }}
+                  transition={{ duration: 0.7, repeat: Infinity, repeatDelay: 0.8 }}
+                  className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold ${
+                    isDark ? "border-white/15 bg-white/10 text-white/80" : "border-gray-200 bg-gray-50 text-gray-700"
+                  }`}
+                >
+                  <XCircle className={`h-4 w-4 ${isDark ? "text-rose-400" : "text-rose-500"}`} />
+                  {t("antiResume.no")}
+                </motion.div>
               </div>
-              <motion.div
-                animate={{ rotate: [0, -4, 4, -3, 3, 0] }}
-                transition={{ duration: 0.7, repeat: Infinity, repeatDelay: 0.8 }}
-                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold ${
-                  isDark ? "border-white/15 bg-white/10 text-white/80" : "border-gray-200 bg-gray-50 text-gray-700"
-                }`}
-              >
-                <XCircle className={`h-4 w-4 ${isDark ? "text-rose-400" : "text-rose-500"}`} />
-                {t("antiResume.no")}
-              </motion.div>
-            </div>
 
-            <div className={`relative mt-6 rounded-2xl border p-5 ${isDark ? "border-white/10 bg-white/5" : "border-gray-200 bg-gray-50"}`}>
-              <div className="flex items-center gap-3">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${isDark ? "bg-white/10" : "bg-white"}`}>
-                  <FileText className={`h-5 w-5 ${isDark ? "text-white/75" : "text-gray-600"}`} />
+              <div className={`rounded-2xl border p-5 ${isDark ? "border-white/10 bg-white/5" : "border-gray-200 bg-gray-50"}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${isDark ? "bg-white/10" : "bg-white"}`}>
+                    <FileText className={`h-5 w-5 ${isDark ? "text-white/75" : "text-gray-600"}`} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className={`h-3 w-40 rounded ${isDark ? "bg-white/10" : "bg-gray-200"}`} />
+                    <div className={`mt-2 h-3 w-28 rounded ${isDark ? "bg-white/10" : "bg-gray-200"}`} />
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <div className={`h-3 w-40 rounded ${isDark ? "bg-white/10" : "bg-gray-200"}`} />
-                  <div className={`mt-2 h-3 w-28 rounded ${isDark ? "bg-white/10" : "bg-gray-200"}`} />
+                <div className="mt-5 space-y-2">
+                  <div className={`h-2.5 w-full rounded ${isDark ? "bg-white/10" : "bg-gray-200"}`} />
+                  <div className={`h-2.5 w-11/12 rounded ${isDark ? "bg-white/10" : "bg-gray-200"}`} />
+                  <div className={`h-2.5 w-10/12 rounded ${isDark ? "bg-white/10" : "bg-gray-200"}`} />
+                  <div className={`h-2.5 w-9/12 rounded ${isDark ? "bg-white/10" : "bg-gray-200"}`} />
+                </div>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {(t.raw("antiResume.resumeChips") as string[]).map((x) => (
+                    <span
+                      key={x}
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                        isDark ? "border-white/10 bg-white/5 text-white/70" : "border-gray-200 bg-white text-gray-600"
+                      }`}
+                    >
+                      {x}
+                    </span>
+                  ))}
                 </div>
               </div>
-              <div className="mt-5 space-y-2">
-                <div className={`h-2.5 w-full rounded ${isDark ? "bg-white/10" : "bg-gray-200"}`} />
-                <div className={`h-2.5 w-11/12 rounded ${isDark ? "bg-white/10" : "bg-gray-200"}`} />
-                <div className={`h-2.5 w-10/12 rounded ${isDark ? "bg-white/10" : "bg-gray-200"}`} />
-                <div className={`h-2.5 w-9/12 rounded ${isDark ? "bg-white/10" : "bg-gray-200"}`} />
-              </div>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {(t.raw("antiResume.resumeChips") as string[]).map((x) => (
-                  <span
-                    key={x}
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                      isDark ? "border-white/10 bg-white/5 text-white/70" : "border-gray-200 bg-white text-gray-600"
-                    }`}
-                  >
-                    {x}
-                  </span>
-                ))}
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div
+                  className={`rounded-2xl p-4 text-sm ${
+                    isDark ? "border border-white/10 bg-black/40" : "border border-gray-200 bg-white"
+                  }`}
+                >
+                  <p className="font-semibold">{t("antiResume.pain.timeTitle")}</p>
+                  <p className={isDark ? "mt-1 text-xs text-white/70" : "mt-1 text-xs text-gray-600"}>
+                    {t("antiResume.pain.timeCopy")}
+                  </p>
+                </div>
+                <div
+                  className={`rounded-2xl p-4 text-sm ${
+                    isDark ? "border border-white/10 bg-black/40" : "border border-gray-200 bg-white"
+                  }`}
+                >
+                  <p className="font-semibold">{t("antiResume.pain.rejectionTitle")}</p>
+                  <p className={isDark ? "mt-1 text-xs text-white/70" : "mt-1 text-xs text-gray-600"}>
+                    {t("antiResume.pain.rejectionCopy")}
+                  </p>
+                </div>
+                <div
+                  className={`rounded-2xl p-4 text-sm ${
+                    isDark ? "border border-white/10 bg-black/40" : "border border-gray-200 bg-white"
+                  }`}
+                >
+                  <p className="font-semibold">{t("antiResume.pain.noFeedbackTitle")}</p>
+                  <p className={isDark ? "mt-1 text-xs text-white/70" : "mt-1 text-xs text-gray-600"}>
+                    {t("antiResume.pain.noFeedbackCopy")}
+                  </p>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -326,7 +361,7 @@ export default function Home() {
       {/* Testimonials */}
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 md:py-18">
         <h2 className={headingClass}>{t("testimonialsTitle")}</h2>
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:mt-10 sm:gap-5 md:grid-cols-3 md:gap-6 md:mt-12">
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:mt-8 sm:gap-5 md:grid-cols-3 md:gap-6">
           {[
             {
               ...t.raw("testimonials.nini"),
@@ -356,10 +391,10 @@ export default function Home() {
       </section>
 
       {/* Trusted – social proof */}
-      <section className={`${isDark ? "border-t border-white/10" : "border-t border-gray-200"} py-10 sm:py-14 md:py-16`}>
+      <section className="py-10 sm:py-14 md:py-16">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
           <h2 className={headingClass}>{t("socialProofTitle")}</h2>
-          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-4 sm:gap-8">
+          <div className="mt-6 grid grid-cols-1 gap-6 sm:mt-8 sm:grid-cols-4 sm:gap-8">
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}

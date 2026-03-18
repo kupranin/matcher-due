@@ -536,7 +536,7 @@ export default function InteractiveHero({
       </div>
 
       {/* Live swipe demo */}
-      <div className="relative flex justify-center md:justify-end">
+      <div className="relative flex justify-center md:justify-end md:self-center">
         <div
           className={`absolute -inset-8 -z-10 rounded-[3rem] blur-2xl ${
             isDark
