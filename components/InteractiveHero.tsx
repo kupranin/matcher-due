@@ -420,6 +420,7 @@ export default function InteractiveHero({
   const titleHasSwap = copy.title.includes("{swap}") && swapWords.length > 0;
   const activeSwapWord = swapWords.length > 0 ? swapWords[swapIdx % swapWords.length] : "";
   const [titleBefore, titleAfter] = titleHasSwap ? copy.title.split("{swap}") : [copy.title, ""];
+  const swapMinWidthCh = useMemo(() => Math.max(0, ...swapWords.map((w) => (typeof w === "string" ? w.length : 0))), [swapWords]);
 
   useEffect(() => {
     if (!titleHasSwap) return;
@@ -456,14 +457,14 @@ export default function InteractiveHero({
           <h1
             className={
               isDark
-                ? "mt-5 text-balance text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
-                : "mt-5 text-balance text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl"
+                ? "font-heading mt-5 text-balance text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
+                : "font-heading mt-5 text-balance text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl"
             }
           >
             {titleHasSwap ? (
               <>
                 {titleBefore}
-                <span className="relative inline-block align-baseline">
+                <span className="relative inline-block align-baseline" style={{ minWidth: swapMinWidthCh ? `${swapMinWidthCh}ch` : undefined }}>
                   <AnimatePresence mode="wait" initial={false}>
                     <motion.span
                       key={activeSwapWord}
@@ -509,34 +510,6 @@ export default function InteractiveHero({
               {copy.ctaSecondary}
             </Link>
           </div>
-        </motion.div>
-
-        {/* Matching logic infographic */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.45 }}
-          className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3"
-        >
-          {[
-            { label: "Your Profile", icon: <User className={isDark ? "h-5 w-5 text-white/90" : "h-5 w-5 text-gray-700"} /> },
-            { label: "Algorithm", icon: <Sparkles className={isDark ? "h-5 w-5 text-white/90" : "h-5 w-5 text-gray-700"} /> },
-            { label: "Perfect Match", icon: <Heart className={isDark ? "h-5 w-5 text-white/90" : "h-5 w-5 text-gray-700"} /> },
-          ].map((item) => (
-            <div
-              key={item.label}
-              className={
-                isDark
-                  ? "flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-white/90 backdrop-blur-md"
-                  : "flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-gray-800 shadow-sm"
-              }
-            >
-              <div className={isDark ? "flex h-9 w-9 items-center justify-center rounded-xl bg-white/10" : "flex h-9 w-9 items-center justify-center rounded-xl bg-gray-50"}>
-                {item.icon}
-              </div>
-              <p className="text-sm font-semibold">{item.label}</p>
-            </div>
-          ))}
         </motion.div>
 
         {/* How it works */}
@@ -648,33 +621,34 @@ export default function InteractiveHero({
               )}
             </AnimatePresence>
 
-            {/* Swipe buttons integrated */}
-            <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
-              <div
-                className={`pointer-events-auto inline-flex items-center gap-4 rounded-full border px-4 py-3 shadow-lg ${
-                  isDark ? "border-white/15 bg-white/10 backdrop-blur-md" : "border-gray-200 bg-white"
-                }`}
-              >
-                <button
-                  type="button"
-                  onClick={() => swipe("left")}
-                  disabled={!current}
-                  className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-md disabled:opacity-50"
-                  aria-label="Pass"
-                >
-                  <XIcon className="h-6 w-6" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => swipe("right")}
-                  disabled={!current}
-                  className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-matcher to-matcher-teal text-white shadow-md disabled:opacity-50"
-                  aria-label="Like"
-                >
-                  <Heart className="h-6 w-6" />
-                </button>
-              </div>
-            </div>
+          </div>
+        </div>
+
+        {/* Swipe buttons (under the phone/card) */}
+        <div className="mt-6 flex justify-center">
+          <div
+            className={`inline-flex items-center gap-4 rounded-full border px-4 py-3 shadow-lg ${
+              isDark ? "border-white/15 bg-white/10 backdrop-blur-md" : "border-gray-200 bg-white"
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() => swipe("left")}
+              disabled={!current}
+              className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-md disabled:opacity-50"
+              aria-label="Pass"
+            >
+              <XIcon className="h-6 w-6" />
+            </button>
+            <button
+              type="button"
+              onClick={() => swipe("right")}
+              disabled={!current}
+              className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-matcher to-matcher-teal text-white shadow-md disabled:opacity-50"
+              aria-label="Like"
+            >
+              <Heart className="h-6 w-6" />
+            </button>
           </div>
         </div>
 

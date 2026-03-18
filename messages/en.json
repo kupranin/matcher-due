@@ -250,35 +250,35 @@
       "demoCards": [
         {
           "id": "react-dev",
-          "title": "Senior React Developer",
-          "company": "Tbilisi Product Studio",
-          "salary": "₾8k–₾12k",
+          "title": "Sales Associate",
+          "company": "Tbilisi Mall",
+          "salary": "₾1,200–₾1,500",
           "location": "Tbilisi",
-          "workType": "Hybrid",
-          "tech": ["React", "Next.js", "TypeScript", "GraphQL"],
-          "description": "Build a fast, swipe-first marketplace experience. Own UI performance and component quality.",
+          "workType": "Full-time",
+          "tech": ["Customer service", "Cash handling", "Teamwork", "Communication"],
+          "description": "Entry-level retail role. Learn on the job, work with a team, and grow into shift lead roles.",
           "photo": "/hero/react-dev.jpg"
         },
         {
           "id": "designer",
-          "title": "Product Designer",
-          "company": "Matcher Labs",
-          "salary": "₾5k–₾7k",
-          "location": "Remote",
-          "workType": "Remote",
-          "tech": ["Figma", "Design Systems", "UX Research"],
-          "description": "Design high-conversion onboarding and swipe flows. Turn trust and clarity into retention.",
+          "title": "Barista",
+          "company": "Coffee Lab",
+          "salary": "₾1,100–₾1,400",
+          "location": "Tbilisi",
+          "workType": "Full-time",
+          "tech": ["Coffee prep", "Speed", "Cleanliness", "Customer service"],
+          "description": "Entry-level barista role. Training provided. Friendly team and flexible shifts.",
           "photo": "/hero/designer.jpg"
         },
         {
           "id": "pm",
-          "title": "Associate Product Manager",
-          "company": "GeoCommerce",
-          "salary": "₾3k–₾4k",
+          "title": "Cashier",
+          "company": "Carrefour",
+          "salary": "₾1,000–₾1,300",
           "location": "Tbilisi",
           "workType": "Full-time",
-          "tech": ["Roadmaps", "Analytics", "Experimentation"],
-          "description": "Ship weekly. Instrument the matching funnel and iterate on copy, cards, and conversation triggers.",
+          "tech": ["Cash register", "Accuracy", "Politeness", "Basic math"],
+          "description": "Entry-level cashier role. Stable schedule, fast onboarding, and clear growth path.",
           "photo": "/hero/pm.jpg"
         }
       ]

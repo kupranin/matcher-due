@@ -32,6 +32,8 @@ function SwipeCard({
   const rotate = useTransform(x, [-200, 200], [-12, 12]);
   const likeOpacity = useTransform(x, [0, 80, 160], [0, 0.5, 1]);
   const nopeOpacity = useTransform(x, [-160, -80, 0], [1, 0.5, 0]);
+  const bgLeftOpacity = useTransform(x, [0, -120], [0, 0.25]);
+  const bgRightOpacity = useTransform(x, [120, 0], [0.25, 0]);
 
   function handleDragEnd(_: unknown, info: PanInfo) {
     const threshold = 80;
@@ -47,16 +49,75 @@ function SwipeCard({
       dragElastic={0.6}
       onDragEnd={handleDragEnd}
       style={{ x, rotate }}
-      className="absolute inset-0 cursor-grab active:cursor-grabbing"
+      className="absolute inset-0 touch-none cursor-grab active:cursor-grabbing"
     >
+      {/* drag background hint */}
+      <div className="absolute -inset-3 flex overflow-hidden rounded-[1.75rem]">
+        <motion.div style={{ opacity: bgLeftOpacity }} className="flex-1 bg-rose-500/35" aria-hidden />
+        <motion.div style={{ opacity: bgRightOpacity }} className="flex-1 bg-emerald-500/35" aria-hidden />
+      </div>
+
       <div
-        className={`relative h-full w-full overflow-hidden rounded-3xl border border-l-4 p-7 shadow-xl ${section.accent} ${
-          isDark ? "border-white/10 bg-white/5 text-white" : "border-gray-100 bg-white text-gray-900"
-        }`}
+        className={
+          isDark
+            ? "relative h-full w-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-2xl shadow-black/20 backdrop-blur-md"
+            : "relative h-full w-full overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-xl"
+        }
       >
-        <div className="absolute right-5 top-5 opacity-90">
-          <Logo href="" height={40} />
+        {/* Top “photo” area (premium, like real card) */}
+        <div className={isDark ? "relative h-[56%] w-full overflow-hidden bg-white/5" : "relative h-[56%] w-full overflow-hidden bg-gray-100"}>
+          <div
+            className={
+              isDark
+                ? "absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(139,195,74,0.18),transparent_55%),radial-gradient(circle_at_bottom,rgba(0,173,181,0.14),transparent_55%)]"
+                : "absolute inset-0 bg-gradient-to-br from-matcher-pale via-white to-matcher-mint/40"
+            }
+            aria-hidden
+          />
+          <div className="absolute inset-0 opacity-70 [filter:url(#noise)]" aria-hidden />
+
+          <div className="absolute left-4 top-4 flex items-center gap-2">
+            <span className={isDark ? "rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/85" : "rounded-full bg-matcher-pale px-3 py-1 text-xs font-bold text-matcher-dark"}>
+              {t("badge")}
+            </span>
+          </div>
+
+          <div className="absolute right-4 top-4 opacity-90">
+            <Logo href="" height={36} />
+          </div>
+
+          <div className="absolute bottom-4 left-4">
+            <div className={isDark ? "inline-flex items-center gap-2 rounded-2xl bg-black/35 px-3 py-2 text-white" : "inline-flex items-center gap-2 rounded-2xl bg-white/80 px-3 py-2 text-gray-900 shadow-sm"}>
+              <span className="text-lg" aria-hidden>
+                {section.icon}
+              </span>
+              <span className="text-sm font-semibold">{title}</span>
+            </div>
+          </div>
+
+          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/55 to-transparent" aria-hidden />
         </div>
+
+        {/* Content area */}
+        <div className={isDark ? "flex h-[44%] flex-col justify-between p-5 text-white" : "flex h-[44%] flex-col justify-between p-5 text-gray-900"}>
+          <div>
+            <p className={isDark ? "text-xs font-semibold uppercase tracking-[0.2em] text-white/60" : "text-xs font-semibold uppercase tracking-[0.2em] text-gray-500"}>
+              {t("swipeHint")}
+            </p>
+            <p className={isDark ? "mt-2 text-sm leading-relaxed text-white/80" : "mt-2 text-sm leading-relaxed text-gray-700"}>
+              {text}
+            </p>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2 text-xs">
+            <span className={isDark ? "rounded-full bg-white/10 px-3 py-1 font-semibold text-white/85" : "rounded-full bg-gray-100 px-3 py-1 font-semibold text-gray-700"}>
+              {t("like")} / {t("nope")}
+            </span>
+            <span className={isDark ? "rounded-full bg-white/10 px-3 py-1 font-semibold text-white/85" : "rounded-full bg-gray-100 px-3 py-1 font-semibold text-gray-700"}>
+              matcher.ge
+            </span>
+          </div>
+        </div>
+
         {/* Swipe overlays */}
         <motion.div
           style={{ opacity: likeOpacity }}
@@ -74,16 +135,6 @@ function SwipeCard({
             <span className="text-2xl font-black uppercase tracking-wider text-white">{t("nope")}</span>
           </div>
         </motion.div>
-
-        <div className="flex flex-col gap-4">
-          <span className="text-3xl" aria-hidden>
-            {section.icon}
-          </span>
-          <div>
-            <h2 className="text-lg font-semibold sm:text-xl">{title}</h2>
-            <p className={isDark ? "mt-2 text-sm leading-relaxed text-white/75 sm:text-base" : "mt-2 text-sm leading-relaxed text-gray-600 sm:text-base"}>{text}</p>
-          </div>
-        </div>
       </div>
     </motion.div>
   );
@@ -173,7 +224,7 @@ export default function AboutPage() {
 
         {/* Card deck - one visible at a time */}
         <section className="mx-auto max-w-2xl px-4 pb-24 sm:px-6">
-          <div className="relative mx-auto aspect-[4/3] max-h-[360px] sm:max-h-[420px]">
+          <div className="relative mx-auto aspect-[3/4] max-h-[520px]">
             {current ? (
               <AnimatePresence mode="wait">
                 <motion.div

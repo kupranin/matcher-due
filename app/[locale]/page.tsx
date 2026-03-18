@@ -44,8 +44,8 @@ export default function Home() {
   const demoCards = t.raw("liveHero.demoCards") as Array<import("@/components/InteractiveHero").DemoJobCard>;
 
   const headingClass = isDark
-    ? "text-center text-xl font-extrabold tracking-tight text-white sm:text-2xl md:text-3xl"
-    : "text-center text-xl font-bold tracking-tight text-gray-900 sm:text-2xl md:text-3xl";
+    ? "font-heading text-center text-xl font-extrabold tracking-tight text-white sm:text-2xl md:text-3xl"
+    : "font-heading text-center text-xl font-extrabold tracking-tight text-gray-900 sm:text-2xl md:text-3xl";
 
   const glassCard = isDark
     ? "border-white/15 bg-white/10 text-white shadow-xl shadow-black/10 backdrop-blur-md"
@@ -150,7 +150,7 @@ export default function Home() {
                 <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${isDark ? "text-white/60" : "text-gray-500"}`}>
                   {t("antiResume.oldSchool")}
                 </p>
-                <h2 className="mt-2 text-2xl font-extrabold tracking-tight">
+                <h2 className="font-heading mt-2 text-2xl font-extrabold tracking-tight">
                   {t("antiResume.resumeTitle")}
                 </h2>
                 <p className={`mt-2 text-sm ${isDark ? "text-white/70" : "text-gray-600"}`}>
@@ -220,7 +220,7 @@ export default function Home() {
                 <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${isDark ? "text-white/70" : "text-gray-600"}`}>
                   {t("antiResume.newWay")}
                 </p>
-                <h2 className="mt-2 text-2xl font-extrabold tracking-tight">
+                <h2 className="font-heading mt-2 text-2xl font-extrabold tracking-tight">
                   {t("antiResume.matcherCardTitle")}
                 </h2>
                 <p className={`mt-2 text-sm ${isDark ? "text-white/80" : "text-gray-600"}`}>
@@ -276,7 +276,7 @@ export default function Home() {
                 <div className={`absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t ${isDark ? "from-black/65" : "from-white/70"} to-transparent`} aria-hidden />
               </div>
               <div className="p-5">
-                <p className="text-lg font-bold">{t("antiResume.matcherDemoCard.title")}</p>
+                <p className="font-heading text-lg font-bold">{t("antiResume.matcherDemoCard.title")}</p>
                 <p className={`mt-1 text-sm font-semibold ${isDark ? "text-white/80" : "text-gray-600"}`}>{t("antiResume.matcherDemoCard.company")}</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {(t.raw("antiResume.matcherDemoCard.chips") as string[]).map((x) => (
@@ -343,11 +343,11 @@ export default function Home() {
               key={item.name}
               className={`rounded-2xl border p-4 sm:p-5 md:p-6 ${glassCard}`}
             >
-              <p className={isDark ? "text-white/80" : "text-gray-600"}>&ldquo;{item.quote}&rdquo;</p>
-              <p className={isDark ? "mt-4 text-sm font-bold text-white" : "mt-4 text-sm font-semibold text-gray-900"}>
+              <p className={isDark ? "text-white/80" : "text-gray-700"}>&ldquo;{item.quote}&rdquo;</p>
+              <p className={isDark ? "mt-4 text-sm font-bold text-white" : "font-heading mt-4 text-sm font-bold text-gray-900"}>
                 {item.name}, {item.city}
               </p>
-              <p className={isDark ? "text-sm font-semibold text-white/60" : "text-sm text-gray-500"}>{item.role}</p>
+              <p className={isDark ? "text-sm font-semibold text-white/60" : "text-sm font-medium text-gray-600"}>{item.role}</p>
             </div>
           ))}
         </div>
@@ -356,7 +356,7 @@ export default function Home() {
       {/* Trusted – social proof */}
       <section className={`${isDark ? "border-t border-white/10" : "border-t border-gray-200"} py-12 sm:py-14 md:py-16`}>
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
-          <p className={isDark ? "text-center text-xs font-semibold uppercase tracking-[0.2em] text-white/65" : "text-center text-xs font-semibold uppercase tracking-[0.2em] text-matcher-dark/90"}>
+          <p className={isDark ? "text-center text-xs font-semibold uppercase tracking-[0.2em] text-white/65" : "text-center text-xs font-semibold uppercase tracking-[0.2em] text-gray-500"}>
             {t("socialProofTitle")}
           </p>
           <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-8">
@@ -367,7 +367,7 @@ export default function Home() {
               transition={{ duration: 0.4 }}
               className={`rounded-2xl border px-6 py-6 text-center sm:px-8 sm:py-8 ${glassCard}`}
             >
-              <p className={isDark ? "font-heading text-3xl font-extrabold text-white sm:text-4xl" : "font-heading text-3xl font-bold text-matcher-dark sm:text-4xl"}>
+              <p className={isDark ? "font-heading text-3xl font-extrabold text-white sm:text-4xl" : "font-heading text-3xl font-extrabold text-gray-900 sm:text-4xl"}>
                 20+
               </p>
               <p className={isDark ? "mt-1 text-sm font-semibold text-white/70" : "mt-1 text-sm font-medium text-gray-600"}>
@@ -381,7 +381,7 @@ export default function Home() {
               transition={{ duration: 0.4, delay: 0.1 }}
               className={`rounded-2xl border px-6 py-6 text-center sm:px-8 sm:py-8 ${glassCard}`}
             >
-              <p className={isDark ? "font-heading text-3xl font-extrabold text-white sm:text-4xl" : "font-heading text-3xl font-bold text-matcher-dark sm:text-4xl"}>
+              <p className={isDark ? "font-heading text-3xl font-extrabold text-white sm:text-4xl" : "font-heading text-3xl font-extrabold text-gray-900 sm:text-4xl"}>
                 150
               </p>
               <p className={isDark ? "mt-1 text-sm font-semibold text-white/70" : "mt-1 text-sm font-medium text-gray-600"}>
@@ -395,7 +395,7 @@ export default function Home() {
               transition={{ duration: 0.4, delay: 0.2 }}
               className={`rounded-2xl border px-6 py-6 text-center sm:px-8 sm:py-8 ${glassCard}`}
             >
-              <p className={isDark ? "font-heading text-3xl font-extrabold text-white sm:text-4xl" : "font-heading text-3xl font-bold text-matcher-dark sm:text-4xl"}>
+              <p className={isDark ? "font-heading text-3xl font-extrabold text-white sm:text-4xl" : "font-heading text-3xl font-extrabold text-gray-900 sm:text-4xl"}>
                 1,000+
               </p>
               <p className={isDark ? "mt-1 text-sm font-semibold text-white/70" : "mt-1 text-sm font-medium text-gray-600"}>
@@ -415,7 +415,7 @@ export default function Home() {
               : "rounded-2xl border border-matcher bg-gradient-to-br from-matcher-pale to-matcher-mint p-8 text-center sm:p-10 md:p-12 lg:p-16"
           }
         >
-          <h2 className={isDark ? "text-xl font-extrabold tracking-tight text-white sm:text-2xl md:text-3xl" : "text-xl font-bold tracking-tight text-gray-900 sm:text-2xl md:text-3xl"}>
+          <h2 className={isDark ? "font-heading text-xl font-extrabold tracking-tight text-white sm:text-2xl md:text-3xl" : "font-heading text-xl font-extrabold tracking-tight text-gray-900 sm:text-2xl md:text-3xl"}>
             {t("readyTitle")}
           </h2>
           <p className={isDark ? "mt-2 text-white/75 sm:mt-3 sm:text-base" : "mt-2 text-gray-600 sm:mt-3 sm:text-base"}>

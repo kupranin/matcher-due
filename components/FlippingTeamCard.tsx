@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 
 export type TeamMember = {
   id: string;
@@ -169,17 +169,23 @@ export function SwipeTeamCarousel({
   title,
   subtitle,
   theme = "light",
-  onActiveMemberChange,
 }: {
   members: TeamMember[];
   title: string;
   subtitle?: string;
   theme?: "light" | "dark";
-  onActiveMemberChange?: (member: TeamMember | null) => void;
 }) {
   const isDark = theme === "dark";
-  const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
-  const activeMember = activeMemberId ? members.find((m) => m.id === activeMemberId) ?? null : null;
+  const scrollId = useId();
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+
+  function scrollByCards(dir: "left" | "right") {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const cardWidth = 320; // close to card width; good enough for UX
+    const delta = dir === "left" ? -cardWidth : cardWidth;
+    el.scrollBy({ left: delta, behavior: "smooth" });
+  }
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
@@ -195,59 +201,55 @@ export function SwipeTeamCarousel({
         </p>
       </div>
 
-      <div className="mt-8 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch]">
+      <div
+        ref={scrollerRef}
+        id={scrollId}
+        className="mt-8 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch]"
+        aria-label="Team cards carousel"
+      >
         <div className="flex gap-4 pr-6">
           {members.map((m) => (
             <FlippingTeamCard
               key={m.id}
               member={m}
               theme={theme}
-              onFlipChange={(open) => {
-                const nextId = open ? m.id : null;
-                setActiveMemberId(nextId);
-                const nextMember = open ? m : null;
-                onActiveMemberChange?.(nextMember);
-              }}
             />
           ))}
         </div>
       </div>
 
-      {/* Text appears after flipping */}
-      <AnimatePresence initial={false}>
-        {activeMember ? (
-          <motion.div
-            key={activeMember.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className={
-              isDark
-                ? "mt-8 rounded-3xl border border-white/10 bg-white/5 p-6 text-white shadow-xl shadow-black/20"
-                : "mt-8 rounded-3xl border border-gray-200 bg-white p-6 text-gray-900 shadow-sm"
-            }
-          >
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className={isDark ? "text-xs font-semibold uppercase tracking-[0.18em] text-white/60" : "text-xs font-semibold uppercase tracking-[0.18em] text-gray-500"}>
-                  After flip
-                </p>
-                <h3 className="mt-1 text-lg font-bold">{activeMember.name}</h3>
-                <p className={isDark ? "text-sm font-semibold text-white/70" : "text-sm font-semibold text-gray-600"}>{activeMember.role}</p>
-              </div>
-              <p className={isDark ? "mt-3 text-sm text-white/60 sm:mt-0" : "mt-3 text-sm text-gray-500 sm:mt-0"}>
-                Tip: tap the card again to close.
-              </p>
-            </div>
-
-            <div className="mt-4">
-              <p className={isDark ? "text-sm leading-relaxed text-white/80" : "text-sm leading-relaxed text-gray-700"}>
-                {activeMember.why}
-              </p>
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      {/* Scroll affordance under cards */}
+      <div className="mt-5 flex items-center justify-center gap-3">
+        <button
+          type="button"
+          onClick={() => scrollByCards("left")}
+          className={
+            isDark
+              ? "inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/85 hover:bg-white/10"
+              : "inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-800 hover:bg-gray-50"
+          }
+          aria-controls={scrollId}
+          aria-label="Scroll left"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <p className={isDark ? "text-sm font-semibold text-white/60" : "text-sm font-semibold text-gray-500"}>
+          Scroll
+        </p>
+        <button
+          type="button"
+          onClick={() => scrollByCards("right")}
+          className={
+            isDark
+              ? "inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/85 hover:bg-white/10"
+              : "inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-800 hover:bg-gray-50"
+          }
+          aria-controls={scrollId}
+          aria-label="Scroll right"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      </div>
     </section>
   );
 }

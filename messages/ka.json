@@ -259,35 +259,35 @@
       "demoCards": [
         {
           "id": "react-dev",
-          "title": "Senior React დეველოპერი",
-          "company": "Tbilisi Product Studio",
-          "salary": "₾8k–₾12k",
+          "title": "გაყიდვების კონსულტანტი",
+          "company": "Tbilisi Mall",
+          "salary": "₾1,200–₾1,500",
           "location": "თბილისი",
-          "workType": "ჰიბრიდი",
-          "tech": ["React", "Next.js", "TypeScript", "GraphQL"],
-          "description": "შექმენი სწრაფი, swipe‑პირველი პროდუქტი. იზრუნე UI‑ს ხარისხსა და წარმადობაზე.",
+          "workType": "სრული განაკვეთი",
+          "tech": ["მომსახურება", "კომუნიკაცია", "გუნდურობა", "სწრაფი სწავლა"],
+          "description": "დამწყები როლი საცალო ვაჭრობაში. ტრენინგი ადგილზე, მეგობრული გუნდი და ზრდის შესაძლებლობა.",
           "photo": "/hero/react-dev.jpg"
         },
         {
           "id": "designer",
-          "title": "პროდუქტის დიზაინერი",
-          "company": "Matcher Labs",
-          "salary": "₾5k–₾7k",
-          "location": "დისტანციურად",
-          "workType": "Remote",
-          "tech": ["Figma", "Design Systems", "UX Research"],
-          "description": "დააპროექტე მაღალი კონვერსიის onboarding და swipe‑ფლოუები. გადააქციე სიცხადე და ნდობა შედეგებად.",
+          "title": "ბარისტა",
+          "company": "Coffee Lab",
+          "salary": "₾1,100–₾1,400",
+          "location": "თბილისი",
+          "workType": "სრული განაკვეთი",
+          "tech": ["ყავა", "სისწრაფე", "სისუფთავე", "მომსახურება"],
+          "description": "დამწყები ბარისტა. სწავლება ადგილზე, მოქნილი ცვლები და მეგობრული გარემო.",
           "photo": "/hero/designer.jpg"
         },
         {
           "id": "pm",
-          "title": "უმცროსი პროდუქტის მენეჯერი",
-          "company": "GeoCommerce",
-          "salary": "₾3k–₾4k",
+          "title": "მოლარე",
+          "company": "Carrefour",
+          "salary": "₾1,000–₾1,300",
           "location": "თბილისი",
           "workType": "სრული განაკვეთი",
-          "tech": ["Roadmaps", "Analytics", "Experimentation"],
-          "description": "გამოუშვი სიახლეები ყოველ კვირას. გაზომე funnel‑ი და გააუმჯობესე ბარათები და კომუნიკაცია.",
+          "tech": ["კასა", "სიზუსტე", "ზრდილობა", "ბაზისური მათემატიკა"],
+          "description": "დამწყები მოლარე. სტაბილური გრაფიკი, სწრაფი onboarding და ნათელი ზრდის გზა.",
           "photo": "/hero/pm.jpg"
         }
       ]
