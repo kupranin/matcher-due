@@ -431,7 +431,7 @@ export default function InteractiveHero({
   }, [swapIntervalMs, swapWords.length, titleHasSwap]);
 
   return (
-    <section className="relative mx-auto grid max-w-6xl grid-cols-1 items-start gap-10 px-4 py-8 sm:px-6 sm:py-12 md:grid-cols-2 md:gap-14 md:items-center">
+    <section className="relative mx-auto grid max-w-6xl grid-cols-1 items-start gap-8 px-4 py-7 sm:px-6 sm:py-10 md:grid-cols-2 md:gap-12 md:items-center">
       <div className="md:pr-4">
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
           <div className="inline-flex items-center gap-3">
@@ -457,8 +457,8 @@ export default function InteractiveHero({
           <h1
             className={
               isDark
-                ? "font-heading mt-5 text-balance text-4xl font-extrabold tracking-tight leading-tight text-white sm:text-5xl"
-                : "font-heading mt-5 text-balance text-4xl font-extrabold tracking-tight leading-tight text-gray-900 sm:text-5xl"
+                ? "font-heading mt-4 text-balance text-5xl font-extrabold tracking-tight leading-[1.05] text-white sm:text-6xl"
+                : "font-heading mt-4 text-balance text-5xl font-extrabold tracking-tight leading-[1.05] text-gray-900 sm:text-6xl"
             }
           >
             {titleHasSwap ? (
@@ -492,10 +492,10 @@ export default function InteractiveHero({
             {copy.subtitle}
           </p>
 
-          <div className="mt-7 flex flex-wrap gap-3">
+          <div className="mt-6 flex flex-wrap gap-3">
             <Link
               href={ctaHref}
-              className="inline-flex items-center justify-center rounded-xl bg-matcher px-6 py-3 font-semibold text-white hover:bg-matcher-dark"
+              className="inline-flex items-center justify-center rounded-xl bg-matcher px-7 py-3.5 text-base font-semibold text-white shadow-lg shadow-matcher/20 ring-1 ring-matcher/20 hover:bg-matcher-dark hover:shadow-matcher/30"
             >
               {copy.ctaPrimary}
             </Link>
@@ -503,8 +503,8 @@ export default function InteractiveHero({
               href={audience === "candidate" ? "/employer" : "/userFlow/1"}
               className={
                 isDark
-                  ? "inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-6 py-3 font-semibold text-white/90 backdrop-blur-md hover:bg-white/15"
-                  : "inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-800 hover:bg-gray-50"
+                  ? "inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-base font-semibold text-white/80 backdrop-blur-md hover:bg-white/10 hover:text-white/90"
+                  : "inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-6 py-3 text-base font-semibold text-gray-800 hover:bg-gray-50"
               }
             >
               {copy.ctaSecondary}
@@ -513,11 +513,11 @@ export default function InteractiveHero({
         </motion.div>
 
         {/* How it works */}
-        <div className="mt-10">
+        <div className="mt-8">
           <p className={isDark ? "text-xs font-semibold uppercase tracking-[0.2em] text-white/70" : "text-xs font-semibold uppercase tracking-[0.2em] text-gray-500"}>
             {labels.howItWorks}
           </p>
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
             {steps.slice(0, 3).map((s) => (
               <div
                 key={s.title}
@@ -528,7 +528,7 @@ export default function InteractiveHero({
                 }
               >
                 <p className="text-sm font-semibold">{s.title}</p>
-                <p className={isDark ? "mt-1 text-sm text-white/75" : "mt-1 text-sm text-gray-600"}>{s.text}</p>
+                <p className={isDark ? "mt-1 text-sm leading-relaxed text-white/75" : "mt-1 text-sm leading-relaxed text-gray-600"}>{s.text}</p>
               </div>
             ))}
           </div>

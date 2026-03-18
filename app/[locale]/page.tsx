@@ -134,8 +134,8 @@ export default function Home() {
       />
       </section>
 
-      {/* Anti-Resume comparison */}
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+      {/* Anti-Resume comparison (Product preview) */}
+      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
           {/* Old school resume */}
           <motion.div
@@ -323,6 +323,30 @@ export default function Home() {
               </Link>
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Benefits */}
+      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+        <h2 className={headingClass}>{t("valuePropositionTitle")}</h2>
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:mt-8 sm:grid-cols-3 sm:gap-5">
+          {[
+            { title: t("noCv"), desc: t("minutes") },
+            { title: t("skillsMatching"), desc: t("swipeToMatch") },
+            { title: t("builtForGeorgia"), desc: t("entryLevel") },
+          ].map((x) => (
+            <motion.div
+              key={x.title}
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4 }}
+              className={`rounded-3xl border p-6 ${glassCardStrong}`}
+            >
+              <p className="font-heading text-base font-extrabold tracking-tight">{x.title}</p>
+              <p className={isDark ? "mt-2 text-sm text-white/75" : "mt-2 text-sm text-gray-600"}>{x.desc}</p>
+            </motion.div>
+          ))}
         </div>
       </section>
 

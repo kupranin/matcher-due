@@ -1,36 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence, animate } from "framer-motion";
 import { buildVacancyCardsWithMatch } from "@/lib/vacancyApi";
-import { GEORGIAN_CITIES } from "@/lib/georgianLocations";
 import { getCandidateProfileForMatch, loadCandidateProfile, getCandidateProfileId, getCandidateUserId, saveCandidateProfile } from "@/lib/candidateProfileStorage";
 import { addCandidateLike, type MutualMatch } from "@/lib/matchStorage";
 import MatchCongratulationsModal from "@/components/MatchCongratulationsModal";
-import MatchProgressRing from "@/components/MatchProgressRing";
 
 type Vacancy = import("@/lib/vacancyApi").VacancyCardFromApi;
-
-const VibeIcons = {
-  noCv: (
-    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-  ),
-  flexible: (
-    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  weeklyPay: (
-    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v2a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-2a2 2 0 00-2-2H9a2 2 0 00-2 2v2a2 2 0 002 2zm0 0V7a2 2 0 012-2h2a2 2 0 012 2v0" />
-    </svg>
-  ),
-};
 
 const SWIPE_THRESHOLD = 100;
 
@@ -41,21 +21,20 @@ function SwipeCard({
   vacancy: Vacancy;
   onSwipe: (dir: "left" | "right") => void;
 }) {
-  const t = useTranslations("cabinet");
   const [expanded, setExpanded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  // Match the home page demo card structure/text exactly.
+  const homeLiveHeroT = useTranslations("home.liveHero");
+
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-220, 220], [-14, 14]);
   const likeOpacity = useTransform(x, [0, 60, SWIPE_THRESHOLD], [0, 0.4, 1]);
   const nopeOpacity = useTransform(x, [-220, -100, 0], [1, 0.4, 0]);
-  const bgLeftOpacity = useTransform(x, [0, -120], [0, 0.22]);
-  const bgRightOpacity = useTransform(x, [120, 0], [0.22, 0]);
+  const bgLeftOpacity = useTransform(x, [0, -120], [0, 0.25]);
+  const bgRightOpacity = useTransform(x, [120, 0], [0.25, 0]);
 
-  const flexibleHours = vacancy.workType.toLowerCase().includes("part") || vacancy.workType.toLowerCase().includes("remote") || vacancy.workType.toLowerCase().includes("flex");
-  const vibes = [
-    { key: "noCv", show: true, icon: VibeIcons.noCv, label: "No CV needed" },
-    { key: "flexible", show: flexibleHours, icon: VibeIcons.flexible, label: "Flexible hours" },
-    { key: "weeklyPay", show: true, icon: VibeIcons.weeklyPay, label: "Weekly pay" },
-  ].filter((v) => v.show);
+  const tech = Array.isArray(vacancy.profile?.skills) ? vacancy.profile.skills.map((s) => s.name) : [];
 
   function handleDragEnd(_: unknown, info: PanInfo) {
     if (info.offset.x > SWIPE_THRESHOLD) onSwipe("right");
@@ -70,48 +49,47 @@ function SwipeCard({
       dragElastic={0.65}
       onDragEnd={handleDragEnd}
       style={{ x, rotate }}
-      className="absolute inset-0 cursor-grab active:cursor-grabbing"
+      className="absolute inset-0 touch-none cursor-grab active:cursor-grabbing"
       role="article"
       aria-label={`${vacancy.title} at ${vacancy.company}`}
     >
-      {/* Background hint: green right, red left */}
-      <div className="absolute -inset-3 flex rounded-[1.5rem] overflow-hidden">
-        <motion.div style={{ opacity: bgLeftOpacity }} className="flex-1 bg-rose-400/40" aria-hidden />
-        <motion.div style={{ opacity: bgRightOpacity }} className="flex-1 bg-emerald-400/40" aria-hidden />
+      {/* drag background hint */}
+      <div className="absolute -inset-3 flex overflow-hidden rounded-[1.5rem]">
+        <motion.div style={{ opacity: bgLeftOpacity }} className="flex-1 bg-rose-500/35" aria-hidden />
+        <motion.div style={{ opacity: bgRightOpacity }} className="flex-1 bg-emerald-500/35" aria-hidden />
       </div>
-      <div className="relative flex h-full w-full flex-col overflow-hidden rounded-3xl bg-gray-900 shadow-2xl shadow-gray-300/50 ring-2 ring-white/20">
-        {/* Image block – salary pill top-right, match ring top-left */}
-        <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden">
-          <Image
-            src={vacancy.photo}
-            alt={vacancy.title ? `${vacancy.title} at ${vacancy.company}` : "Vacancy photo"}
-            fill
-            priority={false}
-            sizes="(min-width: 768px) 400px, 100vw"
-            className="object-cover"
+      <div className="relative flex h-full w-full flex-col overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-2xl shadow-black/15 backdrop-blur-md">
+        <div className="relative aspect-[4/3] w-full overflow-hidden">
+          {/* Always-visible placeholder (never blocks the image). */}
+          <div
+            className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-white/10"
+            aria-hidden
           />
-          {/* High-contrast salary pill – top right, Gen Z scannable */}
-          <div className="absolute right-3 top-3 rounded-full bg-matcher-bright px-3 py-1.5 text-sm font-bold tracking-tight text-charcoal shadow-lg sm:right-4 sm:top-4 sm:px-4 sm:py-2 sm:text-base">
+          <div className="absolute inset-0 animate-pulse bg-white/5" aria-hidden />
+          {!imgError && (
+            <Image
+              src={vacancy.photo}
+              alt=""
+              fill
+              className="object-cover"
+              sizes="(min-width: 768px) 420px, 90vw"
+              unoptimized
+              referrerPolicy="no-referrer"
+              onError={() => setImgError(true)}
+              priority={false}
+            />
+          )}
+          <div className="absolute right-3 top-3 rounded-full bg-matcher-bright px-3 py-1.5 text-sm font-bold text-charcoal shadow-lg">
             {vacancy.salary}
           </div>
-          {/* Circular match ring around employer initial – top left */}
-          <div className="absolute left-3 top-3 sm:left-4 sm:top-4">
-            <MatchProgressRing percent={vacancy.match} size={48} className="text-matcher-bright">
-              {vacancy.match}%
-            </MatchProgressRing>
-          </div>
-          {vacancy.topMatch && (
-            <div className="absolute left-3 bottom-3 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-semibold text-white shadow-md sm:left-4 sm:bottom-4">
-              Top match
-            </div>
-          )}
-          {/* Swipe overlays */}
+
+          {/* LIKE / NOPE stamps */}
           <motion.div
             style={{ opacity: likeOpacity }}
             className="pointer-events-none absolute inset-0 flex items-center justify-end pr-8"
           >
             <div className="rounded-2xl border-4 border-matcher bg-matcher/90 px-6 py-3 shadow-xl -rotate-12">
-              <span className="text-3xl font-black uppercase tracking-wider text-white">{t("like")}</span>
+              <span className="text-3xl font-black uppercase tracking-wider text-white">{homeLiveHeroT("like")}</span>
             </div>
           </motion.div>
           <motion.div
@@ -119,40 +97,29 @@ function SwipeCard({
             className="pointer-events-none absolute inset-0 flex items-center justify-start pl-8"
           >
             <div className="rounded-2xl border-4 border-rose-400 bg-rose-500/90 px-6 py-3 shadow-xl rotate-12">
-              <span className="text-3xl font-black uppercase tracking-wider text-white">{t("nope")}</span>
+              <span className="text-3xl font-black uppercase tracking-wider text-white">{homeLiveHeroT("nope")}</span>
             </div>
           </motion.div>
         </div>
 
-        {/* Dark info block – title, company, description, skills, vibe row, location */}
         <div className="flex flex-1 flex-col justify-between p-5 text-white">
           <div>
-            <h2 className="font-heading text-2xl font-bold">{vacancy.title}</h2>
-            <p className="mt-0.5 text-lg font-medium text-white/90">{vacancy.company}</p>
-            {/* Quick view */}
-            {vacancy.description && (
-              <p className="mt-2 text-sm text-gray-300 line-clamp-2">{vacancy.description}</p>
-            )}
-            {Array.isArray(vacancy.profile?.skills) && vacancy.profile.skills.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {vacancy.profile.skills.slice(0, 3).map((s) => (
-                  <span
-                    key={s.name}
-                    className="px-2 py-1 text-xs bg-white/15 rounded-md text-white/95"
-                  >
-                    {s.name}
-                  </span>
-                ))}
-              </div>
-            )}
+            <h3 className="text-xl font-bold tracking-tight">{vacancy.title}</h3>
+            <p className="mt-0.5 text-white/85">{vacancy.company}</p>
+
+            {/* quick view */}
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-full px-3 py-1 font-semibold bg-white/15">{vacancy.location}</span>
+              <span className="rounded-full px-3 py-1 font-semibold bg-white/15">{vacancy.workType}</span>
+            </div>
 
             <button
               type="button"
               onClick={() => setExpanded((e) => !e)}
-              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/15"
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/15"
               aria-expanded={expanded}
             >
-              {expanded ? "Hide details" : "Tap to expand"}
+              {expanded ? homeLiveHeroT("hideDetails") : homeLiveHeroT("tapToExpand")}
               <span aria-hidden className="text-white/70">
                 {expanded ? "▴" : "▾"}
               </span>
@@ -168,56 +135,34 @@ function SwipeCard({
                   className="overflow-hidden"
                 >
                   <div className="mt-3 space-y-3 rounded-2xl bg-white/10 p-4">
-                    {vacancy.description && (
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-white/70">
-                          Job description
-                        </p>
-                        <p className="mt-1 text-sm text-white/90">{vacancy.description}</p>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-white/70">
+                        {homeLiveHeroT("jobDescription")}
+                      </p>
+                      <p className="mt-1 text-sm text-white/90">{vacancy.description ?? ""}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-white/70">
+                        {homeLiveHeroT("techStack")}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {tech.map((t) => (
+                          <span
+                            key={t}
+                            className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/90"
+                          >
+                            {t}
+                          </span>
+                        ))}
                       </div>
-                    )}
-                    {Array.isArray(vacancy.profile?.skills) && vacancy.profile.skills.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-white/70">
-                          Tech stack
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {vacancy.profile.skills.slice(0, 10).map((s) => (
-                            <span
-                              key={s.name}
-                              className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white/90"
-                            >
-                              {s.name}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    </div>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
-            {/* Vibe row: icons for No CV, Flexible Hours, Weekly Pay */}
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              {vibes.map((v) => (
-                <span
-                  key={v.key}
-                  className="flex items-center gap-1.5 rounded-lg bg-white/15 px-2.5 py-1.5 text-xs font-medium text-white/95"
-                  title={v.label}
-                >
-                  {v.icon}
-                  <span className="sr-only">{v.label}</span>
-                </span>
-              ))}
-              <span className="rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium">
-                {vacancy.location}
-              </span>
-              <span className="rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium">
-                {vacancy.workType}
-              </span>
-            </div>
           </div>
-          <p className="mt-4 text-sm font-medium text-white/80">{t("swipeInstruction")}</p>
+          <p className="mt-4 text-sm font-medium text-white/80">{homeLiveHeroT("swipeInstruction")}</p>
         </div>
       </div>
     </motion.div>
