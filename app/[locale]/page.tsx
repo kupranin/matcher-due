@@ -81,8 +81,8 @@ export default function Home() {
       />
 
       {/* Navbar */}
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
-        <Logo height={108} />
+      <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-1.5 sm:px-6 sm:py-2.5">
+        <Logo height={80} />
         <div className="flex items-center gap-3">
           <LanguageSwitcher />
           <ThemeToggle />
@@ -101,6 +101,7 @@ export default function Home() {
         </div>
       </header>
 
+      <section className="mt-4 sm:mt-6">
       <InteractiveHero
         candidateCopy={{
           eyebrow: t("liveHero.candidate.eyebrow"),
@@ -131,6 +132,7 @@ export default function Home() {
         demoCards={demoCards}
         theme={isDark ? "dark" : "light"}
       />
+      </section>
 
       {/* Anti-Resume comparison */}
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">

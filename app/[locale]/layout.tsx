@@ -56,11 +56,6 @@ export default async function LocaleLayout({ children, params }: Props) {
           lang={displayLocale}
           data-locale={locale}
         >
-          {/* Global controls (desktop only). Mobile pages can render controls in their headers. */}
-          <div className="hidden md:fixed md:right-6 md:bottom-6 md:z-[100] md:flex md:flex-col md:gap-2">
-            <LanguageSwitcher />
-            <ThemeToggle />
-          </div>
           {children}
         </div>
       </ThemeProvider>

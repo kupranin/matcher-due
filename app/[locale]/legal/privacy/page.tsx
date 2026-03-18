@@ -5,6 +5,8 @@ import { Link } from "@/i18n/navigation";
 import Logo from "@/components/Logo";
 import Footer from "@/components/Footer";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import ThemeToggle from "@/components/theme/ThemeToggle";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 const prose = "text-gray-700 leading-relaxed";
 const list = "space-y-2 pl-0 list-none";
@@ -38,21 +40,34 @@ function Section({
 
 export default function PrivacyPage() {
   const tCommon = useTranslations("common");
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   return (
-    <div className="relative min-h-screen bg-white">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-matcher-pale/50 via-white to-gray-50/50" />
+    <div className={isDark ? "relative min-h-screen bg-[#070B12] text-white" : "relative min-h-screen bg-white text-gray-900"}>
+      <div
+        className={
+          isDark
+            ? "pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,rgba(139,195,74,0.18),transparent_55%),radial-gradient(ellipse_at_bottom,rgba(0,173,181,0.14),transparent_55%)]"
+            : "pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-matcher-pale/50 via-white to-gray-50/50"
+        }
+      />
 
-      <header className="border-b border-gray-100/80 bg-white/90 backdrop-blur-sm">
+      <header className={isDark ? "border-b border-white/10 bg-black/40 backdrop-blur-sm" : "border-b border-gray-100/80 bg-white/90 backdrop-blur-sm"}>
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <Link href="/" className="shrink-0 transition-opacity hover:opacity-90">
             <Logo height={56} />
           </Link>
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
+            <ThemeToggle />
             <Link
               href="/"
-              className="shrink-0 rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-matcher hover:bg-matcher-pale hover:text-matcher-dark"
+              className={
+                isDark
+                  ? "shrink-0 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white/85 transition hover:bg-white/15"
+                  : "shrink-0 rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-matcher hover:bg-matcher-pale hover:text-matcher-dark"
+              }
             >
               {tCommon("backToHome")}
             </Link>

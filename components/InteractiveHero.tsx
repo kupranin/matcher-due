@@ -431,8 +431,8 @@ export default function InteractiveHero({
   }, [swapIntervalMs, swapWords.length, titleHasSwap]);
 
   return (
-    <section className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-4 py-10 sm:px-6 sm:py-14 md:grid-cols-2 md:gap-12 md:py-18">
-      <div>
+    <section className="relative mx-auto grid max-w-6xl grid-cols-1 items-start gap-10 px-4 py-8 sm:px-6 sm:py-12 md:grid-cols-2 md:gap-14 md:items-center">
+      <div className="md:pr-4">
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
           <div className="inline-flex items-center gap-3">
             <span
@@ -457,8 +457,8 @@ export default function InteractiveHero({
           <h1
             className={
               isDark
-                ? "font-heading mt-5 text-balance text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
-                : "font-heading mt-5 text-balance text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl"
+                ? "font-heading mt-5 text-balance text-4xl font-extrabold tracking-tight leading-tight text-white sm:text-5xl"
+                : "font-heading mt-5 text-balance text-4xl font-extrabold tracking-tight leading-tight text-gray-900 sm:text-5xl"
             }
           >
             {titleHasSwap ? (
@@ -488,7 +488,7 @@ export default function InteractiveHero({
               copy.title
             )}
           </h1>
-          <p className={isDark ? "mt-4 max-w-xl text-balance text-base text-white/80 sm:text-lg" : "mt-4 max-w-xl text-balance text-base text-gray-600 sm:text-lg"}>
+          <p className={isDark ? "mt-4 max-w-xl text-balance text-base leading-relaxed text-white/80 sm:text-lg" : "mt-4 max-w-xl text-balance text-base leading-relaxed text-gray-600 sm:text-lg"}>
             {copy.subtitle}
           </p>
 
@@ -536,7 +536,7 @@ export default function InteractiveHero({
       </div>
 
       {/* Live swipe demo */}
-      <div className="relative">
+      <div className="relative flex justify-center md:justify-end">
         <div
           className={`absolute -inset-8 -z-10 rounded-[3rem] blur-2xl ${
             isDark
