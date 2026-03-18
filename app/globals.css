@@ -38,17 +38,37 @@
   --font-heading: var(--font-manrope);
 }
 
+/* Theme resolution
+   - Default: light
+   - If no explicit theme is set, prefer system dark via media query
+   - If user toggles, we set html[data-theme="light|dark"] which overrides this.
+*/
 @media (prefers-color-scheme: dark) {
   :root {
     --background: var(--charcoal);
     --foreground: #ededed;
   }
-}
-
-@media (prefers-color-scheme: dark) {
   body {
     background: linear-gradient(180deg, var(--charcoal) 0%, #121416 100%);
   }
+}
+
+html[data-theme="light"] {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+html[data-theme="dark"] {
+  --background: var(--charcoal);
+  --foreground: #ededed;
+}
+
+html[data-theme="dark"] body {
+  background: linear-gradient(180deg, var(--charcoal) 0%, #121416 100%);
+}
+
+html[data-theme="light"] body {
+  background: var(--background);
 }
 
 html {

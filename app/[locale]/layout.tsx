@@ -5,6 +5,8 @@ import { hasLocale } from "next-intl";
 import { routing } from "@/i18n/routing";
 import { Geist, Geist_Mono, Noto_Sans_Georgian, Manrope } from "next/font/google";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import ThemeToggle from "@/components/theme/ThemeToggle";
 import "../globals.css";
 
 const geistSans = Geist({
@@ -46,19 +48,22 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <NextIntlClientProvider messages={messages}>
-      <div
-        className={`${geistSans.variable} ${geistMono.variable} ${notoSansGeorgian.variable} ${manrope.variable} antialiased ${
-          displayLocale === "ka" ? "[font-family:var(--font-georgian),var(--font-geist-sans),system-ui,sans-serif]" : ""
-        }`}
-        lang={displayLocale}
-        data-locale={locale}
-      >
-        {/* Global language switcher (desktop only). Mobile pages render it in their headers. */}
-        <div className="hidden md:fixed md:right-6 md:bottom-6 md:z-[100]">
-          <LanguageSwitcher />
+      <ThemeProvider>
+        <div
+          className={`${geistSans.variable} ${geistMono.variable} ${notoSansGeorgian.variable} ${manrope.variable} antialiased ${
+            displayLocale === "ka" ? "[font-family:var(--font-georgian),var(--font-geist-sans),system-ui,sans-serif]" : ""
+          }`}
+          lang={displayLocale}
+          data-locale={locale}
+        >
+          {/* Global controls (desktop only). Mobile pages can render controls in their headers. */}
+          <div className="hidden md:fixed md:right-6 md:bottom-6 md:z-[100] md:flex md:flex-col md:gap-2">
+            <LanguageSwitcher />
+            <ThemeToggle />
+          </div>
+          {children}
         </div>
-        {children}
-      </div>
+      </ThemeProvider>
     </NextIntlClientProvider>
   );
 }
