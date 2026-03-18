@@ -356,10 +356,10 @@ export default function Home() {
       {/* Trusted – social proof */}
       <section className={`${isDark ? "border-t border-white/10" : "border-t border-gray-200"} py-12 sm:py-14 md:py-16`}>
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
-          <p className={isDark ? "text-center text-xs font-semibold uppercase tracking-[0.2em] text-white/65" : "text-center text-xs font-semibold uppercase tracking-[0.2em] text-gray-500"}>
+          <p className={isDark ? "font-heading text-center text-xs font-extrabold uppercase tracking-[0.25em] text-white/70" : "font-heading text-center text-xs font-extrabold uppercase tracking-[0.25em] text-gray-600"}>
             {t("socialProofTitle")}
           </p>
-          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-8">
+          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-4 sm:gap-8">
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -400,6 +400,20 @@ export default function Home() {
               </p>
               <p className={isDark ? "mt-1 text-sm font-semibold text-white/70" : "mt-1 text-sm font-medium text-gray-600"}>
                 {t("socialProofUsers")}
+              </p>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className={`rounded-2xl border px-6 py-6 text-center sm:px-8 sm:py-8 ${glassCard}`}
+            >
+              <p className={isDark ? "font-heading text-3xl font-extrabold text-white sm:text-4xl" : "font-heading text-3xl font-extrabold text-gray-900 sm:text-4xl"}>
+                65+
+              </p>
+              <p className={isDark ? "mt-1 text-sm font-semibold text-white/70" : "mt-1 text-sm font-medium text-gray-600"}>
+                {t("socialProofMatches")}
               </p>
             </motion.div>
           </div>

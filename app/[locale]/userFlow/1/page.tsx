@@ -808,13 +808,20 @@ export default function UserFlow1Page() {
             {/* STEP 4 */}
             {step === 4 && (
               <div className="animate-[fadeIn_240ms_ease-out]">
-                <h1 className="text-2xl font-semibold tracking-tight">{t("step4.title")}</h1>
-                <p className="mt-2 text-gray-600">
+                <h1 className={classNames("text-2xl font-semibold tracking-tight", isDark ? "text-white" : "text-gray-900")}>
+                  {t("step4.title")}
+                </h1>
+                <p className={classNames("mt-2 text-sm", isDark ? "text-gray-300" : "text-gray-600")}>
                   {t("step4.subtitle")}
                 </p>
 
                 <div className="mt-5">
-                  <div className="text-sm font-medium text-gray-900">{t("step4.suggestedFor")} <span className="font-bold text-matcher-dark">{displayJobTitle || t("step4.yourJob")}</span></div>
+                  <div className={classNames("text-sm font-medium", isDark ? "text-white" : "text-gray-900")}>
+                    {t("step4.suggestedFor")}{" "}
+                    <span className="font-bold text-matcher-dark">
+                      {displayJobTitle || t("step4.yourJob")}
+                    </span>
+                  </div>
                   <div className="mt-2 flex flex-wrap gap-2 items-center">
                     {(suggestedSkills.length ? suggestedSkills : ["Communication", "Teamwork", "Time management"]).map(
                       (s) => {
@@ -829,7 +836,9 @@ export default function UserFlow1Page() {
                               "rounded-full border px-3 py-1.5 text-xs transition",
                               active
                                 ? "border-matcher bg-matcher-mint text-matcher-dark"
-                                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50",
+                                : isDark
+                                  ? "border-white/15 bg-white/5 text-white/80 hover:bg-white/10"
+                                  : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50",
                               disabled && "opacity-40 cursor-not-allowed"
                             )}
                           >
@@ -842,7 +851,12 @@ export default function UserFlow1Page() {
                       <button
                         type="button"
                         onClick={() => setShowAddSkillInput(true)}
-                        className="rounded-full border-2 border-dashed border-matcher-teal bg-matcher-teal/10 px-3 py-1.5 text-xs font-medium text-matcher-teal hover:bg-matcher-teal/20 hover:border-matcher-teal"
+                          className={classNames(
+                            "rounded-full border-2 border-dashed px-3 py-1.5 text-xs font-medium hover:border-matcher-teal",
+                            isDark
+                              ? "border-matcher-teal/60 bg-matcher-teal/15 text-matcher-teal hover:bg-matcher-teal/25"
+                              : "border-matcher-teal bg-matcher-teal/10 text-matcher-teal hover:bg-matcher-teal/20"
+                          )}
                       >
                         + {t("step4.addYourSkill")}
                       </button>
@@ -861,17 +875,31 @@ export default function UserFlow1Page() {
                             if (e.key === "Escape") setShowAddSkillInput(false);
                           }}
                           placeholder={t("step4.searchSkillsPlaceholder")}
-                          className="rounded-full border border-matcher bg-matcher-pale px-4 py-1.5 text-sm outline-none focus:ring-2 focus:ring-matcher/30 w-48"
+                          className={classNames(
+                            "rounded-full border px-4 py-1.5 text-sm outline-none focus:ring-2 focus:ring-matcher/30 w-48",
+                            isDark
+                              ? "border-matcher-teal/70 bg-white/5 text-white placeholder:text-gray-400"
+                              : "border-matcher bg-matcher-pale text-gray-900 placeholder:text-gray-500"
+                          )}
                           autoFocus
                         />
                         {(skillSearch.trim().length >= 2 && (filteredSkillsForSearch.length > 0 || !skills.some((s) => s.name.toLowerCase() === skillSearch.trim().toLowerCase()))) && (
-                          <div className="absolute z-50 left-0 mt-1 w-56 rounded-2xl border border-gray-200 bg-white py-1 shadow-xl max-h-48 overflow-y-auto" onMouseDown={(e) => e.preventDefault()}>
+                          <div
+                            className={classNames(
+                              "absolute z-50 left-0 mt-1 w-56 rounded-2xl border py-1 shadow-xl max-h-48 overflow-y-auto",
+                              isDark ? "border-white/15 bg-gray-900" : "border-gray-200 bg-white"
+                            )}
+                            onMouseDown={(e) => e.preventDefault()}
+                          >
                             {filteredSkillsForSearch.map((s) => (
                               <button
                                 key={s}
                                 type="button"
                                 onClick={() => { toggleSkill(s); setSkillSearch(""); setShowAddSkillInput(false); }}
-                                className="w-full px-4 py-2 text-left text-sm hover:bg-matcher-mint"
+                                className={classNames(
+                                  "w-full px-4 py-2 text-left text-sm",
+                                  isDark ? "text-white hover:bg-white/10" : "hover:bg-matcher-mint"
+                                )}
                               >
                                 {skillLabel(s)}
                               </button>
@@ -881,28 +909,52 @@ export default function UserFlow1Page() {
                               <button
                                 type="button"
                                 onClick={() => { addCustomSkill(); setShowAddSkillInput(false); }}
-                                className="w-full px-4 py-2 text-left text-sm text-matcher-dark hover:bg-matcher-mint border-t border-gray-100"
+                                className={classNames(
+                                  "w-full px-4 py-2 text-left text-sm border-t",
+                                  isDark
+                                    ? "text-matcher-mint border-white/10 hover:bg-white/10"
+                                    : "text-matcher-dark border-gray-100 hover:bg-matcher-mint"
+                                )}
                               >
                                 {t("step4.addCustomSkill", { skill: skillSearch.trim() })}
                               </button>
                             )}
                           </div>
                         )}
-                        <button type="button" onClick={() => { setShowAddSkillInput(false); setSkillSearch(""); }} className="ml-1.5 text-gray-500 hover:text-gray-700">×</button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAddSkillInput(false);
+                            setSkillSearch("");
+                          }}
+                          className={classNames(
+                            "ml-1.5 text-sm",
+                            isDark ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700"
+                          )}
+                        >
+                          ×
+                        </button>
                       </div>
                     )}
                   </div>
-                  <p className="mt-2 text-xs text-gray-500">{t("step4.tip")}</p>
+                  <p className={classNames("mt-2 text-xs", isDark ? "text-gray-400" : "text-gray-500")}>
+                    {t("step4.tip")}
+                  </p>
                 </div>
 
                 {/* Selected skills + levels */}
                 <div className="mt-6">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-900">{t("step4.selected")} ({skills.length}/5)</p>
+                    <p className={classNames("text-sm font-medium", isDark ? "text-white" : "text-gray-900")}>
+                      {t("step4.selected")} ({skills.length}/5)
+                    </p>
                     {skills.length > 0 && (
                       <button
                         onClick={() => setSkills([])}
-                        className="text-xs text-gray-500 hover:text-gray-900"
+                        className={classNames(
+                          "text-xs",
+                          isDark ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-900"
+                        )}
                       >
                         {t("step4.clearAll")}
                       </button>
@@ -910,21 +962,44 @@ export default function UserFlow1Page() {
                   </div>
 
                   {skills.length === 0 ? (
-                    <div className="mt-3 rounded-2xl border border-dashed p-4 text-sm text-gray-500">
+                    <div
+                      className={classNames(
+                        "mt-3 rounded-2xl border border-dashed p-4 text-sm",
+                        isDark ? "border-white/15 text-gray-300" : "border-gray-300 text-gray-500"
+                      )}
+                    >
                       {t("step4.selectAtLeast")}
                     </div>
                   ) : (
                     <div className="mt-3 space-y-3">
                       {skills.map((sk) => (
-                        <div key={sk.name} className="rounded-2xl border p-4">
+                        <div
+                          key={sk.name}
+                          className={classNames(
+                            "rounded-2xl border p-4",
+                            isDark ? "border-white/15 bg-white/5" : "border-gray-200 bg-white"
+                          )}
+                        >
                           <div className="flex items-center justify-between gap-3">
                             <div>
-                              <div className="text-sm font-medium text-gray-900">{skillLabel(sk.name)}</div>
-                              <div className="text-xs text-gray-500">{t("step4.pickLevel")}</div>
+                              <div
+                                className={classNames(
+                                  "text-sm font-medium",
+                                  isDark ? "text-white" : "text-gray-900"
+                                )}
+                              >
+                                {skillLabel(sk.name)}
+                              </div>
+                              <div className={classNames("text-xs", isDark ? "text-gray-400" : "text-gray-500")}>
+                                {t("step4.pickLevel")}
+                              </div>
                             </div>
                             <button
                               onClick={() => toggleSkill(sk.name)}
-                              className="text-xs text-gray-500 hover:text-gray-900"
+                              className={classNames(
+                                "text-xs",
+                                isDark ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-900"
+                              )}
                             >
                               {t("step4.remove")}
                             </button>
@@ -942,7 +1017,9 @@ export default function UserFlow1Page() {
                                     "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition",
                                     active
                                       ? "border-matcher bg-matcher text-white"
-                                      : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                                      : isDark
+                                        ? "border-white/20 bg-white/5 text-white/80 hover:bg-white/10"
+                                        : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                                   )}
                                 >
                                   {icon}
@@ -966,21 +1043,35 @@ export default function UserFlow1Page() {
             {/* STEP 5 — Location */}
             {step === 5 && (
               <div className="animate-[fadeIn_240ms_ease-out]">
-                <h1 className="text-2xl font-semibold tracking-tight">{t("step5.title")}</h1>
-                <p className="mt-2 text-gray-600">
+                <h1 className={classNames("text-2xl font-semibold tracking-tight", isDark ? "text-white" : "text-gray-900")}>
+                  {t("step5.title")}
+                </h1>
+                <p className={classNames("mt-2 text-sm", isDark ? "text-gray-300" : "text-gray-600")}>
                   {t("step5.subtitle")}
                 </p>
 
                 {/* Free map: Leaflet + CartoDB Voyager (no API key) */}
-                <div className="mt-5 rounded-2xl border overflow-hidden">
+                <div
+                  className={classNames(
+                    "mt-5 rounded-2xl border overflow-hidden",
+                    isDark ? "border-white/15 bg-white/5" : "border-gray-200 bg-white"
+                  )}
+                >
                   <GeorgiaMap />
-                  <p className="px-3 py-2 text-xs text-gray-500 bg-white border-t">
+                  <p
+                    className={classNames(
+                      "px-3 py-2 text-xs border-t",
+                      isDark ? "bg-gray-900/90 text-gray-300 border-white/10" : "bg-white text-gray-500 border-gray-200"
+                    )}
+                  >
                     {t("step5.georgia")}
                   </p>
                 </div>
 
                 <div className="mt-5 relative">
-                  <label className="text-sm font-medium text-gray-900">{t("step5.city")}</label>
+                  <label className={classNames("text-sm font-medium", isDark ? "text-white" : "text-gray-900")}>
+                    {t("step5.city")}
+                  </label>
                   <div className="mt-2 relative">
                     <input
                       value={selectedCity ? cityName(selectedCity) : locationSearch}
@@ -995,7 +1086,12 @@ export default function UserFlow1Page() {
                       onFocus={() => setLocationInputFocused(true)}
                       onBlur={() => setTimeout(() => setLocationInputFocused(false), 150)}
                       placeholder={t("step5.cityPlaceholder")}
-                      className="w-full rounded-2xl border px-4 py-3 pr-10 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
+                      className={classNames(
+                        "w-full rounded-2xl border px-4 py-3 pr-10 text-sm outline-none focus:ring-2 focus:ring-matcher/30",
+                        isDark
+                          ? "border-white/20 bg-white/5 text-white placeholder:text-gray-400"
+                          : "border-gray-300 bg-white text-gray-900 placeholder:text-gray-500"
+                      )}
                     />
                     {selectedCity && (
                       <button
@@ -1005,7 +1101,12 @@ export default function UserFlow1Page() {
                           setLocationDistrictId(null);
                           setLocationSearch("");
                         }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                        className={classNames(
+                          "absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1",
+                          isDark
+                            ? "text-gray-400 hover:bg-white/10 hover:text-gray-100"
+                            : "text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                        )}
                         aria-label="Change city"
                       >
                         ✕
@@ -1013,7 +1114,12 @@ export default function UserFlow1Page() {
                     )}
                   </div>
                   {showCityDropdown && filteredCities.length > 0 && (
-                    <div className="absolute z-10 mt-1 w-full rounded-2xl border bg-white py-1 shadow-lg max-h-56 overflow-y-auto">
+                    <div
+                      className={classNames(
+                        "absolute z-10 mt-1 w-full rounded-2xl border py-1 shadow-lg max-h-56 overflow-y-auto",
+                        isDark ? "bg-gray-900 border-white/15" : "bg-white border-gray-200"
+                      )}
+                    >
                       {filteredCities.map((city) => {
                         const region = GEORGIAN_REGIONS.find((r) => r.id === city.regionId);
                         return (
@@ -1025,11 +1131,23 @@ export default function UserFlow1Page() {
                               setLocationDistrictId(city.districts?.length ? null : null);
                               setLocationSearch("");
                             }}
-                            className="w-full px-4 py-2.5 text-left text-sm hover:bg-matcher-mint flex flex-col"
+                            className={classNames(
+                              "w-full px-4 py-2.5 text-left text-sm flex flex-col",
+                              isDark ? "text-white hover:bg-white/10" : "hover:bg-matcher-mint"
+                            )}
                           >
-                            <span className="font-medium text-gray-900">{cityName(city)}</span>
+                            <span
+                              className={classNames(
+                                "font-medium",
+                                isDark ? "text-white" : "text-gray-900"
+                              )}
+                            >
+                              {cityName(city)}
+                            </span>
                             {region && (
-                              <span className="text-xs text-gray-500">{cityName(region)}</span>
+                              <span className={classNames("text-xs", isDark ? "text-gray-400" : "text-gray-500")}>
+                                {cityName(region)}
+                              </span>
                             )}
                           </button>
                         );
@@ -1037,7 +1155,12 @@ export default function UserFlow1Page() {
                     </div>
                   )}
                   {showCityDropdown && locationSearch.trim().length >= 2 && filteredCities.length === 0 && (
-                    <div className="absolute z-10 mt-1 w-full rounded-2xl border bg-white px-4 py-3 text-sm text-gray-500">
+                    <div
+                      className={classNames(
+                        "absolute z-10 mt-1 w-full rounded-2xl border px-4 py-3 text-sm",
+                        isDark ? "bg-gray-900 text-gray-300 border-white/15" : "bg-white text-gray-500 border-gray-200"
+                      )}
+                    >
                       {t("step5.noCitiesFound")}
                     </div>
                   )}
@@ -1045,7 +1168,7 @@ export default function UserFlow1Page() {
 
                 {selectedCity?.districts && selectedCity.districts.length > 0 && (
                   <div className="mt-4">
-                    <label className="text-sm font-medium text-gray-900">
+                    <label className={classNames("text-sm font-medium", isDark ? "text-white" : "text-gray-900")}>
                       {t("step5.district")} — {cityName(selectedCity)}
                     </label>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -1056,7 +1179,9 @@ export default function UserFlow1Page() {
                           "rounded-full border px-3 py-1.5 text-xs transition",
                           locationDistrictId === null
                             ? "border-matcher bg-matcher-mint text-matcher-dark"
-                            : "border-gray-200 hover:bg-gray-50"
+                            : isDark
+                              ? "border-white/20 text-white/80 hover:bg-white/10"
+                              : "border-gray-200 hover:bg-gray-50"
                         )}
                       >
                         {t("step5.any")}
@@ -1072,7 +1197,9 @@ export default function UserFlow1Page() {
                               "rounded-full border px-3 py-1.5 text-xs transition",
                               active
                                 ? "border-matcher bg-matcher-mint text-matcher-dark"
-                                : "border-gray-200 hover:bg-gray-50"
+                                : isDark
+                                  ? "border-white/20 text-white/80 hover:bg-white/10"
+                                  : "border-gray-200 hover:bg-gray-50"
                             )}
                           >
                             {cityName(d)}
@@ -1084,9 +1211,9 @@ export default function UserFlow1Page() {
                 )}
 
                 {selectedCity && (
-                  <p className="mt-3 text-sm text-gray-600">
+                  <p className={classNames("mt-3 text-sm", isDark ? "text-gray-300" : "text-gray-600")}>
                     {t("step5.selected")}:{" "}
-                    <span className="font-medium text-gray-900">
+                    <span className={classNames("font-medium", isDark ? "text-white" : "text-gray-900")}>
                       {cityName(selectedCity)}
                       {locationDistrictId && selectedCity.districts
                         ? (() => {
@@ -1099,14 +1226,20 @@ export default function UserFlow1Page() {
                 )}
 
                 <div className="mt-5">
-                  <label className="text-sm font-medium text-gray-900">{t("step5.willingToRelocate")}</label>
+                  <label className={classNames("text-sm font-medium", isDark ? "text-white" : "text-gray-900")}>
+                    {t("step5.willingToRelocate")}
+                  </label>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={() => setWillingToRelocate(false)}
                       className={classNames(
                         "rounded-full border px-3 py-1.5 text-xs transition",
-                        !willingToRelocate ? "border-matcher bg-matcher-mint text-matcher-dark" : "border-gray-200 hover:bg-gray-50"
+                        !willingToRelocate
+                          ? "border-matcher bg-matcher-mint text-matcher-dark"
+                          : isDark
+                            ? "border-white/20 text-white/80 hover:bg-white/10"
+                            : "border-gray-200 hover:bg-gray-50"
                       )}
                     >
                       {t("step5.willingToRelocateNo")}
@@ -1116,7 +1249,11 @@ export default function UserFlow1Page() {
                       onClick={() => setWillingToRelocate(true)}
                       className={classNames(
                         "rounded-full border px-3 py-1.5 text-xs transition",
-                        willingToRelocate ? "border-matcher bg-matcher-mint text-matcher-dark" : "border-gray-200 hover:bg-gray-50"
+                        willingToRelocate
+                          ? "border-matcher bg-matcher-mint text-matcher-dark"
+                          : isDark
+                            ? "border-white/20 text-white/80 hover:bg-white/10"
+                            : "border-gray-200 hover:bg-gray-50"
                       )}
                     >
                       {t("step5.willingToRelocateYes")}
