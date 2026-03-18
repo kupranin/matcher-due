@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import Logo from "@/components/Logo";
 import { performCandidateLogout } from "@/lib/logoutUtils";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function CabinetLayout({
   children,
@@ -73,14 +74,17 @@ export default function CabinetLayout({
       {/* Mobile header */}
       <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 md:hidden">
         <Logo height={56} />
-        <button
-          type="button"
-          onClick={() => setMobileMenuOpen((o) => !o)}
-          className="rounded-lg p-2 text-gray-600 hover:bg-gray-100"
-          aria-label="Menu"
-        >
-          {mobileMenuOpen ? "✕" : "☰"}
-        </button>
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher />
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen((o) => !o)}
+            className="rounded-lg p-2 text-gray-600 hover:bg-gray-100"
+            aria-label="Menu"
+          >
+            {mobileMenuOpen ? "✕" : "☰"}
+          </button>
+        </div>
       </header>
 
       {/* Mobile menu overlay */}

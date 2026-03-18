@@ -53,8 +53,8 @@ export default async function LocaleLayout({ children, params }: Props) {
         lang={displayLocale}
         data-locale={locale}
       >
-        {/* Global language switcher - bottom-right, high z-index so it stays visible */}
-        <div className="fixed right-4 bottom-4 z-[100] md:right-6 md:bottom-6">
+        {/* Global language switcher (desktop only). Mobile pages render it in their headers. */}
+        <div className="hidden md:fixed md:right-6 md:bottom-6 md:z-[100]">
           <LanguageSwitcher />
         </div>
         {children}
