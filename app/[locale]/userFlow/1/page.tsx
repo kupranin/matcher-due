@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useTranslations, useLocale } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import Logo from "@/components/Logo";
+import { useTheme } from "@/components/theme/ThemeProvider";
 import {
   GEORGIAN_REGIONS,
   GEORGIAN_CITIES,
@@ -111,6 +112,8 @@ export default function UserFlow1Page() {
   const locale = useLocale();
   const apiLocale = (locale === "local" ? "en" : locale) as "en" | "ka";
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8>(1);
 
   // Job templates from DB
@@ -445,11 +448,11 @@ export default function UserFlow1Page() {
 
   if (registrationSuccess) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-matcher-pale/30 px-4">
-        <div className="w-full max-w-sm rounded-2xl border border-matcher/20 bg-white p-8 text-center shadow-lg">
+      <div className={classNames("flex min-h-screen flex-col items-center justify-center px-4", isDark ? "bg-[#070B12] text-white" : "bg-matcher-pale/30 text-gray-900")}>
+        <div className={classNames("w-full max-w-sm rounded-2xl border p-8 text-center shadow-lg", isDark ? "border-white/10 bg-white/5" : "border-matcher/20 bg-white")}>
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-matcher-mint text-2xl text-matcher-dark">✓</div>
-          <h2 className="text-xl font-semibold text-gray-900">{t("step8.registrationSuccess")}</h2>
-          <p className="mt-2 text-sm text-gray-600">{t("step8.takingYouToCabinet")}</p>
+          <h2 className={classNames("text-xl font-semibold", isDark ? "text-white" : "text-gray-900")}>{t("step8.registrationSuccess")}</h2>
+          <p className={classNames("mt-2 text-sm", isDark ? "text-white/70" : "text-gray-600")}>{t("step8.takingYouToCabinet")}</p>
           <div className="mt-6 flex justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-matcher border-t-transparent" />
           </div>
@@ -459,27 +462,30 @@ export default function UserFlow1Page() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className={classNames("min-h-screen", isDark ? "bg-[#070B12] text-white" : "bg-white text-gray-900")}>
       {/* Top bar */}
-      <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+      <header className={classNames("sticky top-0 z-20 border-b backdrop-blur", isDark ? "border-white/10 bg-black/30" : "border-gray-200 bg-white/80")}>
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3 sm:px-6">
           <button
             onClick={back}
-            className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            className={classNames(
+              "inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition",
+              isDark ? "text-white/85 hover:bg-white/10" : "text-gray-700 hover:bg-gray-100"
+            )}
           >
             <span className="text-lg">←</span> {t("back")}
           </button>
 
-          <Logo height={72} />
+          <Logo height={64} />
 
-          <div className="text-sm text-gray-500">
-            {t("step")} <span className="text-gray-900 font-medium">{step}</span>/8
+          <div className={classNames("text-sm tabular-nums", isDark ? "text-white/60" : "text-gray-500")}>
+            {t("step")} <span className={classNames("font-semibold", isDark ? "text-white" : "text-gray-900")}>{step}</span>/8
           </div>
         </div>
 
         {/* Progress bar */}
-        <div className="mx-auto max-w-5xl px-4 pb-3">
-          <div className="h-2 w-full rounded-full bg-gray-100">
+        <div className="mx-auto max-w-2xl px-4 pb-3 sm:px-6">
+          <div className={classNames("h-2 w-full rounded-full", isDark ? "bg-white/10" : "bg-gray-100")}>
             <div
               className="h-2 rounded-full bg-matcher transition-all"
               style={{ width: `${Math.round(progress * 100)}%` }}
@@ -488,15 +494,49 @@ export default function UserFlow1Page() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-10">
-        <div className="grid gap-8 md:grid-cols-[1fr_340px]">
-          {/* Main card */}
-          <section className="rounded-3xl border bg-white p-6 shadow-sm">
+      <main className="relative mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
+        {/* Subtle step watermark (keeps progress context without sidebar) */}
+        <div
+          className={classNames(
+            "pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 select-none font-black leading-none",
+            "text-[160px] sm:text-[220px]",
+            isDark ? "text-white/[0.05]" : "text-gray-900/[0.04]"
+          )}
+          aria-hidden
+        >
+          {step}
+        </div>
+
+        {/* Main card */}
+        <section className={classNames("relative mx-auto rounded-3xl border p-5 shadow-sm sm:p-7", isDark ? "border-white/10 bg-white/5" : "border-gray-200 bg-white")}>
+          {/* Elegant stepper */}
+          <div className="mb-5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {Array.from({ length: 8 }).map((_, i) => {
+                const n = (i + 1) as number;
+                const active = n <= step;
+                return (
+                  <span
+                    key={n}
+                    className={classNames(
+                      "h-1.5 w-5 rounded-full transition",
+                      active ? "bg-matcher" : isDark ? "bg-white/10" : "bg-gray-200"
+                    )}
+                    aria-hidden
+                  />
+                );
+              })}
+            </div>
+            <div className={classNames("text-xs font-semibold uppercase tracking-[0.18em]", isDark ? "text-white/60" : "text-gray-500")}>
+              {t("step")} {step}/8
+            </div>
+          </div>
+
             {/* STEP 1 */}
             {step === 1 && (
               <div className="animate-[fadeIn_240ms_ease-out]">
-                <h1 className="text-2xl font-semibold tracking-tight">{t("step1.title")}</h1>
-                <p className="mt-2 text-gray-600">
+                <h1 className={classNames("text-2xl font-semibold tracking-tight sm:text-3xl", isDark ? "text-white" : "text-gray-900")}>{t("step1.title")}</h1>
+                <p className={classNames("mt-2", isDark ? "text-white/70" : "text-gray-600")}>
                   {t("step1.subtitle")}
                 </p>
 
@@ -507,7 +547,7 @@ export default function UserFlow1Page() {
                 )}
 
                 {jobRolesLoading && (
-                  <p className="mt-5 text-sm text-gray-500">{tExtras("loadingJobs")}</p>
+                  <p className={classNames("mt-5 text-sm", isDark ? "text-white/60" : "text-gray-500")}>{tExtras("loadingJobs")}</p>
                 )}
 
                 <div className="mt-5">
@@ -528,11 +568,16 @@ export default function UserFlow1Page() {
                       }
                     }}
                     placeholder={t("step1.placeholder")}
-                    className="w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
+                    className={classNames(
+                      "w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none transition",
+                      isDark
+                        ? "border-white/10 bg-white/5 text-white placeholder:text-white/40 focus:border-matcher/60 focus:ring-4 focus:ring-matcher/15 focus:shadow-[0_0_0_1px_rgba(139,195,74,0.18)]"
+                        : "border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:border-matcher/60 focus:ring-4 focus:ring-matcher/10 focus:shadow-md"
+                    )}
                   />
                 </div>
 
-                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
                   {!jobRolesLoading && (jobListExpanded ? filteredJobs : filteredJobs.slice(0, 5)).map((role) => {
                     const active = job === role.slug;
                     return (
@@ -549,14 +594,18 @@ export default function UserFlow1Page() {
                           }
                         }}
                         className={classNames(
-                          "rounded-2xl border px-4 py-3 text-left text-sm transition",
+                          "min-h-[64px] rounded-2xl border px-4 py-3 text-left text-sm transition",
                           active
-                            ? "border-matcher bg-matcher-mint"
-                            : "border-gray-200 hover:bg-gray-50"
+                            ? isDark
+                              ? "border-matcher/60 bg-matcher/15"
+                              : "border-matcher bg-matcher-mint"
+                            : isDark
+                              ? "border-white/10 bg-white/5 hover:bg-white/10"
+                              : "border-gray-200 hover:bg-gray-50"
                         )}
                       >
-                        <div className={classNames("font-bold", active ? "text-matcher-dark" : "text-gray-900")}>{role.title}</div>
-                        <div className="mt-0.5 text-xs text-gray-500">{t("step1.selectToContinue")}</div>
+                        <div className={classNames("font-bold", active ? "text-matcher-bright" : isDark ? "text-white" : "text-gray-900")}>{role.title}</div>
+                        <div className={classNames("mt-0.5 text-xs", isDark ? "text-white/55" : "text-gray-500")}>{t("step1.selectToContinue")}</div>
                       </button>
                     );
                   })}
@@ -565,7 +614,12 @@ export default function UserFlow1Page() {
                   <button
                     type="button"
                     onClick={() => setJobListExpanded(true)}
-                    className="mt-3 w-full rounded-2xl border border-dashed border-gray-300 px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-400"
+                    className={classNames(
+                      "mt-4 w-full rounded-2xl border border-dashed px-4 py-3 text-sm font-semibold transition",
+                      isDark
+                        ? "border-white/15 bg-white/5 text-white/80 hover:bg-white/10"
+                        : "border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-400"
+                    )}
                   >
                     {t("step1.showMore", { count: filteredJobs.length - 5 })}
                   </button>
@@ -576,23 +630,37 @@ export default function UserFlow1Page() {
                     type="button"
                     onClick={() => setJob("other")}
                     className={classNames(
-                      "mt-4 w-full rounded-2xl border px-4 py-3 text-left text-sm transition",
-                      job === "other" ? "border-matcher bg-matcher-mint" : "border-gray-200 hover:bg-gray-50"
+                      "mt-3 w-full rounded-2xl border px-4 py-3 text-left text-sm transition",
+                      job === "other"
+                        ? isDark
+                          ? "border-matcher/60 bg-matcher/15"
+                          : "border-matcher bg-matcher-mint"
+                        : isDark
+                          ? "border-white/15 bg-transparent text-white/85 hover:bg-white/10"
+                          : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                     )}
                   >
-                    <span className="font-bold text-matcher-dark">{t("step1.otherJob")}</span>
+                    <span className={classNames("font-bold", isDark ? "text-white" : "text-gray-900")}>{t("step1.otherJob")}</span>
+                    <div className={classNames("mt-0.5 text-xs", isDark ? "text-white/55" : "text-gray-500")}>
+                      {t("step1.customJobLabel")}
+                    </div>
                   </button>
                 )}
 
                 {job === "other" && (
                   <div className="mt-4">
-                    <label className="text-sm font-medium text-gray-700">{t("step1.customJobLabel")}</label>
+                    <label className={classNames("text-sm font-medium", isDark ? "text-white/80" : "text-gray-700")}>{t("step1.customJobLabel")}</label>
                     <input
                       type="text"
                       value={customJobTitle}
                       onChange={(e) => setCustomJobTitle(e.target.value)}
                       placeholder={t("step1.customJobPlaceholder")}
-                      className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
+                      className={classNames(
+                        "mt-2 w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none transition",
+                        isDark
+                          ? "border-white/10 bg-white/5 text-white placeholder:text-white/40 focus:border-matcher/60 focus:ring-4 focus:ring-matcher/15"
+                          : "border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:border-matcher/60 focus:ring-4 focus:ring-matcher/10"
+                      )}
                     />
                   </div>
                 )}
@@ -1219,7 +1287,10 @@ export default function UserFlow1Page() {
             <div className="mt-8 flex items-center justify-between">
               <button
                 onClick={back}
-                className="rounded-2xl px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                className={classNames(
+                  "rounded-2xl px-4 py-3 text-sm font-semibold transition",
+                  isDark ? "text-white/80 hover:bg-white/10" : "text-gray-700 hover:bg-gray-100"
+                )}
               >
                 {t("back")}
               </button>
@@ -1231,47 +1302,15 @@ export default function UserFlow1Page() {
                   "rounded-2xl px-5 py-3 text-sm font-semibold transition",
                   canContinue
                     ? "bg-matcher text-white hover:bg-matcher-dark"
-                    : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    : isDark
+                      ? "bg-white/10 text-white/40 cursor-not-allowed"
+                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
                 )}
               >
                 {step < 8 ? t("continue") : t("createAccount")}
               </button>
             </div>
-          </section>
-
-          {/* Side panel (nice for desktop) */}
-          <aside className="hidden md:block">
-            <div className="rounded-3xl border bg-white p-5 shadow-sm">
-              <div className="text-sm font-semibold text-gray-900">{t("whyThisWorks")}</div>
-              <ul className="mt-3 space-y-2 text-sm text-gray-600">
-                <li>{t("noCv")}</li>
-                <li>{t("minutes")}</li>
-                <li>{t("skillsMatching")}</li>
-                <li>{t("swipeToMatch")}</li>
-              </ul>
-
-              <div className="mt-5 rounded-2xl bg-matcher-mint p-4">
-                <div className="text-sm font-semibold text-matcher-dark">{t("mvpNote")}</div>
-                <p className="mt-1 text-sm text-matcher-dark/80">
-                  {t("mvpNoteText")}
-                </p>
-              </div>
-
-              <div className="mt-5 space-y-1 text-xs text-gray-400">
-                <p>
-                  <Link className="text-gray-700 underline" href="/">
-                    {t("home")}
-                  </Link>
-                </p>
-                <p>
-                  <Link className="text-gray-700 underline" href="/cabinet/profile">
-                    {t("editProfile")}
-                  </Link>
-                </p>
-              </div>
-            </div>
-          </aside>
-        </div>
+        </section>
       </main>
 
       {/* Salary above recommended — confirm to continue */}
