@@ -107,6 +107,58 @@ export async function POST(request: Request) {
 }
 
 /**
+ * PATCH /api/matches — update match flags (used for rewind/undo).
+ * Currently supports setting candidateLiked=false for a given (vacancyId, candidateProfileId).
+ */
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json().catch(() => ({}));
+    const vacancyId = typeof body?.vacancyId === "string" ? body.vacancyId.trim() : "";
+    const candidateProfileId = typeof body?.candidateProfileId === "string" ? body.candidateProfileId.trim() : "";
+    const candidateLikedRaw = body?.candidateLiked;
+    const candidateLiked = typeof candidateLikedRaw === "boolean" ? candidateLikedRaw : null;
+
+    if (!vacancyId || !candidateProfileId || candidateLiked == null) {
+      return NextResponse.json(
+        { error: "vacancyId, candidateProfileId, and candidateLiked required" },
+        { status: 400 }
+      );
+    }
+
+    if (candidateLiked !== false) {
+      return NextResponse.json({ error: "Only candidateLiked=false is supported" }, { status: 400 });
+    }
+
+    const existing = await prisma.match.findUnique({
+      where: { vacancyId_candidateProfileId: { vacancyId, candidateProfileId } },
+      select: { id: true, employerLiked: true, candidateLiked: true, matchedAt: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ ok: true, updated: false });
+    }
+
+    // Safety: don't undo a mutual match via rewind.
+    if (existing.employerLiked && existing.candidateLiked) {
+      return NextResponse.json(
+        { error: "Cannot undo a mutual match" },
+        { status: 409 }
+      );
+    }
+
+    await prisma.match.update({
+      where: { vacancyId_candidateProfileId: { vacancyId, candidateProfileId } },
+      data: { candidateLiked: false },
+    });
+
+    return NextResponse.json({ ok: true, updated: true });
+  } catch (e) {
+    console.error("Match update error:", e);
+    return NextResponse.json({ error: "Failed to update like" }, { status: 500 });
+  }
+}
+
+/**
  * GET /api/matches — employer match inbox query or candidate match query.
  */
 export async function GET(request: Request) {

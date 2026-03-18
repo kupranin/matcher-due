@@ -92,6 +92,7 @@ model CandidateProfile {
 
   skills   CandidateSkill[]
   matches  Match[]
+  discards Discard[]
 }
 
 model CandidateSkill {
@@ -131,6 +132,7 @@ model Vacancy {
 
   skills  VacancySkill[]
   matches Match[]
+  discards Discard[]
 }
 
 enum VacancyStatus {
@@ -246,6 +248,19 @@ model Match {
 
   @@unique([vacancyId, candidateProfileId])
   @@map("matches")
+}
+
+// ——— Discards (Swipe / Pass) ———
+model Discard {
+  id                 String           @id @default(cuid())
+  vacancyId          String           @map("vacancy_id")
+  vacancy            Vacancy          @relation(fields: [vacancyId], references: [id], onDelete: Cascade)
+  candidateProfileId String           @map("candidate_profile_id")
+  candidateProfile   CandidateProfile @relation(fields: [candidateProfileId], references: [id], onDelete: Cascade)
+  createdAt          DateTime         @default(now()) @map("created_at")
+
+  @@unique([vacancyId, candidateProfileId])
+  @@map("discards")
 }
 
 // ——— Chat (per mutual match) ———

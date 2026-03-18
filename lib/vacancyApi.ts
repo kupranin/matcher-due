@@ -27,6 +27,8 @@ export type VacancyCardFromApi = {
   profile: VacancyProfile;
   match: number;
   description: string | null;
+  /** True when vacancy skills intersect candidate skills (simple overlap). */
+  topMatch: boolean;
 };
 
 function locationCityName(cityId: string): string {
@@ -212,6 +214,12 @@ export function buildVacancyCardsWithMatch(
   /** Candidate's preferred job title (e.g. "Barista"). Vacancies not matching this are excluded. */
   candidatePreferredJob?: string | null
 ): VacancyCardFromApi[] {
+  const candidateSkillSet = new Set(
+    (candidateProfile.skills ?? [])
+      .map((s) => (typeof s?.name === "string" ? s.name.trim().toLowerCase() : ""))
+      .filter(Boolean)
+  );
+
   return apiVacancies
     .filter((v) => {
       const cat = roleMatchCategoryFromTitles(v.title, candidatePreferredJob ?? null);
@@ -226,6 +234,11 @@ export function buildVacancyCardsWithMatch(
         v.salaryMin != null
           ? `${v.salaryMin.toLocaleString()}–${v.salaryMax.toLocaleString()} GEL`
           : `${v.salaryMax.toLocaleString()} GEL`;
+
+      const vacancySkills = (v.skills ?? [])
+        .map((s) => (typeof s?.name === "string" ? s.name.trim().toLowerCase() : ""))
+        .filter(Boolean);
+      const topMatch = vacancySkills.some((name) => candidateSkillSet.has(name));
 
       return {
         id: v.id,
@@ -242,6 +255,7 @@ export function buildVacancyCardsWithMatch(
         match,
         // Normalize to `string | null` so card code never sees `undefined`.
         description: v.description ?? null,
+        topMatch,
       };
     })
     // Do not hide low-score vacancies; show all and let ranking happen via `match`.

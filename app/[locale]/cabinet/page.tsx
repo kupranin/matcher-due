@@ -42,6 +42,7 @@ function SwipeCard({
   onSwipe: (dir: "left" | "right") => void;
 }) {
   const t = useTranslations("cabinet");
+  const [expanded, setExpanded] = useState(false);
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-220, 220], [-14, 14]);
   const likeOpacity = useTransform(x, [0, 60, SWIPE_THRESHOLD], [0, 0.4, 1]);
@@ -99,7 +100,7 @@ function SwipeCard({
               {vacancy.match}%
             </MatchProgressRing>
           </div>
-          {vacancy.match >= 80 && (
+          {vacancy.topMatch && (
             <div className="absolute left-3 bottom-3 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-semibold text-white shadow-md sm:left-4 sm:bottom-4">
               Top match
             </div>
@@ -128,10 +129,9 @@ function SwipeCard({
           <div>
             <h2 className="font-heading text-2xl font-bold">{vacancy.title}</h2>
             <p className="mt-0.5 text-lg font-medium text-white/90">{vacancy.company}</p>
+            {/* Quick view */}
             {vacancy.description && (
-              <p className="mt-2 text-sm text-gray-300 line-clamp-2">
-                {vacancy.description}
-              </p>
+              <p className="mt-2 text-sm text-gray-300 line-clamp-2">{vacancy.description}</p>
             )}
             {Array.isArray(vacancy.profile?.skills) && vacancy.profile.skills.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
@@ -145,6 +145,58 @@ function SwipeCard({
                 ))}
               </div>
             )}
+
+            <button
+              type="button"
+              onClick={() => setExpanded((e) => !e)}
+              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/15"
+              aria-expanded={expanded}
+            >
+              {expanded ? "Hide details" : "Tap to expand"}
+              <span aria-hidden className="text-white/70">
+                {expanded ? "▴" : "▾"}
+              </span>
+            </button>
+
+            <AnimatePresence initial={false}>
+              {expanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-3 space-y-3 rounded-2xl bg-white/10 p-4">
+                    {vacancy.description && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-white/70">
+                          Job description
+                        </p>
+                        <p className="mt-1 text-sm text-white/90">{vacancy.description}</p>
+                      </div>
+                    )}
+                    {Array.isArray(vacancy.profile?.skills) && vacancy.profile.skills.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-white/70">
+                          Tech stack
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {vacancy.profile.skills.slice(0, 10).map((s) => (
+                            <span
+                              key={s.name}
+                              className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white/90"
+                            >
+                              {s.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
             {/* Vibe row: icons for No CV, Flexible Hours, Weekly Pay */}
             <div className="mt-3 flex flex-wrap items-center gap-3">
               {vibes.map((v) => (
@@ -297,6 +349,7 @@ export default function CabinetPage() {
   }, []);
   const [liked, setLiked] = useState<Vacancy[]>([]);
   const [passed, setPassed] = useState<Vacancy[]>([]);
+  const [swipeHistory, setSwipeHistory] = useState<Array<{ vacancy: Vacancy; dir: "left" | "right" }>>([]);
   const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
   const [newMatch, setNewMatch] = useState<MutualMatch | null>(null);
   const current = vacancies[0];
@@ -360,7 +413,24 @@ export default function CabinetPage() {
       setExitDir("left");
       setVacancies((prev) => prev.slice(1));
       setPassed((prev) => [...prev, current]);
+      setSwipeHistory((prev) => [...prev, { vacancy: current, dir: "left" }]);
       setTimeout(() => setExitDir(null), 50);
+
+      // Optimistic persistence (fire-and-forget).
+      void (async () => {
+        let profileId = getCandidateProfileId();
+        if (!profileId) profileId = await ensureCandidateProfileId();
+        if (!profileId) return;
+        try {
+          await fetch("/api/discards", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ vacancyId: current.id, candidateProfileId: profileId }),
+          });
+        } catch {
+          // ignore; next refresh will still show it unless server saved the discard
+        }
+      })();
       return;
     }
 
@@ -375,6 +445,7 @@ export default function CabinetPage() {
       setExitDir("right");
       setVacancies((prev) => prev.slice(1));
       setLiked((prev) => [...prev, current]);
+      setSwipeHistory((prev) => [...prev, { vacancy: current, dir: "right" }]);
       addCandidateLike(current.id);
       setTimeout(() => setExitDir(null), 50);
       return;
@@ -404,6 +475,7 @@ export default function CabinetPage() {
       setExitDir("right");
       setVacancies((prev) => prev.slice(1));
       setLiked((prev) => [...prev, current]);
+      setSwipeHistory((prev) => [...prev, { vacancy: current, dir: "right" }]);
       addCandidateLike(current.id);
 
       if (data.isMatch) {
@@ -434,6 +506,47 @@ export default function CabinetPage() {
         setLikeError(null);
       }, 2000);
     }
+  }
+
+  async function handleRewind() {
+    const last = swipeHistory[swipeHistory.length - 1];
+    if (!last) return;
+
+    setSwipeHistory((prev) => prev.slice(0, -1));
+    setVacancies((prev) => [last.vacancy, ...prev]);
+    if (last.dir === "left") {
+      setPassed((prev) => prev.filter((v) => v.id !== last.vacancy.id));
+    } else {
+      setLiked((prev) => prev.filter((v) => v.id !== last.vacancy.id));
+    }
+
+    // Best-effort server undo so a refresh doesn't permanently lose the card.
+    void (async () => {
+      let profileId = getCandidateProfileId();
+      if (!profileId) profileId = await ensureCandidateProfileId();
+      if (!profileId) return;
+      try {
+        if (last.dir === "left") {
+          await fetch("/api/discards", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ vacancyId: last.vacancy.id, candidateProfileId: profileId }),
+          });
+        } else {
+          await fetch("/api/matches", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              vacancyId: last.vacancy.id,
+              candidateProfileId: profileId,
+              candidateLiked: false,
+            }),
+          });
+        }
+      } catch {
+        // ignore
+      }
+    })();
   }
 
   function handleOpenChat() {
@@ -553,6 +666,18 @@ export default function CabinetPage() {
             className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-lg shadow-rose-300/50 transition-shadow hover:shadow-xl hover:shadow-rose-400/50 disabled:opacity-50 disabled:cursor-not-allowed active:ring-4 active:ring-rose-300/50"
           >
             <span className="text-2xl font-bold">✕</span>
+          </motion.button>
+          <motion.button
+            type="button"
+            disabled={likeState === "submitting" || swipeHistory.length === 0}
+            onClick={handleRewind}
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.94 }}
+            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-gray-100 to-white text-gray-800 shadow-lg shadow-gray-300/40 transition-shadow hover:shadow-xl hover:shadow-gray-400/40 disabled:opacity-50 disabled:cursor-not-allowed active:ring-4 active:ring-gray-300/60"
+            aria-label="Rewind last swipe"
+            title="Rewind"
+          >
+            <span className="text-2xl font-bold">↺</span>
           </motion.button>
           <motion.button
             type="button"

@@ -16,11 +16,20 @@ export async function GET(request: Request) {
 
     let excludeVacancyIds: string[] = [];
     if (candidateProfileId) {
-      const likedOrMatched = await prisma.match.findMany({
-        where: { candidateProfileId, candidateLiked: true },
-        select: { vacancyId: true },
-      });
-      excludeVacancyIds = likedOrMatched.map((m) => m.vacancyId);
+      const [likedOrMatched, discarded] = await Promise.all([
+        prisma.match.findMany({
+          where: { candidateProfileId, candidateLiked: true },
+          select: { vacancyId: true },
+        }),
+        prisma.discard.findMany({
+          where: { candidateProfileId },
+          select: { vacancyId: true },
+        }),
+      ]);
+      excludeVacancyIds = [
+        ...likedOrMatched.map((m) => m.vacancyId),
+        ...discarded.map((d) => d.vacancyId),
+      ];
     }
 
     const list = await prisma.vacancy.findMany({
