@@ -207,9 +207,13 @@
       "noMoreDemoCardsTitle": "No more demo cards",
       "noMoreDemoCardsSubtitle": "Ready to swipe for real?",
       "getStarted": "Get started",
+      "swapWords": {
+        "job": "job",
+        "candidate": "candidate"
+      },
       "candidate": {
         "eyebrow": "Swipe to find work",
-        "title": "Meet your next job in 30 seconds.",
+        "title": "Meet your next {swap} in 30 seconds.",
         "subtitle": "A Tinder-style job experience built for Georgia. Swipe roles, match fast, chat instantly.",
         "steps": {
           "step1Title": "Create a profile",
@@ -222,7 +226,7 @@
       },
       "employer": {
         "eyebrow": "Swipe to hire",
-        "title": "Meet your next hire in 30 seconds.",
+        "title": "Meet your next {swap} in 30 seconds.",
         "subtitle": "Post roles, review candidates, and match faster with a swipe-first experience.",
         "steps": {
           "step1Title": "Post a vacancy",

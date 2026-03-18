@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform, animate } from "framer-motion";
 import { Briefcase, User, Sparkles, X as XIcon, Heart } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -129,7 +129,6 @@ function DemoSwipeCard({
   const bgRightOpacity = useTransform(x, [120, 0], [0.25, 0]);
 
   const [expanded, setExpanded] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
 
   function handleDragEnd(_: unknown, info: PanInfo) {
@@ -164,36 +163,29 @@ function DemoSwipeCard({
         }
       >
         <div className="relative aspect-[4/3] w-full overflow-hidden">
-          {/* skeleton */}
-          {!imgLoaded && (
-            <div
-              className={`absolute inset-0 animate-pulse ${isDark ? "bg-white/10" : "bg-gray-200"}`}
-              aria-hidden
-            />
-          )}
-          {imgError && (
-            <div
-              className={`absolute inset-0 ${
-                isDark
-                  ? "bg-gradient-to-br from-white/10 via-white/5 to-white/10"
-                  : "bg-gradient-to-br from-matcher-pale via-white to-matcher-mint/40"
-              }`}
-              aria-hidden
-            />
-          )}
-          <Image
-            src={card.photo}
-            alt=""
-            fill
-            className={`object-cover transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
-            sizes="(min-width: 768px) 420px, 90vw"
-            onLoadingComplete={() => setImgLoaded(true)}
-            onError={() => {
-              setImgError(true);
-              setImgLoaded(true);
-            }}
-            priority={zIndex > 1}
+          {/* Always-visible placeholder (never blocks the image). */}
+          <div
+            className={`absolute inset-0 ${
+              isDark
+                ? "bg-gradient-to-br from-white/10 via-white/5 to-white/10"
+                : "bg-gradient-to-br from-matcher-pale via-white to-matcher-mint/40"
+            }`}
+            aria-hidden
           />
+          <div className={`absolute inset-0 animate-pulse ${isDark ? "bg-white/5" : "bg-white/40"}`} aria-hidden />
+          {!imgError && (
+            <Image
+              src={card.photo}
+              alt=""
+              fill
+              className="object-cover"
+              sizes="(min-width: 768px) 420px, 90vw"
+              unoptimized
+              referrerPolicy="no-referrer"
+              onError={() => setImgError(true)}
+              priority={zIndex > 1}
+            />
+          )}
           <div className="absolute right-3 top-3 rounded-full bg-matcher-bright px-3 py-1.5 text-sm font-bold text-charcoal shadow-lg">
             {card.salary}
           </div>
@@ -390,6 +382,8 @@ export default function InteractiveHero({
   employerHowItWorks,
   labels,
   demoCards,
+  swapWords = [],
+  swapIntervalMs = 1700,
   theme = "dark",
 }: {
   candidateCopy: { eyebrow: string; title: string; subtitle: string; ctaPrimary: string; ctaSecondary: string };
@@ -398,6 +392,8 @@ export default function InteractiveHero({
   employerHowItWorks: Array<{ title: string; text: string }>;
   labels: InteractiveHeroLabels;
   demoCards: DemoJobCard[];
+  swapWords?: string[];
+  swapIntervalMs?: number;
   theme?: "light" | "dark";
 }) {
   const isDark = theme === "dark";
@@ -405,6 +401,7 @@ export default function InteractiveHero({
   const [deck, setDeck] = useState<DemoJobCard[]>(() => demoCards);
   const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
   const [matchOpen, setMatchOpen] = useState(false);
+  const [swapIdx, setSwapIdx] = useState(0);
 
   const copy = audience === "candidate" ? candidateCopy : employerCopy;
   const steps = audience === "candidate" ? candidateHowItWorks : employerHowItWorks;
@@ -419,6 +416,18 @@ export default function InteractiveHero({
     if (dir === "right") setMatchOpen(true);
     setTimeout(() => setExitDir(null), 80);
   }
+
+  const titleHasSwap = copy.title.includes("{swap}") && swapWords.length > 0;
+  const activeSwapWord = swapWords.length > 0 ? swapWords[swapIdx % swapWords.length] : "";
+  const [titleBefore, titleAfter] = titleHasSwap ? copy.title.split("{swap}") : [copy.title, ""];
+
+  useEffect(() => {
+    if (!titleHasSwap) return;
+    const id = window.setInterval(() => {
+      setSwapIdx((i) => (swapWords.length > 0 ? (i + 1) % swapWords.length : 0));
+    }, Math.max(800, swapIntervalMs));
+    return () => window.clearInterval(id);
+  }, [swapIntervalMs, swapWords.length, titleHasSwap]);
 
   return (
     <section className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-4 py-10 sm:px-6 sm:py-14 md:grid-cols-2 md:gap-12 md:py-18">
@@ -451,7 +460,32 @@ export default function InteractiveHero({
                 : "mt-5 text-balance text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl"
             }
           >
-            {copy.title}
+            {titleHasSwap ? (
+              <>
+                {titleBefore}
+                <span className="relative inline-block align-baseline">
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                      key={activeSwapWord}
+                      initial={{ y: 10, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: -10, opacity: 0 }}
+                      transition={{ duration: 0.18, ease: "easeOut" }}
+                      className={
+                        isDark
+                          ? "mx-1 inline-flex rounded-xl bg-matcher-bright px-2.5 py-1 font-extrabold text-charcoal shadow-sm"
+                          : "mx-1 inline-flex rounded-xl bg-matcher px-2.5 py-1 font-extrabold text-white shadow-sm"
+                      }
+                    >
+                      {activeSwapWord}
+                    </motion.span>
+                  </AnimatePresence>
+                </span>
+                {titleAfter}
+              </>
+            ) : (
+              copy.title
+            )}
           </h1>
           <p className={isDark ? "mt-4 max-w-xl text-balance text-base text-white/80 sm:text-lg" : "mt-4 max-w-xl text-balance text-base text-gray-600 sm:text-lg"}>
             {copy.subtitle}
@@ -530,74 +564,118 @@ export default function InteractiveHero({
 
       {/* Live swipe demo */}
       <div className="relative">
-        <div className="absolute -inset-6 -z-10 rounded-[2.5rem] bg-gradient-to-br from-matcher/20 via-white/5 to-matcher-teal/20 blur-2xl" />
+        <div
+          className={`absolute -inset-8 -z-10 rounded-[3rem] blur-2xl ${
+            isDark
+              ? "bg-[radial-gradient(circle_at_top,rgba(139,195,74,0.22),transparent_55%),radial-gradient(circle_at_bottom,rgba(0,173,181,0.18),transparent_55%)]"
+              : "bg-[radial-gradient(circle_at_top,rgba(139,195,74,0.22),transparent_60%),radial-gradient(circle_at_bottom,rgba(0,173,181,0.14),transparent_60%)]"
+          }`}
+        />
 
-        <div className="relative mx-auto aspect-[3/4] max-h-[520px] w-full max-w-[420px]">
-          <AnimatePresence mode="wait">
-            {current ? (
-              <motion.div
-                key={current.id}
-                initial={{ opacity: 0, y: 18, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{
-                  opacity: 0,
-                  x: exitDir === "right" ? 420 : exitDir === "left" ? -420 : 0,
-                  rotate: exitDir === "right" ? 18 : exitDir === "left" ? -18 : 0,
-                  transition: { duration: 0.25, ease: [0.4, 0, 0.2, 1] },
-                }}
-                className="absolute inset-0"
-              >
-                <DemoSwipeCard
-                  card={current}
-                  onSwipe={swipe}
-                  zIndex={3}
-                  labels={{
-                    like: labels.like,
-                    nope: labels.nope,
-                    swipeInstruction: labels.swipeInstruction,
-                    tapToExpand: labels.tapToExpand,
-                    hideDetails: labels.hideDetails,
-                    jobDescription: labels.jobDescription,
-                    techStack: labels.techStack,
+        {/* Phone frame */}
+        <div
+          className={`relative mx-auto w-full max-w-[420px] overflow-hidden rounded-[2.5rem] border p-3 shadow-2xl ${
+            isDark ? "border-white/15 bg-[#0b101a]" : "border-gray-200 bg-white"
+          }`}
+        >
+          {/* Notch */}
+          <div className={`pointer-events-none absolute left-1/2 top-3 h-6 w-28 -translate-x-1/2 rounded-full ${isDark ? "bg-black/35" : "bg-gray-100"}`} />
+
+          <div className="relative mx-auto aspect-[3/4] max-h-[560px] w-full">
+            {/* Back cards for depth */}
+            <div className={`absolute inset-0 -z-10 rounded-3xl ${isDark ? "bg-white/5" : "bg-gray-50"}`} />
+            <div
+              className={`absolute inset-0 -z-10 rounded-3xl border ${
+                isDark ? "border-white/10" : "border-gray-200"
+              }`}
+              style={{ transform: "translateY(10px) scale(0.985)" }}
+              aria-hidden
+            />
+            <div
+              className={`absolute inset-0 -z-10 rounded-3xl border ${
+                isDark ? "border-white/10" : "border-gray-200"
+              }`}
+              style={{ transform: "translateY(18px) scale(0.97)" }}
+              aria-hidden
+            />
+
+            <AnimatePresence mode="wait">
+              {current ? (
+                <motion.div
+                  key={current.id}
+                  initial={{ opacity: 0, y: 18, scale: 0.985 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{
+                    opacity: 0,
+                    x: exitDir === "right" ? 420 : exitDir === "left" ? -420 : 0,
+                    rotate: exitDir === "right" ? 18 : exitDir === "left" ? -18 : 0,
+                    transition: { duration: 0.25, ease: [0.4, 0, 0.2, 1] },
                   }}
-                  theme={theme}
-                />
-              </motion.div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.96 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex h-full flex-col items-center justify-center rounded-3xl border border-white/20 bg-white/10 p-8 text-center text-white backdrop-blur-md"
-              >
-                <p className="text-3xl font-extrabold sm:text-4xl">{labels.noMoreDemoCardsTitle}</p>
-                <p className="mt-3 text-white/80">{labels.noMoreDemoCardsSubtitle}</p>
-                <Link href={ctaHref} className="mt-6 rounded-xl bg-matcher px-6 py-3 font-semibold text-white hover:bg-matcher-dark">
-                  {labels.getStarted}
-                </Link>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                  className="absolute inset-0"
+                >
+                  <DemoSwipeCard
+                    card={current}
+                    onSwipe={swipe}
+                    zIndex={3}
+                    labels={{
+                      like: labels.like,
+                      nope: labels.nope,
+                      swipeInstruction: labels.swipeInstruction,
+                      tapToExpand: labels.tapToExpand,
+                      hideDetails: labels.hideDetails,
+                      jobDescription: labels.jobDescription,
+                      techStack: labels.techStack,
+                    }}
+                    theme={theme}
+                  />
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className={
+                    isDark
+                      ? "flex h-full flex-col items-center justify-center rounded-3xl border border-white/20 bg-white/10 p-8 text-center text-white backdrop-blur-md"
+                      : "flex h-full flex-col items-center justify-center rounded-3xl border border-gray-200 bg-white p-8 text-center text-gray-900 shadow-sm"
+                  }
+                >
+                  <p className="text-3xl font-extrabold sm:text-4xl">{labels.noMoreDemoCardsTitle}</p>
+                  <p className={isDark ? "mt-3 text-white/80" : "mt-3 text-gray-600"}>{labels.noMoreDemoCardsSubtitle}</p>
+                  <Link href={ctaHref} className="mt-6 rounded-xl bg-matcher px-6 py-3 font-semibold text-white hover:bg-matcher-dark">
+                    {labels.getStarted}
+                  </Link>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-        <div className="mt-6 flex justify-center gap-6">
-          <button
-            type="button"
-            onClick={() => swipe("left")}
-            disabled={!current}
-            className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-lg shadow-rose-300/40 disabled:opacity-50"
-            aria-label="Pass"
-          >
-            <XIcon className="h-7 w-7" />
-          </button>
-          <button
-            type="button"
-            onClick={() => swipe("right")}
-            disabled={!current}
-            className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-matcher to-matcher-teal text-white shadow-lg shadow-matcher/35 disabled:opacity-50"
-            aria-label="Like"
-          >
-            <Heart className="h-7 w-7" />
-          </button>
+            {/* Swipe buttons integrated */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
+              <div
+                className={`pointer-events-auto inline-flex items-center gap-4 rounded-full border px-4 py-3 shadow-lg ${
+                  isDark ? "border-white/15 bg-white/10 backdrop-blur-md" : "border-gray-200 bg-white"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => swipe("left")}
+                  disabled={!current}
+                  className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-md disabled:opacity-50"
+                  aria-label="Pass"
+                >
+                  <XIcon className="h-6 w-6" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => swipe("right")}
+                  disabled={!current}
+                  className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-matcher to-matcher-teal text-white shadow-md disabled:opacity-50"
+                  aria-label="Like"
+                >
+                  <Heart className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <MatchOverlay

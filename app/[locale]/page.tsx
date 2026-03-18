@@ -116,6 +116,7 @@ export default function Home() {
           ctaPrimary: tCommon("imHiring"),
           ctaSecondary: tCommon("getMatched"),
         }}
+        swapWords={[t("liveHero.swapWords.job"), t("liveHero.swapWords.candidate")]}
         candidateHowItWorks={[
           { title: t("liveHero.candidate.steps.step1Title"), text: t("liveHero.candidate.steps.step1Text") },
           { title: t("liveHero.candidate.steps.step2Title"), text: t("liveHero.candidate.steps.step2Text") },
@@ -264,6 +265,8 @@ export default function Home() {
                   className={`object-cover transition-opacity duration-300 ${
                     antiResumeImgLoaded ? "opacity-100" : "opacity-0"
                   }`}
+                  unoptimized
+                  referrerPolicy="no-referrer"
                   onLoadingComplete={() => setAntiResumeImgLoaded(true)}
                   onError={() => {
                     setAntiResumeImgError(true);
