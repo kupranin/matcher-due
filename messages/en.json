@@ -117,6 +117,11 @@
         "text": "We're just getting started. As we grow, we'll keep listening, improving, and expanding to serve more job seekers and employers across Georgia and beyond."
       }
     }
+    ,
+    "swipeTeam": {
+      "title": "Swipe the Team",
+      "subtitle": "Tap a card to flip. Swipe/scroll horizontally to explore."
+    }
   },
   "contactPage": {
     "title": "Contact",
@@ -184,6 +189,107 @@
     "lastCardCta": "Get started"
   },
   "home": {
+    "liveHero": {
+      "segmentedCandidate": "I’m a Candidate",
+      "segmentedEmployer": "I’m an Employer",
+      "howItWorksTitle": "How it works",
+      "like": "LIKE",
+      "nope": "NOPE",
+      "swipeInstruction": "Swipe right to like, left to pass.",
+      "tapToExpand": "Tap to expand",
+      "hideDetails": "Hide details",
+      "jobDescription": "Job description",
+      "techStack": "Tech stack",
+      "itsAMatchEyebrow": "It’s a Match!",
+      "itsAMatchTitle": "Ready to do this for real?",
+      "signUp": "Sign up",
+      "keepSwiping": "Keep swiping",
+      "noMoreDemoCardsTitle": "No more demo cards",
+      "noMoreDemoCardsSubtitle": "Ready to swipe for real?",
+      "getStarted": "Get started",
+      "candidate": {
+        "eyebrow": "Swipe to find work",
+        "title": "Meet your next job in 30 seconds.",
+        "subtitle": "A Tinder-style job experience built for Georgia. Swipe roles, match fast, chat instantly.",
+        "steps": {
+          "step1Title": "Create a profile",
+          "step1Text": "Tell us your role, salary, and skills.",
+          "step2Title": "Swipe jobs",
+          "step2Text": "Like roles that fit. Pass the rest.",
+          "step3Title": "Match & chat",
+          "step3Text": "When both sides like — start a conversation."
+        }
+      },
+      "employer": {
+        "eyebrow": "Swipe to hire",
+        "title": "Meet your next hire in 30 seconds.",
+        "subtitle": "Post roles, review candidates, and match faster with a swipe-first experience.",
+        "steps": {
+          "step1Title": "Post a vacancy",
+          "step1Text": "Add title, salary, and required skills.",
+          "step2Title": "Swipe candidates",
+          "step2Text": "Shortlist fast with LIKE/NOPE.",
+          "step3Title": "Match & interview",
+          "step3Text": "Chat and schedule in minutes."
+        }
+      },
+      "demoCards": [
+        {
+          "id": "react-dev",
+          "title": "Senior React Developer",
+          "company": "Tbilisi Product Studio",
+          "salary": "₾8k–₾12k",
+          "location": "Tbilisi",
+          "workType": "Hybrid",
+          "tech": ["React", "Next.js", "TypeScript", "GraphQL"],
+          "description": "Build a fast, swipe-first marketplace experience. Own UI performance and component quality.",
+          "photo": "https://images.unsplash.com/photo-1521737711867-e3b97395f902?w=1200&q=80"
+        },
+        {
+          "id": "designer",
+          "title": "Product Designer",
+          "company": "Matcher Labs",
+          "salary": "₾5k–₾7k",
+          "location": "Remote",
+          "workType": "Remote",
+          "tech": ["Figma", "Design Systems", "UX Research"],
+          "description": "Design high-conversion onboarding and swipe flows. Turn trust and clarity into retention.",
+          "photo": "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=1200&q=80"
+        },
+        {
+          "id": "pm",
+          "title": "Associate Product Manager",
+          "company": "GeoCommerce",
+          "salary": "₾3k–₾4k",
+          "location": "Tbilisi",
+          "workType": "Full-time",
+          "tech": ["Roadmaps", "Analytics", "Experimentation"],
+          "description": "Ship weekly. Instrument the matching funnel and iterate on copy, cards, and conversation triggers.",
+          "photo": "https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&q=80"
+        }
+      ]
+    },
+    "antiResume": {
+      "oldSchool": "Old school",
+      "resumeTitle": "Resume",
+      "resumeSubtitle": "Upload. Fill forms. Wait. Repeat.",
+      "no": "No",
+      "resumeChips": ["PDF", "Portfolios", "Cover letters", "ATS"],
+      "newWay": "New way",
+      "matcherCardTitle": "Matcher Card",
+      "matcherCardSubtitle": "Swipe. Match. Chat. Done.",
+      "yes": "Yes",
+      "matcherDemoCard": {
+        "title": "Senior React Developer",
+        "company": "Tbilisi Product Studio",
+        "photo": "https://images.unsplash.com/photo-1521737711867-e3b97395f902?w=1200&q=80",
+        "chips": ["React", "Next.js", "TypeScript", "Great salary"],
+        "footerLeft": "Swipe-style matching",
+        "footerRight": "92% match"
+      },
+      "ctaPrimary": "Try Matcher",
+      "ctaSecondary": "Learn more"
+    },
     "heroTitlePrefix": "Get matched to your first ",
     "heroTitleSuffix": " in minutes.",
     "heroWordJob": "job",

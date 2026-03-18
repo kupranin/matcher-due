@@ -30,15 +30,26 @@ function InstagramIcon({ className }: { className?: string }) {
   );
 }
 
-export default function Footer() {
+export default function Footer({
+  variant = "light",
+}: {
+  variant?: "light" | "dark";
+}) {
   const t = useTranslations("footer");
+  const isDark = variant === "dark";
   return (
-    <footer className="border-t border-gray-200 bg-white">
+    <footer
+      className={
+        isDark
+          ? "border-t border-white/10 bg-transparent"
+          : "border-t border-gray-200 bg-white"
+      }
+    >
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5 lg:items-start">
           {/* Left: Brand + social icons */}
           <div className="lg:col-span-2 flex flex-col">
-            <p className="max-w-xs text-sm font-bold text-gray-900">
+            <p className={isDark ? "max-w-xs text-sm font-bold text-white" : "max-w-xs text-sm font-bold text-gray-900"}>
               {t("tagline")}
             </p>
             <div className="mt-4 flex items-center gap-4">
@@ -46,7 +57,7 @@ export default function Footer() {
                 href="https://facebook.com/matcher.ge"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-500 transition hover:text-matcher-dark"
+                className={isDark ? "text-white/65 transition hover:text-white" : "text-gray-500 transition hover:text-matcher-dark"}
                 aria-label="Facebook"
               >
                 <FacebookIcon className="h-5 w-5" />
@@ -55,7 +66,7 @@ export default function Footer() {
                 href="https://www.linkedin.com/company/matcher-ge"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-500 transition hover:text-matcher-dark"
+                className={isDark ? "text-white/65 transition hover:text-white" : "text-gray-500 transition hover:text-matcher-dark"}
                 aria-label="LinkedIn"
               >
                 <LinkedInIcon className="h-5 w-5" />
@@ -64,22 +75,22 @@ export default function Footer() {
                 href="https://instagram.com/matcher.ge"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-500 transition hover:text-matcher-dark"
+                className={isDark ? "text-white/65 transition hover:text-white" : "text-gray-500 transition hover:text-matcher-dark"}
                 aria-label="Instagram"
               >
                 <InstagramIcon className="h-5 w-5" />
               </a>
             </div>
-            <div className="mt-4 space-y-1 text-sm text-gray-500">
+            <div className={isDark ? "mt-4 space-y-1 text-sm text-white/65" : "mt-4 space-y-1 text-sm text-gray-500"}>
               <a
                 href="mailto:keti@matcher.ge"
-                className="block text-gray-500 transition hover:text-matcher-dark"
+                className={isDark ? "block text-white/65 transition hover:text-white" : "block text-gray-500 transition hover:text-matcher-dark"}
               >
                 keti@matcher.ge
               </a>
               <a
                 href="tel:+995599620426"
-                className="block text-gray-500 transition hover:text-matcher-dark"
+                className={isDark ? "block text-white/65 transition hover:text-white" : "block text-gray-500 transition hover:text-matcher-dark"}
               >
                 +995 599 62 04 26
               </a>
@@ -88,14 +99,14 @@ export default function Footer() {
 
           {/* Middle: Company links */}
           <div className="flex flex-col">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900">
+            <h3 className={isDark ? "text-xs font-semibold uppercase tracking-wider text-white" : "text-xs font-semibold uppercase tracking-wider text-gray-900"}>
               {t("company")}
             </h3>
             <ul className="mt-3 space-y-2">
               <li>
                 <Link
                   href="/about"
-                  className="text-sm text-gray-500 transition hover:text-gray-900"
+                  className={isDark ? "text-sm text-white/65 transition hover:text-white" : "text-sm text-gray-500 transition hover:text-gray-900"}
                 >
                   {t("about")}
                 </Link>
@@ -103,7 +114,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/team"
-                  className="text-sm text-gray-500 transition hover:text-gray-900"
+                  className={isDark ? "text-sm text-white/65 transition hover:text-white" : "text-sm text-gray-500 transition hover:text-gray-900"}
                 >
                   {t("team")}
                 </Link>
@@ -111,7 +122,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/contact"
-                  className="text-sm text-gray-500 transition hover:text-gray-900"
+                  className={isDark ? "text-sm text-white/65 transition hover:text-white" : "text-sm text-gray-500 transition hover:text-gray-900"}
                 >
                   {t("contact")}
                 </Link>
@@ -121,14 +132,14 @@ export default function Footer() {
 
           {/* Middle: Legal links */}
           <div className="flex flex-col">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900">
+            <h3 className={isDark ? "text-xs font-semibold uppercase tracking-wider text-white" : "text-xs font-semibold uppercase tracking-wider text-gray-900"}>
               {t("legal")}
             </h3>
             <ul className="mt-3 space-y-2">
               <li>
                 <Link
                   href="/legal/terms"
-                  className="text-sm text-gray-500 transition hover:text-gray-900"
+                  className={isDark ? "text-sm text-white/65 transition hover:text-white" : "text-sm text-gray-500 transition hover:text-gray-900"}
                 >
                   {t("userAgreement")}
                 </Link>
@@ -136,7 +147,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/legal/privacy"
-                  className="text-sm text-gray-500 transition hover:text-gray-900"
+                  className={isDark ? "text-sm text-white/65 transition hover:text-white" : "text-sm text-gray-500 transition hover:text-gray-900"}
                 >
                   {t("privacyPolicy")}
                 </Link>
@@ -146,7 +157,7 @@ export default function Footer() {
 
           {/* Right: Social links */}
           <div className="flex flex-col">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900">
+            <h3 className={isDark ? "text-xs font-semibold uppercase tracking-wider text-white" : "text-xs font-semibold uppercase tracking-wider text-gray-900"}>
               {t("followUs")}
             </h3>
             <ul className="mt-3 space-y-2">
@@ -155,7 +166,7 @@ export default function Footer() {
                   href="https://www.linkedin.com/company/matcher-ge"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-gray-500 transition hover:text-gray-900"
+                  className={isDark ? "text-sm text-white/65 transition hover:text-white" : "text-sm text-gray-500 transition hover:text-gray-900"}
                   aria-label="LinkedIn"
                 >
                   LinkedIn
@@ -166,7 +177,7 @@ export default function Footer() {
                   href="https://facebook.com/matcher.ge"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-gray-500 transition hover:text-gray-900"
+                  className={isDark ? "text-sm text-white/65 transition hover:text-white" : "text-sm text-gray-500 transition hover:text-gray-900"}
                   aria-label="Facebook"
                 >
                   Facebook
@@ -177,7 +188,7 @@ export default function Footer() {
                   href="https://x.com/matcher_ge"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-gray-500 transition hover:text-gray-900"
+                  className={isDark ? "text-sm text-white/65 transition hover:text-white" : "text-sm text-gray-500 transition hover:text-gray-900"}
                   aria-label="Twitter/X"
                 >
                   Twitter/X
@@ -188,8 +199,8 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-12 border-t border-gray-100 pt-8">
-          <p className="text-center text-xs text-gray-500">
+        <div className={isDark ? "mt-12 border-t border-white/10 pt-8" : "mt-12 border-t border-gray-100 pt-8"}>
+          <p className={isDark ? "text-center text-xs text-white/50" : "text-center text-xs text-gray-500"}>
             {t("allRightsReserved", { year: String(currentYear) })}
           </p>
         </div>

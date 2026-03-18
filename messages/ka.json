@@ -117,6 +117,11 @@
         "text": "ჩვენ ჯერ ახლა ვიწყებთ. ვიზრდებით და ვაგრძელებთ მოსმენას, გაუმჯობესებას და გაფართოებას — უფრო მეტი სამუშაოს მაძიებლისა და დამსაქმებლისთვის საქართველოში და მის ფარგლებს გარეთაც."
       }
     }
+    ,
+    "swipeTeam": {
+      "title": "გაიცანი გუნდი — გადაფურცვლით",
+      "subtitle": "დააჭირე ბარათს გადასაბრუნებლად. გვერდზე გადაასრიალე/გადაფურცლე რომ ნახო სხვებიც."
+    }
   },
   "contactPage": {
     "title": "კონტაქტი",
@@ -193,6 +198,107 @@
     "values[3]": "დღევანდელი დღე მნიშვნელოვანია — შესაძლებლობები სწრაფად იზრდება, დასაქმებაც ასევე უნდა იყოს."
   },
   "home": {
+    "liveHero": {
+      "segmentedCandidate": "კანდიდატი ვარ",
+      "segmentedEmployer": "დამსაქმებელი ვარ",
+      "howItWorksTitle": "როგორ მუშაობს",
+      "like": "მომწონს",
+      "nope": "გამოტოვება",
+      "swipeInstruction": "მარჯვნივ — მოწონება, მარცხნივ — გამოტოვება.",
+      "tapToExpand": "დააჭირე დეტალებისთვის",
+      "hideDetails": "დეტალების დამალვა",
+      "jobDescription": "აღწერა",
+      "techStack": "უნარები/ტექნოლოგიები",
+      "itsAMatchEyebrow": "შესაბამისობაა!",
+      "itsAMatchTitle": "გინდა რეალურადაც სცადო?",
+      "signUp": "რეგისტრაცია",
+      "keepSwiping": "გავაგრძელო გადაფურცვლა",
+      "noMoreDemoCardsTitle": "დემო ბარათები დასრულდა",
+      "noMoreDemoCardsSubtitle": "ახლა რეალურად სცადე გადაფურცვლა.",
+      "getStarted": "დაწყება",
+      "candidate": {
+        "eyebrow": "იპოვე სამუშაო — გადაფურცვლით",
+        "title": "შენი შემდეგი სამუშაო 30 წამში.",
+        "subtitle": "Tinder‑სტილის დასაქმება საქართველოში. გადაფურცლე ვაკანსიები, იპოვე შესაბამისობა, დაიწყე ჩატი.",
+        "steps": {
+          "step1Title": "შექმენი პროფილი",
+          "step1Text": "მოგვიყევი როლზე, ხელფასზე და უნარებზე.",
+          "step2Title": "გადაფურცლე სამუშაოები",
+          "step2Text": "მოგწონს — მარჯვნივ. არა — მარცხნივ.",
+          "step3Title": "შესაბამისობა და ჩატი",
+          "step3Text": "როცა ორივე მხარეს მოეწონება — იწყება საუბარი."
+        }
+      },
+      "employer": {
+        "eyebrow": "იპოვე თანამშრომელი — გადაფურცვლით",
+        "title": "შენი შემდეგი თანამშრომელი 30 წამში.",
+        "subtitle": "გამოაქვეყნე ვაკანსია, გადახედე კანდიდატებს და დააჩქარე დაქირავება გადაფურცვლით.",
+        "steps": {
+          "step1Title": "გამოაქვეყნე ვაკანსია",
+          "step1Text": "მიუთითე პოზიცია, ხელფასი და საჭირო უნარები.",
+          "step2Title": "გადაფურცლე კანდიდატები",
+          "step2Text": "მომწონს/გამოტოვება — სწრაფი შერჩევა.",
+          "step3Title": "შესაბამისობა და ინტერვიუ",
+          "step3Text": "ჩატი და შეხვედრის დაგეგმვა წუთებში."
+        }
+      },
+      "demoCards": [
+        {
+          "id": "react-dev",
+          "title": "Senior React დეველოპერი",
+          "company": "Tbilisi Product Studio",
+          "salary": "₾8k–₾12k",
+          "location": "თბილისი",
+          "workType": "ჰიბრიდი",
+          "tech": ["React", "Next.js", "TypeScript", "GraphQL"],
+          "description": "შექმენი სწრაფი, swipe‑პირველი პროდუქტი. იზრუნე UI‑ს ხარისხსა და წარმადობაზე.",
+          "photo": "https://images.unsplash.com/photo-1521737711867-e3b97395f902?w=1200&q=80"
+        },
+        {
+          "id": "designer",
+          "title": "პროდუქტის დიზაინერი",
+          "company": "Matcher Labs",
+          "salary": "₾5k–₾7k",
+          "location": "დისტანციურად",
+          "workType": "Remote",
+          "tech": ["Figma", "Design Systems", "UX Research"],
+          "description": "დააპროექტე მაღალი კონვერსიის onboarding და swipe‑ფლოუები. გადააქციე სიცხადე და ნდობა შედეგებად.",
+          "photo": "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=1200&q=80"
+        },
+        {
+          "id": "pm",
+          "title": "უმცროსი პროდუქტის მენეჯერი",
+          "company": "GeoCommerce",
+          "salary": "₾3k–₾4k",
+          "location": "თბილისი",
+          "workType": "სრული განაკვეთი",
+          "tech": ["Roadmaps", "Analytics", "Experimentation"],
+          "description": "გამოუშვი სიახლეები ყოველ კვირას. გაზომე funnel‑ი და გააუმჯობესე ბარათები და კომუნიკაცია.",
+          "photo": "https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&q=80"
+        }
+      ]
+    },
+    "antiResume": {
+      "oldSchool": "ძველი სკოლა",
+      "resumeTitle": "რეზიუმე",
+      "resumeSubtitle": "ატვირთე. შეავსე ფორმები. დაელოდე. თავიდან.",
+      "no": "არა",
+      "resumeChips": ["PDF", "პორტფოლიო", "მოტივაციის წერილი", "ATS"],
+      "newWay": "ახალი გზა",
+      "matcherCardTitle": "Matcher ბარათი",
+      "matcherCardSubtitle": "გადაფურცლე. დაემთხვე. იჩატე. დასრულდა.",
+      "yes": "კი",
+      "matcherDemoCard": {
+        "title": "Senior React დეველოპერი",
+        "company": "Tbilisi Product Studio",
+        "photo": "https://images.unsplash.com/photo-1521737711867-e3b97395f902?w=1200&q=80",
+        "chips": ["React", "Next.js", "TypeScript", "კარგი ხელფასი"],
+        "footerLeft": "Swipe‑სტილის შერჩევა",
+        "footerRight": "92% შესაბამისობა"
+      },
+      "ctaPrimary": "სცადე Matcher",
+      "ctaSecondary": "გაიგე მეტი"
+    },
     "heroTitlePrefix": "შენი პირველი",
     "heroTitleSuffix": "წუთებში აქაა.",
     "heroWordJob": "სამუშაო",

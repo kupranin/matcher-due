@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { CheckCircle2, FileText, XCircle } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import Image from "next/image";
 import Logo from "@/components/Logo";
 import Footer from "@/components/Footer";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -13,6 +14,28 @@ import InteractiveHero from "@/components/InteractiveHero";
 export default function Home() {
   const t = useTranslations("home");
   const tCommon = useTranslations("common");
+
+  const liveHeroLabels = {
+    segmentedCandidate: t("liveHero.segmentedCandidate"),
+    segmentedEmployer: t("liveHero.segmentedEmployer"),
+    howItWorks: t("liveHero.howItWorksTitle"),
+    like: t("liveHero.like"),
+    nope: t("liveHero.nope"),
+    swipeInstruction: t("liveHero.swipeInstruction"),
+    tapToExpand: t("liveHero.tapToExpand"),
+    hideDetails: t("liveHero.hideDetails"),
+    jobDescription: t("liveHero.jobDescription"),
+    techStack: t("liveHero.techStack"),
+    itsAMatchEyebrow: t("liveHero.itsAMatchEyebrow"),
+    itsAMatchTitle: t("liveHero.itsAMatchTitle"),
+    signUp: t("liveHero.signUp"),
+    keepSwiping: t("liveHero.keepSwiping"),
+    noMoreDemoCardsTitle: t("liveHero.noMoreDemoCardsTitle"),
+    noMoreDemoCardsSubtitle: t("liveHero.noMoreDemoCardsSubtitle"),
+    getStarted: t("liveHero.getStarted"),
+  } as const;
+
+  const demoCards = t.raw("liveHero.demoCards") as Array<import("@/components/InteractiveHero").DemoJobCard>;
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#070B12]">
@@ -51,29 +74,31 @@ export default function Home() {
 
       <InteractiveHero
         candidateCopy={{
-          eyebrow: "Swipe to find work",
-          title: "Meet your next job in 30 seconds.",
-          subtitle: "A Tinder-style job experience built for Georgia. Swipe roles, match fast, chat instantly.",
+          eyebrow: t("liveHero.candidate.eyebrow"),
+          title: t("liveHero.candidate.title"),
+          subtitle: t("liveHero.candidate.subtitle"),
           ctaPrimary: tCommon("getMatched"),
           ctaSecondary: tCommon("imHiring"),
         }}
         employerCopy={{
-          eyebrow: "Swipe to hire",
-          title: "Meet your next hire in 30 seconds.",
-          subtitle: "Post roles, review candidates, and match faster with a swipe-first experience.",
+          eyebrow: t("liveHero.employer.eyebrow"),
+          title: t("liveHero.employer.title"),
+          subtitle: t("liveHero.employer.subtitle"),
           ctaPrimary: tCommon("imHiring"),
           ctaSecondary: tCommon("getMatched"),
         }}
         candidateHowItWorks={[
-          { title: "Create a profile", text: "Tell us your role, salary, and skills." },
-          { title: "Swipe jobs", text: "Like roles that fit. Pass the rest." },
-          { title: "Match & chat", text: "When both sides like — start a conversation." },
+          { title: t("liveHero.candidate.steps.step1Title"), text: t("liveHero.candidate.steps.step1Text") },
+          { title: t("liveHero.candidate.steps.step2Title"), text: t("liveHero.candidate.steps.step2Text") },
+          { title: t("liveHero.candidate.steps.step3Title"), text: t("liveHero.candidate.steps.step3Text") },
         ]}
         employerHowItWorks={[
-          { title: "Post a vacancy", text: "Add title, salary, and required skills." },
-          { title: "Swipe candidates", text: "Shortlist fast with LIKE/NOPE." },
-          { title: "Match & interview", text: "Chat and schedule in minutes." },
+          { title: t("liveHero.employer.steps.step1Title"), text: t("liveHero.employer.steps.step1Text") },
+          { title: t("liveHero.employer.steps.step2Title"), text: t("liveHero.employer.steps.step2Text") },
+          { title: t("liveHero.employer.steps.step3Title"), text: t("liveHero.employer.steps.step3Text") },
         ]}
+        labels={liveHeroLabels}
+        demoCards={demoCards}
       />
 
       {/* Anti-Resume comparison */}
@@ -90,13 +115,13 @@ export default function Home() {
             <div className="relative flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
-                  Old school
+                  {t("antiResume.oldSchool")}
                 </p>
                 <h2 className="mt-2 text-2xl font-extrabold tracking-tight">
-                  Resume
+                  {t("antiResume.resumeTitle")}
                 </h2>
                 <p className="mt-2 text-sm text-white/70">
-                  Upload. Fill forms. Wait. Repeat.
+                  {t("antiResume.resumeSubtitle")}
                 </p>
               </div>
               <motion.div
@@ -105,7 +130,7 @@ export default function Home() {
                 className="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white/80"
               >
                 <XCircle className="h-4 w-4 text-rose-400" />
-                No
+                {t("antiResume.no")}
               </motion.div>
             </div>
 
@@ -126,7 +151,7 @@ export default function Home() {
                 <div className="h-2.5 w-9/12 rounded bg-white/10" />
               </div>
               <div className="mt-5 flex flex-wrap gap-2">
-                {["PDF", "Portfolios", "Cover letters", "ATS"].map((x) => (
+                {(t.raw("antiResume.resumeChips") as string[]).map((x) => (
                   <span
                     key={x}
                     className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white/70"
@@ -149,13 +174,13 @@ export default function Home() {
             <div className="relative flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">
-                  New way
+                  {t("antiResume.newWay")}
                 </p>
                 <h2 className="mt-2 text-2xl font-extrabold tracking-tight">
-                  Matcher Card
+                  {t("antiResume.matcherCardTitle")}
                 </h2>
                 <p className="mt-2 text-sm text-white/80">
-                  Swipe. Match. Chat. Done.
+                  {t("antiResume.matcherCardSubtitle")}
                 </p>
               </div>
               <motion.div
@@ -164,16 +189,27 @@ export default function Home() {
                 className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white"
               >
                 <CheckCircle2 className="h-4 w-4 text-emerald-300" />
-                Yes
+                {t("antiResume.yes")}
               </motion.div>
             </div>
 
             <div className="relative mt-6 overflow-hidden rounded-2xl border border-white/15 bg-white/10">
+              <div className="relative aspect-[16/9] w-full overflow-hidden bg-white/5">
+                <div className="absolute inset-0 animate-pulse bg-white/10" aria-hidden />
+                <Image
+                  src={t("antiResume.matcherDemoCard.photo")}
+                  alt=""
+                  fill
+                  sizes="(min-width: 768px) 520px, 92vw"
+                  className="object-cover"
+                />
+                <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/65 to-transparent" aria-hidden />
+              </div>
               <div className="p-5">
-                <p className="text-lg font-bold">Senior React Developer</p>
-                <p className="mt-1 text-sm font-semibold text-white/80">Tbilisi Product Studio</p>
+                <p className="text-lg font-bold">{t("antiResume.matcherDemoCard.title")}</p>
+                <p className="mt-1 text-sm font-semibold text-white/80">{t("antiResume.matcherDemoCard.company")}</p>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {["React", "Next.js", "TypeScript", "Great salary"].map((x) => (
+                  {(t.raw("antiResume.matcherDemoCard.chips") as string[]).map((x) => (
                     <span
                       key={x}
                       className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-white/90"
@@ -184,9 +220,9 @@ export default function Home() {
                 </div>
               </div>
               <div className="flex items-center justify-between border-t border-white/10 bg-white/5 px-5 py-4">
-                <p className="text-xs font-semibold text-white/70">Tinder-style matching</p>
+                <p className="text-xs font-semibold text-white/70">{t("antiResume.matcherDemoCard.footerLeft")}</p>
                 <p className="rounded-full bg-matcher-bright px-3 py-1 text-xs font-black text-charcoal">
-                  92% match
+                  {t("antiResume.matcherDemoCard.footerRight")}
                 </p>
               </div>
             </div>
@@ -196,24 +232,22 @@ export default function Home() {
                 href="/userFlow/1"
                 className="inline-flex items-center justify-center rounded-xl bg-matcher px-6 py-3 font-semibold text-white hover:bg-matcher-dark"
               >
-                Try Matcher
+                {t("antiResume.ctaPrimary")}
               </Link>
               <Link
                 href="/about"
                 className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-6 py-3 font-semibold text-white/90 hover:bg-white/15"
               >
-                Learn more
+                {t("antiResume.ctaSecondary")}
               </Link>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Switch to light surface for the rest of the page */}
-      <div className="bg-white">
-        {/* Value proposition – stats */}
-        <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12 md:py-16">
-          <h2 className="text-center text-xl font-bold tracking-tight text-gray-900 sm:text-2xl md:text-3xl">
+      {/* Value proposition – stats */}
+      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 md:py-20">
+        <h2 className="text-center text-xl font-extrabold tracking-tight text-white sm:text-2xl md:text-3xl">
             {t("valuePropositionTitle")}
           </h2>
           <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 md:gap-6 sm:mt-10 md:mt-12">
@@ -234,18 +268,10 @@ export default function Home() {
                   transition: { duration: 0.2 },
                 }}
                 whileTap={{ scale: 0.98 }}
-                className={`stats-value-prop relative overflow-hidden rounded-xl border-2 p-4 text-center shadow-sm transition-shadow hover:shadow-md sm:rounded-2xl sm:p-5 md:p-6 ${
-                  key === "stat_1"
-                    ? "border-matcher/30 bg-matcher-pale/60"
-                    : key === "stat_2"
-                      ? "border-matcher-teal/25 bg-matcher-mint/40"
-                      : key === "stat_3"
-                        ? "border-matcher-amber/25 bg-matcher-amber/10"
-                        : "border-matcher-dark/20 bg-matcher-pale/50"
-                }`}
+                className="stats-value-prop relative overflow-hidden rounded-2xl border border-white/15 bg-white/10 p-4 text-center shadow-xl shadow-black/10 backdrop-blur-md transition hover:bg-white/[0.12] sm:p-5 md:p-6"
               >
                 <motion.span
-                  className="block text-3xl font-bold tracking-tight text-primary sm:text-4xl"
+                  className="block text-3xl font-extrabold tracking-tight text-white sm:text-4xl"
                   initial={{ scale: 0.9 }}
                   whileInView={{ scale: 1 }}
                   viewport={{ once: true }}
@@ -254,7 +280,7 @@ export default function Home() {
                   {t(`stats.${key}_value`)}
                 </motion.span>
                 <motion.div
-                  className="mt-1.5 text-sm font-medium text-muted-foreground leading-relaxed"
+                  className="mt-1.5 text-sm font-semibold text-white/70 leading-relaxed"
                   initial={{ opacity: 0 }}
                   whileInView={{ opacity: 1 }}
                   viewport={{ once: true }}
@@ -265,11 +291,11 @@ export default function Home() {
               </motion.div>
             ))}
           </div>
-        </section>
+      </section>
 
       {/* Testimonials */}
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 md:py-20">
-        <h2 className="text-center text-xl font-bold tracking-tight text-gray-900 sm:text-2xl md:text-3xl">
+        <h2 className="text-center text-xl font-extrabold tracking-tight text-white sm:text-2xl md:text-3xl">
           {t("testimonialsTitle")}
         </h2>
         <div className="mt-8 grid grid-cols-1 gap-4 sm:mt-10 sm:gap-5 md:grid-cols-3 md:gap-6 md:mt-12">
@@ -289,22 +315,22 @@ export default function Home() {
           ].map((item) => (
             <div
               key={item.name}
-              className={`rounded-2xl border border-gray-200 border-l-4 bg-white p-4 sm:p-5 md:p-6 ${item.accent}`}
+              className="rounded-2xl border border-white/15 bg-white/10 p-4 text-white shadow-xl shadow-black/10 backdrop-blur-md sm:p-5 md:p-6"
             >
-              <p className="text-gray-600">&ldquo;{item.quote}&rdquo;</p>
-              <p className="mt-4 text-sm font-semibold text-gray-900">
+              <p className="text-white/80">&ldquo;{item.quote}&rdquo;</p>
+              <p className="mt-4 text-sm font-bold text-white">
                 {item.name}, {item.city}
               </p>
-              <p className="text-sm text-gray-500">{item.role}</p>
+              <p className="text-sm font-semibold text-white/60">{item.role}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* How it works */}
-      <section className="border-t border-matcher/20 bg-gradient-to-b from-matcher-mint/20 to-matcher-pale/50 py-12 sm:py-16 md:py-20">
+      <section className="border-t border-white/10 py-12 sm:py-16 md:py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <h2 className="text-center text-xl font-bold tracking-tight text-gray-900 sm:text-2xl md:text-3xl">
+          <h2 className="text-center text-xl font-extrabold tracking-tight text-white sm:text-2xl md:text-3xl">
             {t("howItWorksTitle")}
           </h2>
           <div className="mt-8 grid grid-cols-1 gap-5 sm:mt-10 sm:gap-6 md:grid-cols-3 md:gap-8 md:mt-12">
@@ -333,11 +359,11 @@ export default function Home() {
             ].map((item) => (
               <div
                 key={item.step}
-                className={`rounded-2xl border-2 bg-white p-5 text-center sm:p-6 ${item.bg}`}
+                className="rounded-2xl border border-white/15 bg-white/10 p-5 text-center text-white shadow-xl shadow-black/10 backdrop-blur-md sm:p-6"
               >
                 <span className="text-2xl">{item.icon}</span>
-                <p className="mt-3 font-semibold text-gray-900">{item.title}</p>
-                <p className="mt-1 text-sm text-gray-500">{item.text}</p>
+                <p className="mt-3 text-base font-bold text-white">{item.title}</p>
+                <p className="mt-1 text-sm font-semibold text-white/70">{item.text}</p>
               </div>
             ))}
           </div>
@@ -345,9 +371,9 @@ export default function Home() {
       </section>
 
       {/* Trusted – social proof */}
-      <section className="border-t border-matcher/15 bg-gradient-to-b from-matcher-pale/40 to-matcher-mint/20 py-12 sm:py-14 md:py-16">
+      <section className="border-t border-white/10 py-12 sm:py-14 md:py-16">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
-          <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-matcher-dark/90">
+          <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-white/65">
             {t("socialProofTitle")}
           </p>
           <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-8">
@@ -356,30 +382,30 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4 }}
-              className="rounded-2xl border border-matcher/20 bg-white px-6 py-6 text-center shadow-sm sm:px-8 sm:py-8"
+              className="rounded-2xl border border-white/15 bg-white/10 px-6 py-6 text-center text-white shadow-xl shadow-black/10 backdrop-blur-md sm:px-8 sm:py-8"
             >
-              <p className="font-heading text-3xl font-bold text-matcher-dark sm:text-4xl">20+</p>
-              <p className="mt-1 text-sm font-medium text-gray-600">{t("socialProofCompanies")}</p>
+              <p className="font-heading text-3xl font-extrabold text-white sm:text-4xl">20+</p>
+              <p className="mt-1 text-sm font-semibold text-white/70">{t("socialProofCompanies")}</p>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: 0.1 }}
-              className="rounded-2xl border border-matcher/20 bg-white px-6 py-6 text-center shadow-sm sm:px-8 sm:py-8"
+              className="rounded-2xl border border-white/15 bg-white/10 px-6 py-6 text-center text-white shadow-xl shadow-black/10 backdrop-blur-md sm:px-8 sm:py-8"
             >
-              <p className="font-heading text-3xl font-bold text-matcher-dark sm:text-4xl">150</p>
-              <p className="mt-1 text-sm font-medium text-gray-600">{t("socialProofVacancies")}</p>
+              <p className="font-heading text-3xl font-extrabold text-white sm:text-4xl">150</p>
+              <p className="mt-1 text-sm font-semibold text-white/70">{t("socialProofVacancies")}</p>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: 0.2 }}
-              className="rounded-2xl border border-matcher/20 bg-white px-6 py-6 text-center shadow-sm sm:px-8 sm:py-8"
+              className="rounded-2xl border border-white/15 bg-white/10 px-6 py-6 text-center text-white shadow-xl shadow-black/10 backdrop-blur-md sm:px-8 sm:py-8"
             >
-              <p className="font-heading text-3xl font-bold text-matcher-dark sm:text-4xl">1,000+</p>
-              <p className="mt-1 text-sm font-medium text-gray-600">{t("socialProofUsers")}</p>
+              <p className="font-heading text-3xl font-extrabold text-white sm:text-4xl">1,000+</p>
+              <p className="mt-1 text-sm font-semibold text-white/70">{t("socialProofUsers")}</p>
             </motion.div>
           </div>
         </div>
@@ -388,12 +414,12 @@ export default function Home() {
       {/* Final CTA */}
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 md:py-20">
         <div
-          className="rounded-2xl border border-matcher bg-gradient-to-br from-matcher-pale to-matcher-mint p-8 text-center sm:p-10 md:p-12 lg:p-16"
+          className="rounded-3xl border border-white/15 bg-white/10 p-8 text-center text-white shadow-2xl shadow-black/15 backdrop-blur-md sm:p-10 md:p-12 lg:p-16"
         >
-          <h2 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl md:text-3xl">
+          <h2 className="text-xl font-extrabold tracking-tight text-white sm:text-2xl md:text-3xl">
             {t("readyTitle")}
           </h2>
-          <p className="mt-2 text-gray-600 sm:mt-3 sm:text-base">
+          <p className="mt-2 text-white/75 sm:mt-3 sm:text-base">
             {t("readySubtitle")}
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:mt-8 sm:gap-4">
@@ -408,7 +434,7 @@ export default function Home() {
             <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
               <Link
                 href="/employer"
-                className="inline-block rounded-xl border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-800 hover:bg-gray-50"
+                className="inline-block rounded-xl border border-white/20 bg-white/10 px-6 py-3 font-semibold text-white/90 hover:bg-white/15"
               >
                 {tCommon("imHiring")}
               </Link>
@@ -416,10 +442,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      </div>
-
-      <Footer />
+      <Footer variant="dark" />
     </main>
   );
 }

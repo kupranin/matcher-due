@@ -20,12 +20,34 @@ export type DemoJobCard = {
   photo: string;
 };
 
+export type InteractiveHeroLabels = {
+  segmentedCandidate: string;
+  segmentedEmployer: string;
+  howItWorks: string;
+  like: string;
+  nope: string;
+  swipeInstruction: string;
+  tapToExpand: string;
+  hideDetails: string;
+  jobDescription: string;
+  techStack: string;
+  itsAMatchEyebrow: string;
+  itsAMatchTitle: string;
+  signUp: string;
+  keepSwiping: string;
+  noMoreDemoCardsTitle: string;
+  noMoreDemoCardsSubtitle: string;
+  getStarted: string;
+};
+
 function SegmentedAudienceControl({
   value,
   onChange,
+  labels,
 }: {
   value: Audience;
   onChange: (v: Audience) => void;
+  labels: Pick<InteractiveHeroLabels, "segmentedCandidate" | "segmentedEmployer">;
 }) {
   return (
     <div className="inline-flex items-center rounded-full border border-white/20 bg-white/10 p-1 backdrop-blur-md">
@@ -40,7 +62,7 @@ function SegmentedAudienceControl({
         aria-pressed={value === "candidate"}
       >
         <User className="h-4 w-4" />
-        I’m a Candidate
+        {labels.segmentedCandidate}
       </button>
       <button
         type="button"
@@ -53,7 +75,7 @@ function SegmentedAudienceControl({
         aria-pressed={value === "employer"}
       >
         <Briefcase className="h-4 w-4" />
-        I’m an Employer
+        {labels.segmentedEmployer}
       </button>
     </div>
   );
@@ -63,10 +85,21 @@ function DemoSwipeCard({
   card,
   onSwipe,
   zIndex,
+  labels,
 }: {
   card: DemoJobCard;
   onSwipe: (dir: "left" | "right") => void;
   zIndex: number;
+  labels: Pick<
+    InteractiveHeroLabels,
+    | "like"
+    | "nope"
+    | "swipeInstruction"
+    | "tapToExpand"
+    | "hideDetails"
+    | "jobDescription"
+    | "techStack"
+  >;
 }) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-220, 220], [-14, 14]);
@@ -122,12 +155,12 @@ function DemoSwipeCard({
           {/* LIKE / NOPE stamps */}
           <motion.div style={{ opacity: likeOpacity }} className="pointer-events-none absolute inset-0 flex items-center justify-end pr-8">
             <div className="rounded-2xl border-4 border-matcher bg-matcher/90 px-6 py-3 shadow-xl -rotate-12">
-              <span className="text-3xl font-black uppercase tracking-wider text-white">LIKE</span>
+              <span className="text-3xl font-black uppercase tracking-wider text-white">{labels.like}</span>
             </div>
           </motion.div>
           <motion.div style={{ opacity: nopeOpacity }} className="pointer-events-none absolute inset-0 flex items-center justify-start pl-8">
             <div className="rounded-2xl border-4 border-rose-400 bg-rose-500/90 px-6 py-3 shadow-xl rotate-12">
-              <span className="text-3xl font-black uppercase tracking-wider text-white">NOPE</span>
+              <span className="text-3xl font-black uppercase tracking-wider text-white">{labels.nope}</span>
             </div>
           </motion.div>
         </div>
@@ -149,7 +182,7 @@ function DemoSwipeCard({
               className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/15"
               aria-expanded={expanded}
             >
-              {expanded ? "Hide details" : "Tap to expand"}
+              {expanded ? labels.hideDetails : labels.tapToExpand}
               <span aria-hidden className="text-white/70">
                 {expanded ? "▴" : "▾"}
               </span>
@@ -166,11 +199,11 @@ function DemoSwipeCard({
                 >
                   <div className="mt-3 space-y-3 rounded-2xl bg-white/10 p-4">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-white/70">Job description</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-white/70">{labels.jobDescription}</p>
                       <p className="mt-1 text-sm text-white/90">{card.description}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-white/70">Tech stack</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-white/70">{labels.techStack}</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {card.tech.map((t) => (
                           <span key={t} className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/90">
@@ -185,7 +218,7 @@ function DemoSwipeCard({
             </AnimatePresence>
           </div>
 
-          <p className="mt-4 text-sm font-medium text-white/80">Swipe right to like, left to pass.</p>
+          <p className="mt-4 text-sm font-medium text-white/80">{labels.swipeInstruction}</p>
         </div>
       </div>
     </motion.div>
@@ -196,10 +229,15 @@ function MatchOverlay({
   open,
   onClose,
   ctaHref,
+  labels,
 }: {
   open: boolean;
   onClose: () => void;
   ctaHref: string;
+  labels: Pick<
+    InteractiveHeroLabels,
+    "itsAMatchEyebrow" | "itsAMatchTitle" | "signUp" | "keepSwiping"
+  >;
 }) {
   const confetti = useMemo(() => {
     return Array.from({ length: 18 }).map((_, i) => ({
@@ -258,8 +296,8 @@ function MatchOverlay({
                 <Sparkles className="h-6 w-6 text-matcher-bright" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white/80">It’s a Match!</p>
-                <h4 className="text-xl font-bold tracking-tight">Ready to do this for real?</h4>
+                <p className="text-sm font-semibold text-white/80">{labels.itsAMatchEyebrow}</p>
+                <h4 className="text-xl font-bold tracking-tight">{labels.itsAMatchTitle}</h4>
               </div>
             </div>
 
@@ -269,14 +307,14 @@ function MatchOverlay({
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-matcher px-5 py-3 text-sm font-semibold text-white hover:bg-matcher-dark"
               >
                 <Heart className="h-4 w-4" />
-                Sign up
+                {labels.signUp}
               </Link>
               <button
                 type="button"
                 onClick={onClose}
                 className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white/90 hover:bg-white/15"
               >
-                Keep swiping
+                {labels.keepSwiping}
               </button>
             </div>
           </motion.div>
@@ -291,48 +329,18 @@ export default function InteractiveHero({
   employerCopy,
   candidateHowItWorks,
   employerHowItWorks,
+  labels,
+  demoCards,
 }: {
   candidateCopy: { eyebrow: string; title: string; subtitle: string; ctaPrimary: string; ctaSecondary: string };
   employerCopy: { eyebrow: string; title: string; subtitle: string; ctaPrimary: string; ctaSecondary: string };
   candidateHowItWorks: Array<{ title: string; text: string }>;
   employerHowItWorks: Array<{ title: string; text: string }>;
+  labels: InteractiveHeroLabels;
+  demoCards: DemoJobCard[];
 }) {
   const [audience, setAudience] = useState<Audience>("candidate");
-  const [deck, setDeck] = useState<DemoJobCard[]>(() => [
-    {
-      id: "react-dev",
-      title: "Senior React Developer",
-      company: "Tbilisi Product Studio",
-      salary: "₾8k–₾12k",
-      location: "Tbilisi",
-      workType: "Hybrid",
-      tech: ["React", "Next.js", "TypeScript", "GraphQL"],
-      description: "Build a fast, swipe-first marketplace experience. Own UI performance and component quality.",
-      photo: "https://images.unsplash.com/photo-1521737711867-e3b97395f902?w=1200&q=80",
-    },
-    {
-      id: "designer",
-      title: "Product Designer",
-      company: "Matcher Labs",
-      salary: "₾5k–₾7k",
-      location: "Remote",
-      workType: "Remote",
-      tech: ["Figma", "Design Systems", "UX Research"],
-      description: "Design high-conversion onboarding and swipe flows. Turn trust and clarity into retention.",
-      photo: "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=1200&q=80",
-    },
-    {
-      id: "pm",
-      title: "Associate Product Manager",
-      company: "GeoCommerce",
-      salary: "₾3k–₾4k",
-      location: "Tbilisi",
-      workType: "Full-time",
-      tech: ["Roadmaps", "Analytics", "Experimentation"],
-      description: "Ship weekly. Instrument the matching funnel and iterate on copy, cards, and conversation triggers.",
-      photo: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&q=80",
-    },
-  ]);
+  const [deck, setDeck] = useState<DemoJobCard[]>(() => demoCards);
   const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
   const [matchOpen, setMatchOpen] = useState(false);
 
@@ -358,7 +366,14 @@ export default function InteractiveHero({
             <span className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-white/90 backdrop-blur-md">
               {copy.eyebrow}
             </span>
-            <SegmentedAudienceControl value={audience} onChange={setAudience} />
+            <SegmentedAudienceControl
+              value={audience}
+              onChange={setAudience}
+              labels={{
+                segmentedCandidate: labels.segmentedCandidate,
+                segmentedEmployer: labels.segmentedEmployer,
+              }}
+            />
           </div>
           <h1 className="mt-5 text-balance text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
             {copy.title}
@@ -409,7 +424,7 @@ export default function InteractiveHero({
 
         {/* How it works */}
         <div className="mt-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">How it works</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">{labels.howItWorks}</p>
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
             {steps.slice(0, 3).map((s) => (
               <div
@@ -443,7 +458,20 @@ export default function InteractiveHero({
                 }}
                 className="absolute inset-0"
               >
-                <DemoSwipeCard card={current} onSwipe={swipe} zIndex={3} />
+                <DemoSwipeCard
+                  card={current}
+                  onSwipe={swipe}
+                  zIndex={3}
+                  labels={{
+                    like: labels.like,
+                    nope: labels.nope,
+                    swipeInstruction: labels.swipeInstruction,
+                    tapToExpand: labels.tapToExpand,
+                    hideDetails: labels.hideDetails,
+                    jobDescription: labels.jobDescription,
+                    techStack: labels.techStack,
+                  }}
+                />
               </motion.div>
             ) : (
               <motion.div
@@ -451,10 +479,10 @@ export default function InteractiveHero({
                 animate={{ opacity: 1, scale: 1 }}
                 className="flex h-full flex-col items-center justify-center rounded-3xl border border-white/20 bg-white/10 p-8 text-center text-white backdrop-blur-md"
               >
-                <p className="text-4xl font-extrabold">No more demo cards</p>
-                <p className="mt-3 text-white/80">Ready to swipe for real?</p>
+                <p className="text-3xl font-extrabold sm:text-4xl">{labels.noMoreDemoCardsTitle}</p>
+                <p className="mt-3 text-white/80">{labels.noMoreDemoCardsSubtitle}</p>
                 <Link href={ctaHref} className="mt-6 rounded-xl bg-matcher px-6 py-3 font-semibold text-white hover:bg-matcher-dark">
-                  Get started
+                  {labels.getStarted}
                 </Link>
               </motion.div>
             )}
@@ -482,7 +510,17 @@ export default function InteractiveHero({
           </button>
         </div>
 
-        <MatchOverlay open={matchOpen} onClose={() => setMatchOpen(false)} ctaHref={ctaHref} />
+        <MatchOverlay
+          open={matchOpen}
+          onClose={() => setMatchOpen(false)}
+          ctaHref={ctaHref}
+          labels={{
+            itsAMatchEyebrow: labels.itsAMatchEyebrow,
+            itsAMatchTitle: labels.itsAMatchTitle,
+            signUp: labels.signUp,
+            keepSwiping: labels.keepSwiping,
+          }}
+        />
       </div>
     </section>
   );

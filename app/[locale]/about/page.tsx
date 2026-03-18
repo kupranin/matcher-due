@@ -256,8 +256,8 @@ export default function AboutPage() {
 
         {/* Swipe the Team (flip carousel) */}
         <SwipeTeamCarousel
-          title="Swipe the Team"
-          subtitle="Tap a card to flip. Swipe/scroll horizontally to explore."
+          title={t("swipeTeam.title")}
+          subtitle={t("swipeTeam.subtitle")}
           members={teamMembers}
         />
       </main>
