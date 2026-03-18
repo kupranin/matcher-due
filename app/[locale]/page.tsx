@@ -18,6 +18,8 @@ export default function Home() {
   const tCommon = useTranslations("common");
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
+  const [antiResumeImgLoaded, setAntiResumeImgLoaded] = useState(false);
+  const [antiResumeImgError, setAntiResumeImgError] = useState(false);
 
   const liveHeroLabels = {
     segmentedCandidate: t("liveHero.segmentedCandidate"),
@@ -238,13 +240,35 @@ export default function Home() {
 
             <div className={`relative mt-6 overflow-hidden rounded-2xl border ${isDark ? "border-white/15 bg-white/10" : "border-gray-200 bg-white"}`}>
               <div className={`relative aspect-[16/9] w-full overflow-hidden ${isDark ? "bg-white/5" : "bg-gray-100"}`}>
-                <div className={`absolute inset-0 animate-pulse ${isDark ? "bg-white/10" : "bg-gray-200"}`} aria-hidden />
+                {!antiResumeImgLoaded && (
+                  <div
+                    className={`absolute inset-0 animate-pulse ${isDark ? "bg-white/10" : "bg-gray-200"}`}
+                    aria-hidden
+                  />
+                )}
+                {antiResumeImgError && (
+                  <div
+                    className={`absolute inset-0 ${
+                      isDark
+                        ? "bg-gradient-to-br from-white/10 via-white/5 to-white/10"
+                        : "bg-gradient-to-br from-matcher-pale via-white to-matcher-mint/40"
+                    }`}
+                    aria-hidden
+                  />
+                )}
                 <Image
                   src={t("antiResume.matcherDemoCard.photo")}
                   alt=""
                   fill
                   sizes="(min-width: 768px) 520px, 92vw"
-                  className="object-cover"
+                  className={`object-cover transition-opacity duration-300 ${
+                    antiResumeImgLoaded ? "opacity-100" : "opacity-0"
+                  }`}
+                  onLoadingComplete={() => setAntiResumeImgLoaded(true)}
+                  onError={() => {
+                    setAntiResumeImgError(true);
+                    setAntiResumeImgLoaded(true);
+                  }}
                 />
                 <div className={`absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t ${isDark ? "from-black/65" : "from-white/70"} to-transparent`} aria-hidden />
               </div>

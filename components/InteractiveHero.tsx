@@ -44,20 +44,33 @@ function SegmentedAudienceControl({
   value,
   onChange,
   labels,
+  theme,
 }: {
   value: Audience;
   onChange: (v: Audience) => void;
   labels: Pick<InteractiveHeroLabels, "segmentedCandidate" | "segmentedEmployer">;
+  theme: "light" | "dark";
 }) {
+  const isDark = theme === "dark";
   return (
-    <div className="inline-flex items-center rounded-full border border-white/20 bg-white/10 p-1 backdrop-blur-md">
+    <div
+      className={
+        isDark
+          ? "inline-flex items-center rounded-full border border-white/20 bg-white/10 p-1 backdrop-blur-md"
+          : "inline-flex items-center rounded-full border border-gray-200 bg-white p-1 shadow-sm"
+      }
+    >
       <button
         type="button"
         onClick={() => onChange("candidate")}
         className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition ${
           value === "candidate"
-            ? "bg-white text-gray-900 shadow-sm"
-            : "text-white/85 hover:text-white"
+            ? isDark
+              ? "bg-white text-gray-900 shadow-sm"
+              : "bg-matcher-pale text-matcher-dark"
+            : isDark
+              ? "text-white/85 hover:text-white"
+              : "text-gray-600 hover:text-gray-900"
         }`}
         aria-pressed={value === "candidate"}
       >
@@ -69,8 +82,12 @@ function SegmentedAudienceControl({
         onClick={() => onChange("employer")}
         className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition ${
           value === "employer"
-            ? "bg-white text-gray-900 shadow-sm"
-            : "text-white/85 hover:text-white"
+            ? isDark
+              ? "bg-white text-gray-900 shadow-sm"
+              : "bg-matcher-pale text-matcher-dark"
+            : isDark
+              ? "text-white/85 hover:text-white"
+              : "text-gray-600 hover:text-gray-900"
         }`}
         aria-pressed={value === "employer"}
       >
@@ -86,6 +103,7 @@ function DemoSwipeCard({
   onSwipe,
   zIndex,
   labels,
+  theme,
 }: {
   card: DemoJobCard;
   onSwipe: (dir: "left" | "right") => void;
@@ -100,7 +118,9 @@ function DemoSwipeCard({
     | "jobDescription"
     | "techStack"
   >;
+  theme: "light" | "dark";
 }) {
+  const isDark = theme === "dark";
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-220, 220], [-14, 14]);
   const likeOpacity = useTransform(x, [0, 60, 110], [0, 0.4, 1]);
@@ -110,6 +130,7 @@ function DemoSwipeCard({
 
   const [expanded, setExpanded] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   function handleDragEnd(_: unknown, info: PanInfo) {
     const threshold = 90;
@@ -135,10 +156,31 @@ function DemoSwipeCard({
         <motion.div style={{ opacity: bgRightOpacity }} className="flex-1 bg-emerald-500/35" aria-hidden />
       </div>
 
-      <div className="relative flex h-full w-full flex-col overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-2xl shadow-black/15 backdrop-blur-md">
+      <div
+        className={
+          isDark
+            ? "relative flex h-full w-full flex-col overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-2xl shadow-black/15 backdrop-blur-md"
+            : "relative flex h-full w-full flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-lg"
+        }
+      >
         <div className="relative aspect-[4/3] w-full overflow-hidden">
           {/* skeleton */}
-          {!imgLoaded && <div className="absolute inset-0 animate-pulse bg-white/10" aria-hidden />}
+          {!imgLoaded && (
+            <div
+              className={`absolute inset-0 animate-pulse ${isDark ? "bg-white/10" : "bg-gray-200"}`}
+              aria-hidden
+            />
+          )}
+          {imgError && (
+            <div
+              className={`absolute inset-0 ${
+                isDark
+                  ? "bg-gradient-to-br from-white/10 via-white/5 to-white/10"
+                  : "bg-gradient-to-br from-matcher-pale via-white to-matcher-mint/40"
+              }`}
+              aria-hidden
+            />
+          )}
           <Image
             src={card.photo}
             alt=""
@@ -146,6 +188,10 @@ function DemoSwipeCard({
             className={`object-cover transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
             sizes="(min-width: 768px) 420px, 90vw"
             onLoadingComplete={() => setImgLoaded(true)}
+            onError={() => {
+              setImgError(true);
+              setImgLoaded(true);
+            }}
             priority={zIndex > 1}
           />
           <div className="absolute right-3 top-3 rounded-full bg-matcher-bright px-3 py-1.5 text-sm font-bold text-charcoal shadow-lg">
@@ -165,25 +211,33 @@ function DemoSwipeCard({
           </motion.div>
         </div>
 
-        <div className="flex flex-1 flex-col justify-between p-5 text-white">
+        <div className={`flex flex-1 flex-col justify-between p-5 ${isDark ? "text-white" : "text-gray-900"}`}>
           <div>
             <h3 className="text-xl font-bold tracking-tight">{card.title}</h3>
-            <p className="mt-0.5 text-white/85">{card.company}</p>
+            <p className={`mt-0.5 ${isDark ? "text-white/85" : "text-gray-600"}`}>{card.company}</p>
 
             {/* quick view */}
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-              <span className="rounded-full bg-white/15 px-3 py-1 font-semibold">{card.location}</span>
-              <span className="rounded-full bg-white/15 px-3 py-1 font-semibold">{card.workType}</span>
+              <span className={`rounded-full px-3 py-1 font-semibold ${isDark ? "bg-white/15" : "bg-gray-100 text-gray-700"}`}>
+                {card.location}
+              </span>
+              <span className={`rounded-full px-3 py-1 font-semibold ${isDark ? "bg-white/15" : "bg-gray-100 text-gray-700"}`}>
+                {card.workType}
+              </span>
             </div>
 
             <button
               type="button"
               onClick={() => setExpanded((e) => !e)}
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/15"
+              className={
+                isDark
+                  ? "mt-4 inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/15"
+                  : "mt-4 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+              }
               aria-expanded={expanded}
             >
               {expanded ? labels.hideDetails : labels.tapToExpand}
-              <span aria-hidden className="text-white/70">
+              <span aria-hidden className={isDark ? "text-white/70" : "text-gray-500"}>
                 {expanded ? "▴" : "▾"}
               </span>
             </button>
@@ -197,16 +251,21 @@ function DemoSwipeCard({
                   transition={{ duration: 0.2, ease: "easeOut" }}
                   className="overflow-hidden"
                 >
-                  <div className="mt-3 space-y-3 rounded-2xl bg-white/10 p-4">
+                  <div className={`mt-3 space-y-3 rounded-2xl p-4 ${isDark ? "bg-white/10" : "bg-gray-50 border border-gray-200"}`}>
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-white/70">{labels.jobDescription}</p>
-                      <p className="mt-1 text-sm text-white/90">{card.description}</p>
+                      <p className={`text-xs font-semibold uppercase tracking-wide ${isDark ? "text-white/70" : "text-gray-600"}`}>{labels.jobDescription}</p>
+                      <p className={`mt-1 text-sm ${isDark ? "text-white/90" : "text-gray-700"}`}>{card.description}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-white/70">{labels.techStack}</p>
+                      <p className={`text-xs font-semibold uppercase tracking-wide ${isDark ? "text-white/70" : "text-gray-600"}`}>{labels.techStack}</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {card.tech.map((t) => (
-                          <span key={t} className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/90">
+                          <span
+                            key={t}
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                              isDark ? "bg-white/15 text-white/90" : "bg-white border border-gray-200 text-gray-700"
+                            }`}
+                          >
                             {t}
                           </span>
                         ))}
@@ -218,7 +277,7 @@ function DemoSwipeCard({
             </AnimatePresence>
           </div>
 
-          <p className="mt-4 text-sm font-medium text-white/80">{labels.swipeInstruction}</p>
+          <p className={`mt-4 text-sm font-medium ${isDark ? "text-white/80" : "text-gray-600"}`}>{labels.swipeInstruction}</p>
         </div>
       </div>
     </motion.div>
@@ -382,6 +441,7 @@ export default function InteractiveHero({
                 segmentedCandidate: labels.segmentedCandidate,
                 segmentedEmployer: labels.segmentedEmployer,
               }}
+              theme={theme}
             />
           </div>
           <h1
@@ -425,9 +485,9 @@ export default function InteractiveHero({
           className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3"
         >
           {[
-            { label: "Your Profile", icon: <User className="h-5 w-5 text-white/90" /> },
-            { label: "Algorithm", icon: <Sparkles className="h-5 w-5 text-white/90" /> },
-            { label: "Perfect Match", icon: <Heart className="h-5 w-5 text-white/90" /> },
+            { label: "Your Profile", icon: <User className={isDark ? "h-5 w-5 text-white/90" : "h-5 w-5 text-gray-700"} /> },
+            { label: "Algorithm", icon: <Sparkles className={isDark ? "h-5 w-5 text-white/90" : "h-5 w-5 text-gray-700"} /> },
+            { label: "Perfect Match", icon: <Heart className={isDark ? "h-5 w-5 text-white/90" : "h-5 w-5 text-gray-700"} /> },
           ].map((item) => (
             <div
               key={item.label}
@@ -500,6 +560,7 @@ export default function InteractiveHero({
                     jobDescription: labels.jobDescription,
                     techStack: labels.techStack,
                   }}
+                  theme={theme}
                 />
               </motion.div>
             ) : (
