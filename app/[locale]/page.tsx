@@ -202,38 +202,6 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div
-                  className={`rounded-2xl p-4 text-sm ${
-                    isDark ? "border border-white/10 bg-black/40" : "border border-gray-200 bg-white"
-                  }`}
-                >
-                  <p className="font-semibold">{t("antiResume.pain.timeTitle")}</p>
-                  <p className={isDark ? "mt-1 text-xs text-white/70" : "mt-1 text-xs text-gray-600"}>
-                    {t("antiResume.pain.timeCopy")}
-                  </p>
-                </div>
-                <div
-                  className={`rounded-2xl p-4 text-sm ${
-                    isDark ? "border border-white/10 bg-black/40" : "border border-gray-200 bg-white"
-                  }`}
-                >
-                  <p className="font-semibold">{t("antiResume.pain.rejectionTitle")}</p>
-                  <p className={isDark ? "mt-1 text-xs text-white/70" : "mt-1 text-xs text-gray-600"}>
-                    {t("antiResume.pain.rejectionCopy")}
-                  </p>
-                </div>
-                <div
-                  className={`rounded-2xl p-4 text-sm ${
-                    isDark ? "border border-white/10 bg-black/40" : "border border-gray-200 bg-white"
-                  }`}
-                >
-                  <p className="font-semibold">{t("antiResume.pain.noFeedbackTitle")}</p>
-                  <p className={isDark ? "mt-1 text-xs text-white/70" : "mt-1 text-xs text-gray-600"}>
-                    {t("antiResume.pain.noFeedbackCopy")}
-                  </p>
-                </div>
-              </div>
             </div>
           </motion.div>
 

@@ -165,6 +165,10 @@ export default function UserFlow1Page() {
   const [salary, setSalary] = useState("");
   const [education, setEducation] = useState<EducationLevel>("High School");
 
+  // Extra personal details collected during onboarding
+  const [dob, setDob] = useState("");
+  const [availableFrom, setAvailableFrom] = useState("");
+
   // Step 8 — registration (personal info)
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -377,6 +381,7 @@ export default function UserFlow1Page() {
       email: email.trim(),
       phone: phone.trim(),
       job: displayJobTitle || undefined,
+      dateOfBirth: dob || null,
     };
     saveCandidateProfile(stored);
 
@@ -400,6 +405,8 @@ export default function UserFlow1Page() {
           workTypes: profile.workTypes,
           skills: profile.skills.map((s) => ({ name: s.name, level: s.level })),
           jobTitle: displayJobTitle || undefined,
+          dateOfBirth: dob || undefined,
+          availableFrom: availableFrom || undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -1358,6 +1365,31 @@ export default function UserFlow1Page() {
                       placeholder={t("step8.fullNamePlaceholder")}
                       className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
                     />
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-medium text-gray-900">{t("step8.dateOfBirth")}</label>
+                      <input
+                        type="date"
+                        value={dob}
+                        onChange={(e) => setDob(e.target.value)}
+                        max={new Date().toISOString().slice(0, 10)}
+                        className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">{t("step8.dateOfBirthHint")}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-900">{t("step8.availableFrom")}</label>
+                      <input
+                        type="date"
+                        value={availableFrom}
+                        onChange={(e) => setAvailableFrom(e.target.value)}
+                        min={new Date().toISOString().slice(0, 10)}
+                        className="mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">{t("step8.availableFromHint")}</p>
+                    </div>
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">

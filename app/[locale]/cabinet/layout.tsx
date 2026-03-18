@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { LogOut } from "lucide-react";
 import Logo from "@/components/Logo";
 import { performCandidateLogout } from "@/lib/logoutUtils";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -100,39 +101,59 @@ export default function CabinetLayout({
 
       {/* Sidebar - hidden on mobile, slide-out when open */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 transform border-r border-gray-200 bg-white shadow-xl transition-transform md:relative md:left-0 md:z-auto md:w-56 md:translate-x-0 md:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 transform border-r border-gray-100 bg-white shadow-xl transition-transform md:sticky md:top-0 md:left-0 md:z-auto md:w-56 md:translate-x-0 md:shadow-none ${
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-full flex-col p-4 pt-14 md:pt-4">
-          <div className="mb-6 hidden items-center justify-center rounded-xl border border-matcher/20 bg-matcher-pale/50 px-4 py-4 md:flex md:mb-8 md:py-5">
-            <Logo height={72} />
+        <div className="h-screen flex flex-col justify-between p-4">
+          {/* Top: logo */}
+          <div>
+            <div className="mb-8 flex items-center">
+              <Logo height={48} className="max-h-12 w-auto" />
+            </div>
+
+            {/* Navigation */}
+            <nav className="flex flex-col gap-2 flex-grow">
+              {navLinks.map(({ href, label, active }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`rounded-xl p-3 text-sm font-medium transition-colors ${
+                    active ? "bg-green-50 text-green-700" : "text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
           </div>
 
-          <nav className="flex flex-col gap-1">
-            {navLinks.map(({ href, label, active }) => (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`rounded-xl px-4 py-3 text-sm font-medium transition-colors duration-200 ${
-                  active ? "bg-matcher-mint text-matcher-dark shadow-sm" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                }`}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
+          {/* Bottom: user snippet + logout */}
+          <div className="mt-auto border-t border-gray-100 pt-6">
+            <button
+              type="button"
+              className="flex w-full items-center rounded-xl p-3 transition-colors hover:bg-gray-50"
+              // TODO: make this open profile in future
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-sm font-semibold text-gray-700">
+                {userName?.charAt(0)?.toUpperCase() || "L"}
+              </div>
+              <div className="ml-3 flex flex-col items-start">
+                <span className="text-sm font-bold text-gray-900">{userName || "Lali Chokheli"}</span>
+                <span className="text-xs text-gray-400">{tCommon("profile")}</span>
+              </div>
+            </button>
 
-          <div className="mt-auto border-t border-gray-100 pt-4">
             <button
               type="button"
               onClick={() => {
                 handleLogout();
                 setMobileMenuOpen(false);
               }}
-              className="w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+              className="mt-4 flex w-full items-center rounded-xl p-3 text-sm font-medium text-red-500 transition-all hover:bg-red-50"
             >
+              <LogOut className="mr-2 h-4 w-4" />
               {tCommon("logOut")}
             </button>
           </div>

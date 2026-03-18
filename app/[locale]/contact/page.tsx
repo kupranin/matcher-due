@@ -112,7 +112,7 @@ export default function ContactPage() {
             className={
               isDark
                 ? "space-y-4 rounded-3xl border border-white/15 bg-white/10 p-6 shadow-lg shadow-black/20 backdrop-blur-sm sm:p-7 lg:p-8"
-                : "space-y-4 rounded-3xl border border-gray-100 bg-white/60 p-6 shadow-sm backdrop-blur-sm sm:p-7 lg:p-8"
+                : "space-y-4 rounded-3xl border border-gray-100 bg-white/50 p-6 shadow-sm backdrop-blur-sm sm:p-7 lg:p-8"
             }
           >
             <p className={isDark ? "text-xs font-semibold uppercase tracking-[0.2em] text-white/70" : "text-xs font-semibold uppercase tracking-[0.2em] text-gray-500"}>
@@ -137,7 +137,7 @@ export default function ContactPage() {
                 }
               >
                 <div className="flex items-center gap-3">
-                  <div className="rounded-full bg-lime-100 p-3 text-matcher-dark">
+                  <div className="rounded-full bg-green-50 p-3 text-green-700">
                     <Mail className="h-5 w-5" />
                   </div>
                   <div>
@@ -155,10 +155,12 @@ export default function ContactPage() {
                 <button
                   type="button"
                   onClick={() => handleCopy("keti@matcher.ge", "email")}
+                  aria-label="Copy to Clipboard"
+                  title="Copy to Clipboard"
                   className={
                     isDark
-                      ? "inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/5 px-3 py-1 text-xs font-medium text-white/80 hover:bg-white/10"
-                      : "inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-white"
+                      ? "inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-white/20 bg-white/5 px-3 py-1 text-xs font-medium text-white/80 hover:bg-white/10"
+                      : "inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-white"
                   }
                 >
                   <Copy className="h-3.5 w-3.5" />
@@ -176,7 +178,7 @@ export default function ContactPage() {
                     : "flex items-center gap-3 rounded-2xl border border-gray-100 bg-white/80 p-4 shadow-sm"
                 }
               >
-                <div className="rounded-full bg-lime-100 p-3 text-matcher-dark">
+                <div className="rounded-full bg-green-50 p-3 text-green-700">
                   <Phone className="h-5 w-5" />
                 </div>
                 <div>
@@ -219,13 +221,13 @@ export default function ContactPage() {
             className={
               isDark
                 ? "space-y-4 rounded-3xl border border-white/15 bg-white/10 p-6 shadow-lg shadow-black/20 backdrop-blur-sm sm:p-7 lg:p-8"
-                : "space-y-4 rounded-3xl border border-gray-100 bg-white/70 p-6 shadow-sm backdrop-blur-sm sm:p-7 lg:p-8"
+                : "space-y-4 rounded-3xl border border-gray-100 bg-white/50 p-6 shadow-sm backdrop-blur-sm sm:p-7 lg:p-8"
             }
           >
             <h2 className={isDark ? "font-heading text-xl font-semibold text-white" : "font-heading text-xl font-semibold text-gray-900"}>
               {t("formTitle")}
             </h2>
-            <p className={isDark ? "mb-2 text-sm text-white/70" : "mb-2 text-sm text-gray-600"}>{t("formHint")}</p>
+            <p className={isDark ? "mb-2 text-sm text-white/70" : "mb-2 text-sm text-gray-600"}>{t("hint")}</p>
 
             <FormField
               id="contact-name"
@@ -311,7 +313,7 @@ type FormFieldProps = {
 
 function FormField({ id, label, placeholder, value, onChange, type, required = true, isDark }: FormFieldProps) {
   const baseInput =
-    "w-full rounded-xl border px-4 py-3 text-sm shadow-sm outline-none transition focus-visible:ring-0";
+    "w-full rounded-xl border px-4 py-4 text-sm shadow-sm outline-none transition focus-visible:ring-0 hover:border-matcher/70 focus:border-matcher";
 
   const colorInput = isDark
     ? "border-white/15 bg-black/40 text-white placeholder:text-white/40"
@@ -330,7 +332,7 @@ function FormField({ id, label, placeholder, value, onChange, type, required = t
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         whileFocus={{ boxShadow: "0 0 0 1px rgba(162, 217, 78, 0.9), 0 0 0 6px rgba(162, 217, 78, 0.22)" }}
-        className={`${baseInput} ${colorInput} mt-2 focus:border-matcher`}
+        className={`${baseInput} ${colorInput} mt-2`}
       />
     </motion.div>
   );
@@ -347,7 +349,7 @@ type FormTextAreaProps = {
 
 function FormTextArea({ id, label, placeholder, value, onChange, isDark }: FormTextAreaProps) {
   const base =
-    "mt-2 w-full min-h-[120px] resize-y rounded-xl border px-4 py-3 text-sm shadow-sm outline-none transition focus-visible:ring-0";
+    "mt-2 w-full min-h-[120px] resize-y rounded-xl border px-4 py-4 text-sm shadow-sm outline-none transition focus-visible:ring-0 hover:border-matcher/70 focus:border-matcher";
   const color = isDark
     ? "border-white/15 bg-black/40 text-white placeholder:text-white/40"
     : "border-gray-200 bg-white text-gray-900 placeholder:text-gray-400";
