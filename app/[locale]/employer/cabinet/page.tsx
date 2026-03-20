@@ -10,7 +10,6 @@ import { apiVacancyToProfile } from "@/lib/vacancyApi";
 import { getRecommendedSalaryForTitle } from "@/lib/jobTemplates";
 import type { MutualMatch } from "@/lib/matchStorage";
 import MatchCongratulationsModal from "@/components/MatchCongratulationsModal";
-import MatchProgressRing from "@/components/MatchProgressRing";
 
 type EmployerVacancy = {
   id: string;
@@ -85,7 +84,6 @@ function SwipeCard({
     else animate(x, 0, { type: "spring", stiffness: 280, damping: 28 });
   }
 
-  const matchPct = Number.isFinite(Number(candidate.match)) ? Math.min(100, Math.max(0, Math.round(Number(candidate.match)))) : 0;
   const matchedSkills = Array.isArray(candidate.matchedSkills)
     ? candidate.matchedSkills.filter((s) => typeof s === "string" && s.trim().length > 0).slice(0, 5)
     : [];
@@ -124,12 +122,6 @@ function SwipeCard({
               <p className="mt-2 text-xs font-medium text-gray-500">No photo</p>
             </div>
           )}
-          {/* Match ring overlapping bottom-right of image */}
-          <div className="absolute bottom-4 right-4">
-            <MatchProgressRing percent={matchPct} size={52} className="text-matcher-dark">
-              {matchPct}%
-            </MatchProgressRing>
-          </div>
         </div>
 
         {/* Content section */}

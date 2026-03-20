@@ -9,7 +9,6 @@ import { buildVacancyCardsWithMatch } from "@/lib/vacancyApi";
 import { getCandidateProfileForMatch, loadCandidateProfile, getCandidateProfileId, getCandidateUserId, saveCandidateProfile } from "@/lib/candidateProfileStorage";
 import { addCandidateLike, type MutualMatch } from "@/lib/matchStorage";
 import MatchCongratulationsModal from "@/components/MatchCongratulationsModal";
-import { useTheme } from "@/components/theme/ThemeProvider";
 
 type Vacancy = import("@/lib/vacancyApi").VacancyCardFromApi;
 
@@ -24,8 +23,8 @@ function SwipeCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
+  // Cabinet currently uses a light surface; keep card copy high-contrast.
+  const isDark = false;
 
   // Match the home page demo card structure/text exactly.
   const homeLiveHeroT = useTranslations("home.liveHero");

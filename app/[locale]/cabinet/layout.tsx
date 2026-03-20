@@ -134,10 +134,10 @@ export default function CabinetLayout({
 
           {/* Bottom: user snippet + logout */}
           <div className="mt-auto border-t border-gray-100 pt-6">
-            <button
-              type="button"
+            <Link
+              href="/cabinet/profile"
+              onClick={() => setMobileMenuOpen(false)}
               className="flex w-full items-center rounded-xl p-3 transition-colors hover:bg-gray-50"
-              // TODO: make this open profile in future
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-sm font-semibold text-gray-700">
                 {userName?.charAt(0)?.toUpperCase() || "L"}
@@ -146,7 +146,7 @@ export default function CabinetLayout({
                 <span className="text-sm font-bold text-gray-900">{userName || "Lali Chokheli"}</span>
                 <span className="text-xs text-gray-400">{tCommon("profile")}</span>
               </div>
-            </button>
+            </Link>
 
             <button
               type="button"
@@ -165,6 +165,12 @@ export default function CabinetLayout({
 
       {/* Main content - padding for mobile bottom nav */}
       <main className="flex-1 overflow-auto pb-20 md:pb-0">
+        <div className="sticky top-0 z-20 hidden justify-end border-b border-gray-100 bg-gray-50/95 px-4 py-2 backdrop-blur md:flex">
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <ThemeToggle />
+          </div>
+        </div>
         {userName && (
           <div className="sticky top-0 z-10 border-b border-gray-100 bg-gray-50/95 px-4 py-3 backdrop-blur md:static md:border-none md:bg-transparent">
             <p className="mx-auto max-w-3xl text-sm font-medium text-gray-800">
