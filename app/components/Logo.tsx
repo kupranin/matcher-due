@@ -9,10 +9,10 @@ interface LogoProps {
 export default function Logo({ href = "/", className = "", height = 32 }: LogoProps) {
   const img = (
     <img
-      src="/logo.svg"
+      src="/logo.png"
       alt="Matcher.ge"
       className="h-auto w-auto object-contain"
-      style={{ height: `${height}px`, maxWidth: "120px" }}
+      style={{ height: `${height}px`, maxWidth: "140px" }}
     />
   );
 

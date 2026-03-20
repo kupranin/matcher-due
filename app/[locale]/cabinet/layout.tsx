@@ -8,6 +8,7 @@ import Logo from "@/components/Logo";
 import { performCandidateLogout } from "@/lib/logoutUtils";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import ThemeToggle from "@/components/theme/ThemeToggle";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 export default function CabinetLayout({
   children,
@@ -17,6 +18,8 @@ export default function CabinetLayout({
   const tCommon = useTranslations("common");
   const pathname = usePathname();
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
@@ -58,8 +61,8 @@ export default function CabinetLayout({
 
   if (!authChecked) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <p className="text-gray-500">Loading…</p>
+      <div className={`flex min-h-screen items-center justify-center ${isDark ? "bg-[#070B12]" : "bg-gray-50"}`}>
+        <p className={isDark ? "text-white/70" : "text-gray-500"}>Loading…</p>
       </div>
     );
   }
@@ -71,9 +74,9 @@ export default function CabinetLayout({
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50 md:flex-row">
+    <div className={`flex min-h-screen flex-col md:flex-row ${isDark ? "bg-[#070B12] text-white" : "bg-gray-50 text-gray-900"}`}>
       {/* Mobile header */}
-      <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 md:hidden">
+      <header className={`flex items-center justify-between border-b px-4 py-3 md:hidden ${isDark ? "border-white/10 bg-black/30" : "border-gray-200 bg-white"}`}>
         <Logo height={56} />
         <div className="flex items-center gap-2">
           <LanguageSwitcher />
@@ -81,7 +84,7 @@ export default function CabinetLayout({
           <button
             type="button"
             onClick={() => setMobileMenuOpen((o) => !o)}
-            className="rounded-lg p-2 text-gray-600 hover:bg-gray-100"
+            className={`rounded-lg p-2 ${isDark ? "text-white/80 hover:bg-white/10" : "text-gray-600 hover:bg-gray-100"}`}
             aria-label="Menu"
           >
             {mobileMenuOpen ? "✕" : "☰"}
@@ -100,7 +103,9 @@ export default function CabinetLayout({
 
       {/* Sidebar - hidden on mobile, slide-out when open */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 transform border-r border-gray-100 bg-white shadow-xl transition-transform md:sticky md:top-0 md:left-0 md:z-auto md:w-56 md:translate-x-0 md:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 transform border-r shadow-xl transition-transform md:sticky md:top-0 md:left-0 md:z-auto md:w-56 md:translate-x-0 md:shadow-none ${
+          isDark ? "border-white/10 bg-[#0b101a]" : "border-gray-100 bg-white"
+        } ${
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -123,7 +128,13 @@ export default function CabinetLayout({
                   href={href}
                   onClick={() => setMobileMenuOpen(false)}
                   className={`rounded-xl p-3 text-sm font-medium transition-colors ${
-                    active ? "bg-green-50 text-green-700" : "text-gray-500 hover:bg-gray-50"
+                    active
+                      ? isDark
+                        ? "bg-matcher/20 text-matcher-bright"
+                        : "bg-green-50 text-green-700"
+                      : isDark
+                      ? "text-white/70 hover:bg-white/10"
+                      : "text-gray-500 hover:bg-gray-50"
                   }`}
                 >
                   {label}
@@ -133,18 +144,18 @@ export default function CabinetLayout({
           </div>
 
           {/* Bottom: user snippet + logout */}
-          <div className="mt-auto border-t border-gray-100 pt-6">
+          <div className={`mt-auto border-t pt-6 ${isDark ? "border-white/10" : "border-gray-100"}`}>
             <Link
               href="/cabinet/profile"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex w-full items-center rounded-xl p-3 transition-colors hover:bg-gray-50"
+              className={`flex w-full items-center rounded-xl p-3 transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-50"}`}
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-sm font-semibold text-gray-700">
+              <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${isDark ? "bg-white/15 text-white" : "bg-gray-200 text-gray-700"}`}>
                 {userName?.charAt(0)?.toUpperCase() || "L"}
               </div>
               <div className="ml-3 flex flex-col items-start">
-                <span className="text-sm font-bold text-gray-900">{userName || "Lali Chokheli"}</span>
-                <span className="text-xs text-gray-400">{tCommon("profile")}</span>
+                <span className={`text-sm font-bold ${isDark ? "text-white" : "text-gray-900"}`}>{userName || "Lali Chokheli"}</span>
+                <span className={isDark ? "text-xs text-white/60" : "text-xs text-gray-400"}>{tCommon("profile")}</span>
               </div>
             </Link>
 
@@ -165,15 +176,15 @@ export default function CabinetLayout({
 
       {/* Main content - padding for mobile bottom nav */}
       <main className="flex-1 overflow-auto pb-20 md:pb-0">
-        <div className="sticky top-0 z-20 hidden justify-end border-b border-gray-100 bg-gray-50/95 px-4 py-2 backdrop-blur md:flex">
+        <div className={`sticky top-0 z-20 hidden justify-end border-b px-4 py-2 backdrop-blur md:flex ${isDark ? "border-white/10 bg-[#070B12]/90" : "border-gray-100 bg-gray-50/95"}`}>
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
             <ThemeToggle />
           </div>
         </div>
         {userName && (
-          <div className="sticky top-0 z-10 border-b border-gray-100 bg-gray-50/95 px-4 py-3 backdrop-blur md:static md:border-none md:bg-transparent">
-            <p className="mx-auto max-w-3xl text-sm font-medium text-gray-800">
+          <div className={`sticky top-0 z-10 border-b px-4 py-3 backdrop-blur md:static md:border-none md:bg-transparent ${isDark ? "border-white/10 bg-[#070B12]/85" : "border-gray-100 bg-gray-50/95"}`}>
+            <p className={`mx-auto max-w-3xl text-sm font-medium ${isDark ? "text-white/90" : "text-gray-800"}`}>
               {helloLabel},{" "}
               <span className="font-semibold">{userName}</span>
             </p>
@@ -183,7 +194,7 @@ export default function CabinetLayout({
       </main>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-gray-200 bg-white py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
+      <nav className={`fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden ${isDark ? "border-white/10 bg-[#0b101a]" : "border-gray-200 bg-white"}`}>
         {navLinks.map(({ href, label, active }) => {
           const icon =
             href === "/cabinet"
@@ -198,7 +209,7 @@ export default function CabinetLayout({
               key={href}
               href={href}
               className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${
-                active ? "text-matcher-dark" : "text-gray-500"
+                active ? "text-matcher-dark" : isDark ? "text-white/70" : "text-gray-500"
               }`}
             >
               <span>{icon}</span>

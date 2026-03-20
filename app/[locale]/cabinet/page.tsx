@@ -9,6 +9,7 @@ import { buildVacancyCardsWithMatch } from "@/lib/vacancyApi";
 import { getCandidateProfileForMatch, loadCandidateProfile, getCandidateProfileId, getCandidateUserId, saveCandidateProfile } from "@/lib/candidateProfileStorage";
 import { addCandidateLike, type MutualMatch } from "@/lib/matchStorage";
 import MatchCongratulationsModal from "@/components/MatchCongratulationsModal";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 type Vacancy = import("@/lib/vacancyApi").VacancyCardFromApi;
 
@@ -23,8 +24,8 @@ function SwipeCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [imgError, setImgError] = useState(false);
-  // Cabinet currently uses a light surface; keep card copy high-contrast.
-  const isDark = false;
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   // Match the home page demo card structure/text exactly.
   const homeLiveHeroT = useTranslations("home.liveHero");
@@ -93,6 +94,15 @@ function SwipeCard({
           )}
           <div className="absolute right-3 top-3 rounded-full bg-matcher-bright px-3 py-1.5 text-sm font-bold text-charcoal shadow-lg">
             {vacancy.salary}
+          </div>
+          <div
+            className={`absolute left-3 top-3 rounded-full px-3 py-1.5 text-sm font-extrabold shadow-lg ${
+              isDark
+                ? "bg-matcher-bright text-charcoal"
+                : "border border-matcher/40 bg-matcher-bright text-charcoal"
+            }`}
+          >
+            {Math.max(0, Math.min(100, Math.round(Number(vacancy.match) || 0)))}% match
           </div>
 
           {/* LIKE / NOPE stamps */}
@@ -185,21 +195,21 @@ function SwipeCard({
   );
 }
 
-function OpportunitiesSkeleton() {
+function OpportunitiesSkeleton({ isDark }: { isDark: boolean }) {
   return (
-    <div className="flex h-full min-h-[380px] w-full flex-col overflow-hidden rounded-3xl border border-gray-200/80 bg-white shadow-xl">
-      <div className="aspect-[4/3] w-full shrink-0 bg-gray-100 animate-pulse" />
+    <div className={`flex h-full min-h-[380px] w-full flex-col overflow-hidden rounded-3xl border shadow-xl ${isDark ? "border-white/15 bg-white/10" : "border-gray-200/80 bg-white"}`}>
+      <div className={`aspect-[4/3] w-full shrink-0 animate-pulse ${isDark ? "bg-white/10" : "bg-gray-100"}`} />
       <div className="flex flex-1 flex-col justify-between p-5">
         <div className="space-y-3">
-          <div className="h-6 w-3/4 rounded-lg bg-gray-200/80 animate-pulse" />
-          <div className="h-4 w-1/2 rounded-lg bg-gray-200/80 animate-pulse" />
+          <div className={`h-6 w-3/4 rounded-lg animate-pulse ${isDark ? "bg-white/15" : "bg-gray-200/80"}`} />
+          <div className={`h-4 w-1/2 rounded-lg animate-pulse ${isDark ? "bg-white/15" : "bg-gray-200/80"}`} />
           <div className="flex gap-2 pt-1">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-7 w-14 rounded-full bg-gray-200/80 animate-pulse" />
+              <div key={i} className={`h-7 w-14 rounded-full animate-pulse ${isDark ? "bg-white/15" : "bg-gray-200/80"}`} />
             ))}
           </div>
         </div>
-        <div className="mt-4 h-3 w-2/3 rounded bg-gray-200/80 animate-pulse" />
+        <div className={`mt-4 h-3 w-2/3 rounded animate-pulse ${isDark ? "bg-white/15" : "bg-gray-200/80"}`} />
       </div>
     </div>
   );
@@ -208,6 +218,8 @@ function OpportunitiesSkeleton() {
 export default function CabinetPage() {
   const t = useTranslations("cabinet");
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [opportunitiesLoading, setOpportunitiesLoading] = useState(true);
 
@@ -535,19 +547,25 @@ export default function CabinetPage() {
   }
 
   return (
-    <div className="relative mx-auto max-w-md px-4 py-5 sm:py-6 md:py-8">
+    <div className={`relative mx-auto max-w-md px-4 py-5 sm:py-6 md:py-8 ${isDark ? "text-white" : "text-gray-900"}`}>
       {/* Fun gradient background */}
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-matcher-pale via-matcher-mint/50 to-matcher-amber/30" />
+      <div
+        className={`pointer-events-none absolute inset-0 -z-10 ${
+          isDark
+            ? "bg-[radial-gradient(circle_at_top,rgba(139,195,74,0.18),transparent_60%),radial-gradient(circle_at_bottom,rgba(0,173,181,0.16),transparent_60%)]"
+            : "bg-gradient-to-br from-matcher-pale via-matcher-mint/50 to-matcher-amber/30"
+        }`}
+      />
 
       {/* Available to work toggle */}
       {getCandidateUserId() && (
-        <div className="mb-4 flex items-center justify-between rounded-2xl border border-matcher/20 bg-white/80 px-4 py-3 shadow-sm backdrop-blur sm:px-5">
-          <span className="text-sm font-medium text-gray-700">{t("availableToWorkLabel")}</span>
+        <div className={`mb-4 flex items-center justify-between rounded-2xl border px-4 py-3 shadow-sm backdrop-blur sm:px-5 ${isDark ? "border-white/15 bg-white/10" : "border-matcher/20 bg-white/80"}`}>
+          <span className={isDark ? "text-sm font-medium text-white/85" : "text-sm font-medium text-gray-700"}>{t("availableToWorkLabel")}</span>
           <button
             type="button"
             onClick={toggleAvailableToWork}
             disabled={availableToWorkLoading}
-            className={`relative inline-flex h-8 w-14 shrink-0 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-matcher focus:ring-offset-2 ${availableToWork ? "bg-matcher" : "bg-gray-300"}`}
+            className={`relative inline-flex h-8 w-14 shrink-0 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-matcher focus:ring-offset-2 ${isDark ? "focus:ring-offset-[#070B12]" : "focus:ring-offset-2"} ${availableToWork ? "bg-matcher" : isDark ? "bg-white/25" : "bg-gray-300"}`}
             aria-pressed={availableToWork}
             aria-label={availableToWork ? t("availableToWorkOn") : t("availableToWorkOff")}
           >
@@ -558,8 +576,8 @@ export default function CabinetPage() {
         </div>
       )}
 
-      <h1 className="font-heading text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{t("yourMatches")}</h1>
-      <p className="mt-2 text-gray-600">{t("swipeHint")}</p>
+      <h1 className={`font-heading text-2xl font-bold tracking-tight sm:text-3xl ${isDark ? "text-white" : "text-gray-900"}`}>{t("yourMatches")}</h1>
+      <p className={isDark ? "mt-2 text-white/70" : "mt-2 text-gray-600"}>{t("swipeHint")}</p>
 
       {likeError && (
         <div className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800 shadow-sm">
@@ -569,7 +587,7 @@ export default function CabinetPage() {
 
       <div className="relative mx-auto mt-6 aspect-[3/4] max-h-[380px] sm:mt-8 sm:max-h-[440px] md:max-h-[520px]">
         {opportunitiesLoading ? (
-          <OpportunitiesSkeleton />
+          <OpportunitiesSkeleton isDark={isDark} />
         ) : current ? (
           <AnimatePresence mode="wait">
             <motion.div
@@ -588,7 +606,7 @@ export default function CabinetPage() {
               <div className="relative h-full w-full">
                 <SwipeCard vacancy={current} onSwipe={likeState === "submitting" ? () => {} : handleSwipe} />
                 {likeState === "submitting" && (
-                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-3xl bg-gray-900/80 backdrop-blur-sm">
+                  <div className={`absolute inset-0 z-20 flex flex-col items-center justify-center rounded-3xl backdrop-blur-sm ${isDark ? "bg-black/60" : "bg-gray-900/80"}`}>
                     <div className="h-10 w-10 animate-spin rounded-full border-2 border-matcher-bright border-t-transparent" />
                     <p className="mt-3 text-sm font-medium text-white">{t("checkingMatch")}</p>
                   </div>
@@ -600,14 +618,18 @@ export default function CabinetPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex h-full flex-col items-center justify-center rounded-3xl bg-gradient-to-br from-matcher-mint via-matcher-pale to-matcher-teal/20 p-8 text-center shadow-inner"
+            className={`flex h-full flex-col items-center justify-center rounded-3xl p-8 text-center shadow-inner ${
+              isDark
+                ? "border border-white/15 bg-gradient-to-br from-white/10 via-white/5 to-transparent"
+                : "bg-gradient-to-br from-matcher-mint via-matcher-pale to-matcher-teal/20"
+            }`}
           >
             <span className="text-6xl">🎉</span>
-            <p className="mt-4 text-xl font-bold text-gray-800">{t("allCaughtUp")}</p>
-            <p className="mt-2 text-base text-gray-600">
+            <p className={isDark ? "mt-4 text-xl font-bold text-white" : "mt-4 text-xl font-bold text-gray-800"}>{t("allCaughtUp")}</p>
+            <p className={isDark ? "mt-2 text-base text-white/70" : "mt-2 text-base text-gray-600"}>
               {t("likedPassed", { liked: liked.length, passed: passed.length })}
             </p>
-            <p className="mt-6 text-sm text-gray-500">{t("noMoreOpportunities")}</p>
+            <p className={isDark ? "mt-6 text-sm text-white/60" : "mt-6 text-sm text-gray-500"}>{t("noMoreOpportunities")}</p>
           </motion.div>
         )}
       </div>
@@ -634,7 +656,11 @@ export default function CabinetPage() {
             onClick={handleRewind}
             whileHover={{ scale: 1.06 }}
             whileTap={{ scale: 0.94 }}
-            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-gray-100 to-white text-gray-800 shadow-lg shadow-gray-300/40 transition-shadow hover:shadow-xl hover:shadow-gray-400/40 disabled:opacity-50 disabled:cursor-not-allowed active:ring-4 active:ring-gray-300/60"
+            className={`flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 transition-shadow disabled:opacity-50 disabled:cursor-not-allowed active:ring-4 ${
+              isDark
+                ? "bg-gradient-to-br from-white/20 to-white/10 text-white shadow-lg shadow-black/30 hover:shadow-xl hover:shadow-black/40 active:ring-white/20"
+                : "bg-gradient-to-br from-gray-100 to-white text-gray-800 shadow-lg shadow-gray-300/40 hover:shadow-xl hover:shadow-gray-400/40 active:ring-gray-300/60"
+            }`}
             aria-label="Rewind last swipe"
             title="Rewind"
           >
