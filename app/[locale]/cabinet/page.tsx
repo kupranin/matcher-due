@@ -9,6 +9,7 @@ import { buildVacancyCardsWithMatch } from "@/lib/vacancyApi";
 import { getCandidateProfileForMatch, loadCandidateProfile, getCandidateProfileId, getCandidateUserId, saveCandidateProfile } from "@/lib/candidateProfileStorage";
 import { addCandidateLike, type MutualMatch } from "@/lib/matchStorage";
 import MatchCongratulationsModal from "@/components/MatchCongratulationsModal";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 type Vacancy = import("@/lib/vacancyApi").VacancyCardFromApi;
 
@@ -23,6 +24,8 @@ function SwipeCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   // Match the home page demo card structure/text exactly.
   const homeLiveHeroT = useTranslations("home.liveHero");
@@ -58,14 +61,24 @@ function SwipeCard({
         <motion.div style={{ opacity: bgLeftOpacity }} className="flex-1 bg-rose-500/35" aria-hidden />
         <motion.div style={{ opacity: bgRightOpacity }} className="flex-1 bg-emerald-500/35" aria-hidden />
       </div>
-      <div className="relative flex h-full w-full flex-col overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-2xl shadow-black/15 backdrop-blur-md">
+      <div
+        className={
+          isDark
+            ? "relative flex h-full w-full flex-col overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-2xl shadow-black/15 backdrop-blur-md"
+            : "relative flex h-full w-full flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-lg"
+        }
+      >
         <div className="relative aspect-[4/3] w-full overflow-hidden">
           {/* Always-visible placeholder (never blocks the image). */}
           <div
-            className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-white/10"
+            className={`absolute inset-0 ${
+              isDark
+                ? "bg-gradient-to-br from-white/10 via-white/5 to-white/10"
+                : "bg-gradient-to-br from-matcher-pale via-white to-matcher-mint/40"
+            }`}
             aria-hidden
           />
-          <div className="absolute inset-0 animate-pulse bg-white/5" aria-hidden />
+          <div className={`absolute inset-0 animate-pulse ${isDark ? "bg-white/5" : "bg-white/40"}`} aria-hidden />
           {!imgError && (
             <Image
               src={vacancy.photo}
@@ -102,25 +115,29 @@ function SwipeCard({
           </motion.div>
         </div>
 
-        <div className="flex flex-1 flex-col justify-between p-5 text-white">
+        <div className={`flex flex-1 flex-col justify-between p-5 ${isDark ? "text-white" : "text-gray-900"}`}>
           <div>
             <h3 className="text-xl font-bold tracking-tight">{vacancy.title}</h3>
-            <p className="mt-0.5 text-white/85">{vacancy.company}</p>
+            <p className={`mt-0.5 ${isDark ? "text-white/85" : "text-gray-600"}`}>{vacancy.company}</p>
 
             {/* quick view */}
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-              <span className="rounded-full px-3 py-1 font-semibold bg-white/15">{vacancy.location}</span>
-              <span className="rounded-full px-3 py-1 font-semibold bg-white/15">{vacancy.workType}</span>
+              <span className={`rounded-full px-3 py-1 font-semibold ${isDark ? "bg-white/15" : "bg-gray-100 text-gray-700"}`}>{vacancy.location}</span>
+              <span className={`rounded-full px-3 py-1 font-semibold ${isDark ? "bg-white/15" : "bg-gray-100 text-gray-700"}`}>{vacancy.workType}</span>
             </div>
 
             <button
               type="button"
               onClick={() => setExpanded((e) => !e)}
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/15"
+              className={
+                isDark
+                  ? "mt-4 inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/15"
+                  : "mt-4 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+              }
               aria-expanded={expanded}
             >
               {expanded ? homeLiveHeroT("hideDetails") : homeLiveHeroT("tapToExpand")}
-              <span aria-hidden className="text-white/70">
+              <span aria-hidden className={isDark ? "text-white/70" : "text-gray-500"}>
                 {expanded ? "▴" : "▾"}
               </span>
             </button>
@@ -134,23 +151,23 @@ function SwipeCard({
                   transition={{ duration: 0.2, ease: "easeOut" }}
                   className="overflow-hidden"
                 >
-                  <div className="mt-3 space-y-3 rounded-2xl bg-white/10 p-4">
+                  <div className={`mt-3 space-y-3 rounded-2xl p-4 ${isDark ? "bg-white/10" : "border border-gray-200 bg-gray-50"}`}>
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-white/70">
+                      <p className={`text-xs font-semibold uppercase tracking-wide ${isDark ? "text-white/70" : "text-gray-600"}`}>
                         {homeLiveHeroT("jobDescription")}
                       </p>
-                      <p className="mt-1 text-sm text-white/90">{vacancy.description ?? ""}</p>
+                      <p className={`mt-1 text-sm ${isDark ? "text-white/90" : "text-gray-700"}`}>{vacancy.description ?? ""}</p>
                     </div>
 
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-white/70">
+                      <p className={`text-xs font-semibold uppercase tracking-wide ${isDark ? "text-white/70" : "text-gray-600"}`}>
                         {homeLiveHeroT("techStack")}
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {tech.map((t) => (
                           <span
                             key={t}
-                            className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/90"
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${isDark ? "bg-white/15 text-white/90" : "border border-gray-200 bg-white text-gray-700"}`}
                           >
                             {t}
                           </span>
@@ -162,7 +179,7 @@ function SwipeCard({
               )}
             </AnimatePresence>
           </div>
-          <p className="mt-4 text-sm font-medium text-white/80">{homeLiveHeroT("swipeInstruction")}</p>
+          <p className={`mt-4 text-sm font-medium ${isDark ? "text-white/80" : "text-gray-600"}`}>{homeLiveHeroT("swipeInstruction")}</p>
         </div>
       </div>
     </motion.div>

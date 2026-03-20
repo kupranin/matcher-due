@@ -406,6 +406,9 @@ export default function InteractiveHero({
   const copy = audience === "candidate" ? candidateCopy : employerCopy;
   const steps = audience === "candidate" ? candidateHowItWorks : employerHowItWorks;
   const ctaHref = audience === "candidate" ? "/userFlow/1" : "/employer/register";
+  const isGeorgianCopy = /[\u10A0-\u10FF]/.test(
+    `${copy.title} ${copy.subtitle} ${steps.map((s) => `${s.title} ${s.text}`).join(" ")}`
+  );
 
   const current = deck[0] ?? null;
 
@@ -457,8 +460,8 @@ export default function InteractiveHero({
           <h1
             className={
               isDark
-                ? "font-heading mt-4 text-balance text-5xl font-extrabold tracking-tight leading-[1.05] text-white sm:text-6xl"
-                : "font-heading mt-4 text-balance text-5xl font-extrabold tracking-tight leading-[1.05] text-gray-900 sm:text-6xl"
+                ? `font-heading mt-4 text-balance text-5xl font-extrabold tracking-tight text-white sm:text-6xl ${isGeorgianCopy ? "leading-[0.98] sm:leading-[1.02]" : "leading-[1.05]"}`
+                : `font-heading mt-4 text-balance text-5xl font-extrabold tracking-tight text-gray-900 sm:text-6xl ${isGeorgianCopy ? "leading-[0.98] sm:leading-[1.02]" : "leading-[1.05]"}`
             }
           >
             {titleHasSwap ? (
@@ -488,7 +491,13 @@ export default function InteractiveHero({
               copy.title
             )}
           </h1>
-          <p className={isDark ? "mt-4 max-w-xl text-balance text-base leading-relaxed text-white/80 sm:text-lg" : "mt-4 max-w-xl text-balance text-base leading-relaxed text-gray-600 sm:text-lg"}>
+          <p
+            className={
+              isDark
+                ? `mt-4 max-w-xl text-balance text-base text-white/80 sm:text-lg ${isGeorgianCopy ? "leading-[1.45]" : "leading-relaxed"}`
+                : `mt-4 max-w-xl text-balance text-base text-gray-600 sm:text-lg ${isGeorgianCopy ? "leading-[1.45]" : "leading-relaxed"}`
+            }
+          >
             {copy.subtitle}
           </p>
 
@@ -528,7 +537,15 @@ export default function InteractiveHero({
                 }
               >
                 <p className="text-sm font-semibold">{s.title}</p>
-                <p className={isDark ? "mt-1 text-sm leading-relaxed text-white/75" : "mt-1 text-sm leading-relaxed text-gray-600"}>{s.text}</p>
+                <p
+                  className={
+                    isDark
+                      ? `mt-1 text-sm text-white/75 ${isGeorgianCopy ? "leading-[1.4]" : "leading-relaxed"}`
+                      : `mt-1 text-sm text-gray-600 ${isGeorgianCopy ? "leading-[1.4]" : "leading-relaxed"}`
+                  }
+                >
+                  {s.text}
+                </p>
               </div>
             ))}
           </div>
@@ -536,7 +553,7 @@ export default function InteractiveHero({
       </div>
 
       {/* Live swipe demo */}
-      <div className="relative flex justify-center md:justify-end md:self-center">
+      <div className="relative flex flex-col items-center md:items-end md:self-center">
         <div
           className={`absolute -inset-8 -z-10 rounded-[3rem] blur-2xl ${
             isDark
@@ -625,7 +642,7 @@ export default function InteractiveHero({
         </div>
 
         {/* Swipe buttons (under the phone/card) */}
-        <div className="mt-6 flex justify-center">
+        <div className="mt-6 flex w-full max-w-[420px] justify-center">
           <div
             className={`inline-flex items-center gap-4 rounded-full border px-4 py-3 shadow-lg ${
               isDark ? "border-white/15 bg-white/10 backdrop-blur-md" : "border-gray-200 bg-white"

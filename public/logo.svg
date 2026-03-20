@@ -689,9 +689,9 @@
   C 1836.47 245.14 1862.08 224.71 1899.01 224.47
   Z"
 />
-<ellipse fill="none" cx="0.00" cy="0.00" transform="translate(2541.26,308.17) rotate(-89.2)" rx="79.46" ry="73.32"/>
+<ellipse fill="#a4c043" cx="0.00" cy="0.00" transform="translate(2541.26,308.17) rotate(-89.2)" rx="79.46" ry="73.32"/>
 <ellipse fill="none" cx="0.00" cy="0.00" transform="translate(707.96,314.67) rotate(-87.4)" rx="84.00" ry="78.54"/>
-<path fill="none" d="
+<path fill="#a4c043" d="
   M 1493.49 459.47
   L 1422.36 459.47
   C 1420.95 459.47 1419.80 458.32 1419.80 456.91
@@ -703,5 +703,5 @@
   C 1496.05 458.32 1494.90 459.47 1493.49 459.47
   Z"
 />
-<ellipse fill="none" cx="0.00" cy="0.00" transform="translate(2314.54,414.73) rotate(-156.5)" rx="50.84" ry="50.27"/>
+<ellipse fill="#a4c043" cx="0.00" cy="0.00" transform="translate(2314.54,414.73) rotate(-156.5)" rx="50.84" ry="50.27"/>
 </svg>

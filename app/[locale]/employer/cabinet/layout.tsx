@@ -141,8 +141,12 @@ export default function EmployerCabinetLayout({
         }`}
       >
         <div className="flex h-full flex-col overflow-y-auto p-4 pt-14 md:pt-4">
-          <div className="mb-8 flex items-center justify-center rounded-xl border border-matcher/20 bg-matcher-pale/50 px-4 py-5">
-            <Logo height={72} />
+          <div className="mb-8 flex items-center justify-center rounded-xl border border-matcher/20 bg-matcher-pale/50 px-4 py-4">
+            <Logo height={44} />
+          </div>
+          <div className="mb-4 hidden items-center justify-center gap-2 md:flex">
+            <LanguageSwitcher />
+            <ThemeToggle />
           </div>
 
           {sub ? (

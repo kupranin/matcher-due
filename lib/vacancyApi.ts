@@ -283,6 +283,7 @@ export function buildCandidateCardsWithMatch(
   vacancyProfile: VacancyProfile,
   vacancyTitle: string
 ): Array<CandidateCard & { match: number; age?: number | null; matchedSkills?: string[] }> {
+  const MIN_MATCH_PERCENT = 40;
   const safeSkills = (c: (typeof apiCandidates)[0]) => Array.isArray(c.skills) ? c.skills : [];
   const toSkillLevel = (level: string | null | undefined): CandidateProfile["skills"][0]["level"] => {
     const v = level?.trim?.();
@@ -343,5 +344,7 @@ export function buildCandidateCardsWithMatch(
         match,
       };
     })
+    // Product rule: employer swipe deck should not show very low-fit candidates.
+    .filter((c) => c.match >= MIN_MATCH_PERCENT)
     .sort((a, b) => b.match - a.match);
 }

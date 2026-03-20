@@ -68,7 +68,6 @@ export default function CabinetLayout({
     { href: "/cabinet", label: tCommon("opportunities"), active: pathname === "/cabinet" },
     { href: "/cabinet/matches", label: tCommon("matches"), active: pathname === "/cabinet/matches" },
     { href: "/cabinet/chats", label: tCommon("chats"), active: pathname?.includes("/chats") },
-    { href: "/cabinet/profile", label: tCommon("profile"), active: pathname === "/cabinet/profile" },
   ];
 
   return (
@@ -109,7 +108,11 @@ export default function CabinetLayout({
           {/* Top: logo */}
           <div>
             <div className="mb-8 flex items-center">
-              <Logo height={48} className="max-h-12 w-auto" />
+              <Logo height={34} className="max-h-9 w-auto" />
+            </div>
+            <div className="mb-4 hidden items-center gap-2 md:flex">
+              <LanguageSwitcher />
+              <ThemeToggle />
             </div>
 
             {/* Navigation */}
