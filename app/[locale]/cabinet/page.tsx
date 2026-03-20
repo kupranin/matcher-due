@@ -128,6 +128,9 @@ function SwipeCard({
           <div>
             <h3 className="text-xl font-bold tracking-tight">{vacancy.title}</h3>
             <p className={`mt-0.5 ${isDark ? "text-white/85" : "text-gray-600"}`}>{vacancy.company}</p>
+            <p className={`mt-1 text-sm font-semibold ${isDark ? "text-matcher-bright" : "text-matcher-dark"}`}>
+              {Math.max(0, Math.min(100, Math.round(Number(vacancy.match) || 0)))}% match
+            </p>
 
             {/* quick view */}
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
