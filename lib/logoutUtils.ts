@@ -8,6 +8,7 @@ export function clearEmployerSession(): void {
   window.sessionStorage.removeItem("employerLoggedIn");
   window.sessionStorage.removeItem("employerHasSubscription");
   window.sessionStorage.removeItem("matcher_employer_company_id");
+  window.sessionStorage.removeItem("matcher_employer_company_name");
   window.sessionStorage.removeItem("matcher_employer_user_id");
 }
 

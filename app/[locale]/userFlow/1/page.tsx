@@ -204,7 +204,13 @@ export default function UserFlow1Page() {
   const displayJobTitle = job === "other" ? customJobTitle.trim() : (selectedRole?.title ?? job ?? "");
   const skillLabel = (s: string) => (ALL_SKILLS.includes(s) ? (tSkillNames(s) as string) : s);
   const workTypeLabel = (key: string) => t(`workTypeLabels.${key}` as any);
-  const workTypeDesc = (key: string) => t(`step3.${key}Desc` as any);
+  const step3DescKey: Record<string, string> = {
+    "full-time": "fullTimeDesc",
+    "part-time": "partTimeDesc",
+    "temp": "tempDesc",
+    "remote": "remoteDesc",
+  };
+  const workTypeDesc = (key: string) => t(`step3.${step3DescKey[key] ?? key + "Desc"}` as any);
   const skillLevelLabel = (level: string) => t(`skillLevels.${level}` as any);
   const cityName = (c: { nameEn: string; nameKa?: string }) => (apiLocale === "ka" && c.nameKa ? c.nameKa : c.nameEn);
 
@@ -239,8 +245,8 @@ export default function UserFlow1Page() {
       const exists = prev.some((s) => s.name.toLowerCase() === normalized.toLowerCase());
       if (exists) return prev.filter((s) => s.name.toLowerCase() !== normalized.toLowerCase());
       if (prev.length >= 5) return prev;
-      const displayName = normalized.replace(/\b\w/g, (c) => c.toUpperCase());
-      return [...prev, { name: displayName }];
+      // Keep original casing so suggested list and level selection match (e.g. "Physical stamina").
+      return [...prev, { name: normalized }];
     });
   }
 
@@ -256,7 +262,8 @@ export default function UserFlow1Page() {
   }
 
   function setSkillLevel(name: string, level: SkillLevel) {
-    setSkills((prev) => prev.map((s) => (s.name === name ? { ...s, level } : s)));
+    const nameLower = name.toLowerCase();
+    setSkills((prev) => prev.map((s) => (s.name.toLowerCase() === nameLower ? { ...s, level } : s)));
   }
 
   const canContinue = useMemo(() => {
@@ -696,7 +703,7 @@ export default function UserFlow1Page() {
                   <div className="mt-2 flex flex-wrap gap-2 items-center">
                     {(suggestedSkills.length ? suggestedSkills : ["Communication", "Teamwork", "Time management"]).map(
                       (s) => {
-                        const active = skills.some((x) => x.name === s);
+                        const active = skills.some((x) => x.name.toLowerCase() === s.toLowerCase());
                         const disabled = !active && skills.length >= 5;
                         return (
                           <button

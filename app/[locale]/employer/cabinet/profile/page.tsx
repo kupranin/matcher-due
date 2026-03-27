@@ -29,14 +29,17 @@ export default function EmployerCabinetProfilePage() {
     const stored = loadEmployerProfile();
     const userId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_user_id") : null;
     if (userId) {
-      fetch(`/api/companies?userId=${encodeURIComponent(userId)}`)
+      const token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
+      const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      fetch("/api/companies", { credentials: "include", ...auth })
         .then((r) => r.json())
-        .then((company: { name?: string; contactEmail?: string; contactPhone?: string; bio?: string; website?: string; industry?: string; employeeCount?: string; address?: string; linkedIn?: string } | null) => {
+        .then((company: { name?: string; contactEmail?: string; contactPhone?: string; bio?: string; logo?: string | null; website?: string; industry?: string; employeeCount?: string; address?: string; linkedIn?: string } | null) => {
           if (company) {
             setCompanyName(company.name ?? "");
             setEmail(company.contactEmail ?? "");
             setPhone(company.contactPhone ?? "");
             setBio(company.bio ?? "");
+            setLogoUrl(company.logo ?? null);
             setWebsite(company.website ?? "");
             setIndustry(company.industry ?? "");
             setEmployeeCount(company.employeeCount ?? "");
@@ -67,7 +70,13 @@ export default function EmployerCabinetProfilePage() {
 
   function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) setLogoUrl(URL.createObjectURL(file));
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === "string" ? reader.result : null;
+      if (dataUrl) setLogoUrl(dataUrl);
+    };
+    reader.readAsDataURL(file);
   }
 
   return (
@@ -188,15 +197,20 @@ export default function EmployerCabinetProfilePage() {
             const userId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_user_id") : null;
             if (userId) {
               try {
-                await fetch("/api/companies", {
+                const token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
+                const headers: Record<string, string> = { "Content-Type": "application/json" };
+                if (token) headers.Authorization = `Bearer ${token}`;
+                const patchRes = await fetch("/api/companies", {
                   method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
+                  headers,
+                  credentials: "include",
                   body: JSON.stringify({
                     userId,
                     name: companyName.trim(),
                     contactEmail: email.trim(),
                     contactPhone: phone.trim(),
                     bio: bio.trim() || undefined,
+                    logo: logoUrl && !logoUrl.startsWith("blob:") ? logoUrl : logoUrl === null ? null : undefined,
                     website: website.trim() || undefined,
                     industry: industry || undefined,
                     employeeCount: employeeCount || undefined,
@@ -204,6 +218,10 @@ export default function EmployerCabinetProfilePage() {
                     linkedIn: linkedIn.trim() || undefined,
                   }),
                 });
+                if (patchRes.ok && typeof window !== "undefined") {
+                  window.sessionStorage.setItem("matcher_employer_company_name", companyName.trim());
+                  window.dispatchEvent(new CustomEvent("employer-company-updated"));
+                }
               } catch {
                 // ignore
               }

@@ -43,7 +43,7 @@ export default function Footer() {
             </p>
             <div className="mt-4 flex items-center gap-4">
               <a
-                href="https://facebook.com/matcher.ge"
+                href="https://www.facebook.com/profile.php?id=61588660238289"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-500 transition hover:text-matcher-dark"
@@ -163,7 +163,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="https://facebook.com/matcher.ge"
+                  href="https://www.facebook.com/profile.php?id=61588660238289"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-gray-500 transition hover:text-gray-900"

@@ -4,7 +4,7 @@
  */
 
 import type { CandidateProfile, VacancyProfile } from "./matchCalculation";
-import { calculateMatch, normalizeEducationLevel } from "./matchCalculation";
+import { calculateMatch, calculateMatchResult, normalizeEducationLevel, shouldShowToViewer } from "./matchCalculation";
 
 type SkillLevel = "Beginner" | "Intermediate" | "Advanced";
 
@@ -43,6 +43,7 @@ export function vacancyToProfile(v: {
   requiredEducationLevel: string;
   workType: string;
   skills: Array<{ name: string; level: string; weight: number }>;
+  positionTitle?: string | null;
 }): VacancyProfile {
   return {
     locationCityId: v.locationCityId,
@@ -56,6 +57,7 @@ export function vacancyToProfile(v: {
       level: toSkillLevel(s.level),
       weight: Math.min(5, Math.max(1, s.weight ?? 3)),
     })),
+    positionTitle: v.positionTitle ?? null,
   };
 }
 

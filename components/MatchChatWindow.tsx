@@ -37,13 +37,41 @@ export default function MatchChatWindow({
   const otherName = userRole === "candidate" ? match.company : match.candidateName;
   const defaultTitle = `Interview: ${match.vacancyTitle} with ${otherName}`;
 
+  const chatFetchOpts = ((): RequestInit => {
+    const init: RequestInit = { credentials: "include" };
+    if (userRole === "employer" && typeof window !== "undefined") {
+      const token = window.sessionStorage.getItem("matcher_employer_token");
+      if (token) init.headers = { Authorization: `Bearer ${token}` };
+    }
+    return init;
+  })();
+
+  const chatUrl = (matchId: string): string => {
+    const base = `/api/chat?matchId=${encodeURIComponent(matchId)}`;
+    if (userRole === "candidate" && match.candidateId) {
+      return `${base}&candidateProfileId=${encodeURIComponent(match.candidateId)}`;
+    }
+    return base;
+  };
+
   useEffect(() => {
-    fetch(`/api/chat?matchId=${encodeURIComponent(match.id)}`)
-      .then((r) => r.json())
-      .then((list: Array<{ id: string; matchId: string; sender: string; text: string; createdAt: number }>) => {
-        setMessages(list.map((m) => ({ id: m.id, matchId: m.matchId, sender: m.sender as "candidate" | "employer", text: m.text, createdAt: m.createdAt })));
-      })
-      .catch(() => setMessages([]));
+    const matchId = match.id;
+    function poll() {
+      fetch(chatUrl(matchId), chatFetchOpts)
+        .then((r) => {
+          if (!r.ok) return null;
+          return r.json();
+        })
+        .then((list: Array<{ id: string; matchId: string; sender: string; text: string; createdAt: number }> | null) => {
+          if (Array.isArray(list)) {
+            setMessages(list.map((m) => ({ id: m.id, matchId: m.matchId, sender: (m.sender === "system" ? "system" : m.sender === "employer" ? "employer" : "candidate") as "candidate" | "employer" | "system", text: m.text, createdAt: typeof m.createdAt === "number" ? m.createdAt : new Date(m.createdAt).getTime() })));
+          }
+        })
+        .catch(() => {});
+    }
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => clearInterval(interval);
   }, [match.id]);
 
   useEffect(() => {
@@ -55,10 +83,18 @@ export default function MatchChatWindow({
     if (!text) return;
     const sender = userRole;
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (userRole === "employer" && typeof window !== "undefined") {
+        const t = window.sessionStorage.getItem("matcher_employer_token");
+        if (t) headers.Authorization = `Bearer ${t}`;
+      }
+      const body: { matchId: string; sender: string; text: string; candidateProfileId?: string } = { matchId: match.id, sender, text };
+      if (userRole === "candidate" && match.candidateId) body.candidateProfileId = match.candidateId;
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ matchId: match.id, sender, text }),
+        headers,
+        credentials: "include",
+        body: JSON.stringify(body),
       });
       const msg = await res.json();
       if (msg.id) setMessages((prev) => [...prev, { id: msg.id, matchId: match.id, sender: msg.sender as "candidate" | "employer", text: msg.text, createdAt: msg.createdAt }]);
@@ -73,10 +109,18 @@ export default function MatchChatWindow({
   async function handleSuggested(msg: string) {
     const sender = userRole;
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (userRole === "employer" && typeof window !== "undefined") {
+        const t = window.sessionStorage.getItem("matcher_employer_token");
+        if (t) headers.Authorization = `Bearer ${t}`;
+      }
+      const body: { matchId: string; sender: string; text: string; candidateProfileId?: string } = { matchId: match.id, sender, text: msg };
+      if (userRole === "candidate" && match.candidateId) body.candidateProfileId = match.candidateId;
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ matchId: match.id, sender, text: msg }),
+        headers,
+        credentials: "include",
+        body: JSON.stringify(body),
       });
       const message = await res.json();
       if (message.id) setMessages((prev) => [...prev, { id: message.id, matchId: match.id, sender: message.sender as "candidate" | "employer", text: message.text, createdAt: message.createdAt }]);
@@ -271,22 +315,30 @@ export default function MatchChatWindow({
           </div>
         ) : (
           <div className="space-y-3">
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={`flex ${m.sender === userRole ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                    m.sender === userRole
-                      ? "bg-matcher text-white"
-                      : "bg-gray-100 text-gray-900"
-                  }`}
-                >
-                  <p className="text-sm">{m.text}</p>
+            {messages.map((m) =>
+              m.sender === "system" ? (
+                <div key={m.id} className="flex justify-center">
+                  <div className="max-w-[85%] rounded-xl bg-gray-100 px-3 py-2 text-center">
+                    <p className="text-xs text-gray-500">{m.text}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ) : (
+                <div
+                  key={m.id}
+                  className={`flex ${m.sender === userRole ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                      m.sender === userRole
+                        ? "bg-matcher text-white"
+                        : "bg-gray-100 text-gray-900"
+                    }`}
+                  >
+                    <p className="text-sm">{m.text}</p>
+                  </div>
+                </div>
+              )
+            )}
             <div ref={bottomRef} />
           </div>
         )}

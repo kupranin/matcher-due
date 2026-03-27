@@ -2,8 +2,8 @@
  * Helpers to build vacancy/candidate cards from API for cabinet.
  */
 
-import type { CandidateProfile, VacancyProfile } from "./matchCalculation";
-import { passesPreCalcFilter, calculateMatch, normalizeEducationLevel } from "./matchCalculation";
+import type { CandidateProfile, VacancyProfile, MatchResult, GateResult } from "./matchCalculation";
+import { passesHardGate, passesPreCalcFilter, calculateMatch, calculateMatchResult, normalizeEducationLevel, shouldShowToViewer } from "./matchCalculation";
 import type { CandidateCard } from "./matchMockData";
 import { GEORGIAN_CITIES } from "./georgianLocations";
 import { getStockPhotosForJob } from "./vacancyStockPhotos";
@@ -40,6 +40,7 @@ export function apiVacancyToProfile(v: {
   requiredExperienceMonths?: number;
   requiredEducationLevel?: string;
   skills?: Array<{ name: string; level?: string; weight?: number }>;
+  title: string;
 }): VacancyProfile {
   return {
     locationCityId: v.locationCityId,
@@ -49,6 +50,7 @@ export function apiVacancyToProfile(v: {
     requiredEducationLevel: normalizeEducationLevel(v.requiredEducationLevel),
     workType: v.workType || "Full-time",
     skills: (v.skills ?? []).map(apiSkillToVacancySkill),
+    positionTitle: v.title,
   };
 }
 
@@ -59,59 +61,160 @@ function normalizeJobTitleForMatch(title: string): string {
   return t;
 }
 
-/** True if vacancy title matches candidate's preferred job (so we don't show Waiter to someone who wants Barista). */
-function vacancyTitleMatchesPreferredJob(vacancyTitle: string, preferredJob: string | null | undefined): boolean {
-  if (!preferredJob || typeof preferredJob !== "string") return true;
-  const want = normalizeJobTitleForMatch(preferredJob);
-  if (!want) return true;
-  const vacancy = normalizeJobTitleForMatch(vacancyTitle);
-  return vacancy.includes(want) || want.includes(vacancy);
+/** Same-job match: candidate's preferred job must equal the vacancy title or be a more specific version of it (e.g. "Senior Cashier" for "Cashier"). No cross-role matches (e.g. "Customer Service Rep" for "Cashier"). */
+function candidateJobMatchesVacancyStrict(candidateJobTitle: string | null | undefined, vacancyTitle: string): boolean {
+  if (!vacancyTitle || !candidateJobTitle || typeof candidateJobTitle !== "string" || !candidateJobTitle.trim())
+    return false;
+  const vacancyNorm = normalizeJobTitleForMatch(vacancyTitle);
+  const jobNorm = normalizeJobTitleForMatch(candidateJobTitle);
+  if (!vacancyNorm || !jobNorm) return false;
+  return vacancyNorm === jobNorm || (vacancyNorm.length >= 3 && jobNorm.includes(vacancyNorm));
 }
 
-/** Build vacancy cards with match % from API list and candidate profile. Only shows vacancies whose title matches candidate's preferred job (e.g. Barista → no Waiter). */
-export function buildVacancyCardsWithMatch(
-  apiVacancies: Array<{
-    id: string;
-    title: string;
-    company: string;
-    locationCityId: string;
-    salaryMin?: number | null;
-    salaryMax: number;
-    workType: string;
-    isRemote?: boolean;
-    requiredExperienceMonths?: number;
-    requiredEducationLevel?: string;
-    skills?: Array<{ name: string; level?: string; weight?: number }>;
-    photo?: string | null;
-  }>,
+/** True when we should show this vacancy to a candidate with the given preferred job. Same role only: vacancy title equals or is a more specific version of the preferred job (e.g. "Senior Barista" for "Barista"). */
+function vacancyMatchesCandidatePreference(vacancyTitle: string, preferredJob: string | null | undefined): boolean {
+  if (!preferredJob || typeof preferredJob !== "string" || !preferredJob.trim()) return true;
+  const vacancyNorm = normalizeJobTitleForMatch(vacancyTitle);
+  const jobNorm = normalizeJobTitleForMatch(preferredJob);
+  if (!vacancyNorm || !jobNorm) return true;
+  return vacancyNorm === jobNorm || (jobNorm.length >= 3 && vacancyNorm.includes(jobNorm));
+}
+
+export type VacancyForCandidateInput = Array<{
+  id: string;
+  title: string;
+  company: string;
+  locationCityId: string;
+  salaryMin?: number | null;
+  salaryMax: number;
+  workType: string;
+  isRemote?: boolean;
+  requiredExperienceMonths?: number;
+  requiredEducationLevel?: string;
+  skills?: Array<{ name: string; level?: string; weight?: number }>;
+  photo?: string | null;
+}>;
+
+export type ListVacanciesForCandidateDiagnostic = {
+  candidateId: string;
+  availableToWork: boolean;
+  primaryPosition: string | null;
+  locationCityId: string;
+  willingToRelocate: boolean;
+  salaryMin: number | null;
+  countPublished: number;
+  countAfterAvailability: number;
+  countAfterPosition: number;
+  countAfterGeo: number;
+  countAfterFinance: number;
+  countEligible: number;
+  sampleFilteredOut: Array<{ vacancyId: string; title: string; failReason: string }>;
+};
+
+function gateFailReason(gate: GateResult): string {
+  if (!gate.reasons.availabilityPassed) return "availability";
+  if (!gate.reasons.positionPassed) return "position";
+  if (!gate.reasons.geographyPassed) return "geography";
+  if (!gate.reasons.financePassed) return "finance";
+  return "unknown";
+}
+
+/**
+ * Dedicated candidate→vacancy listing: apply hard gates only (no 60% threshold).
+ * Returns vacancies that pass eligibility + optional diagnostic for debugging.
+ */
+export function listVacanciesForCandidate(
+  apiVacancies: VacancyForCandidateInput,
   candidateProfile: CandidateProfile,
-  /** Candidate's preferred job title (e.g. "Barista"). Vacancies not matching this are excluded. */
+  candidatePreferredJob?: string | null,
+  options?: { includeDiagnostic?: boolean; diagnosticCandidateId?: string }
+): { cards: VacancyCardFromApi[]; diagnostic?: ListVacanciesForCandidateDiagnostic } {
+  let countAfterAvailability = 0;
+  let countAfterPosition = 0;
+  let countAfterGeo = 0;
+  let countAfterFinance = 0;
+  const sampleFilteredOut: Array<{ vacancyId: string; title: string; failReason: string }> = [];
+
+  const cards: VacancyCardFromApi[] = [];
+  for (const v of apiVacancies) {
+    const profile = apiVacancyToProfile(v);
+    const gate = passesHardGate(candidateProfile, profile);
+    if (!gate.passed) {
+      const reason = gateFailReason(gate);
+      if (sampleFilteredOut.length < 5) sampleFilteredOut.push({ vacancyId: v.id, title: v.title, failReason: reason });
+      continue;
+    }
+    if (candidatePreferredJob != null && candidatePreferredJob.trim() !== "" && !vacancyMatchesCandidatePreference(v.title, candidatePreferredJob)) {
+      if (sampleFilteredOut.length < 5) sampleFilteredOut.push({ vacancyId: v.id, title: v.title, failReason: "position_preference" });
+      continue;
+    }
+    const match = calculateMatch(candidateProfile, profile);
+    const salaryStr = v.salaryMin != null ? `${v.salaryMin.toLocaleString()}–${v.salaryMax.toLocaleString()} GEL` : `${v.salaryMax.toLocaleString()} GEL`;
+    cards.push({
+      id: v.id,
+      title: v.title,
+      company: v.company,
+      location: locationCityName(v.locationCityId),
+      workType: v.workType,
+      salary: salaryStr,
+      photo: v.photo?.trim() || getStockPhotosForJob(v.title)[0] || "https://images.unsplash.com/photo-1521737711867-e3b97395f902?w=800&q=80",
+      profile,
+      match,
+    });
+  }
+  // Per-gate counts: re-run gates in order for diagnostic (availability first, then position, etc.)
+  if (options?.includeDiagnostic) {
+    for (const v of apiVacancies) {
+      const profile = apiVacancyToProfile(v);
+      const gate = passesHardGate(candidateProfile, profile);
+      if (gate.reasons.availabilityPassed) countAfterAvailability++;
+      if (gate.reasons.availabilityPassed && gate.reasons.positionPassed) countAfterPosition++;
+      if (gate.reasons.availabilityPassed && gate.reasons.positionPassed && gate.reasons.geographyPassed) countAfterGeo++;
+      if (gate.reasons.availabilityPassed && gate.reasons.positionPassed && gate.reasons.geographyPassed && gate.reasons.financePassed) countAfterFinance++;
+    }
+  }
+
+  cards.sort((a, b) => b.match - a.match);
+
+  const diagnostic = options?.includeDiagnostic
+    ? {
+        candidateId: options.diagnosticCandidateId ?? "",
+        availableToWork: candidateProfile.availableToWork !== false,
+        primaryPosition: candidateProfile.primaryPosition ?? null,
+        locationCityId: candidateProfile.locationCityId,
+        willingToRelocate: candidateProfile.willingToRelocate,
+        salaryMin: typeof candidateProfile.salaryMin === "number" ? candidateProfile.salaryMin : null,
+        countPublished: apiVacancies.length,
+        countAfterAvailability,
+        countAfterPosition,
+        countAfterGeo,
+        countAfterFinance,
+        countEligible: cards.length,
+        sampleFilteredOut,
+      }
+    : undefined;
+
+  return { cards, diagnostic };
+}
+
+/** Build vacancy cards with match % from API list and candidate profile. When candidatePreferredJob is set, only vacancies for that role (or more specific, e.g. Senior Barista for Barista) are shown. Uses candidate eligibility gates only; no match-percent threshold (60% is employer-side only). */
+export function buildVacancyCardsWithMatch(
+  apiVacancies: VacancyForCandidateInput,
+  candidateProfile: CandidateProfile,
+  /** Candidate's preferred job title. When set, only vacancies matching this role are shown. */
   candidatePreferredJob?: string | null
 ): VacancyCardFromApi[] {
-  return apiVacancies
-    .filter((v) => vacancyTitleMatchesPreferredJob(v.title, candidatePreferredJob))
-    .map((v) => {
-      const profile = apiVacancyToProfile(v);
-      if (!passesPreCalcFilter(candidateProfile, profile)) return null;
-      const match = calculateMatch(candidateProfile, profile);
-      const salaryStr = v.salaryMin != null ? `${v.salaryMin.toLocaleString()}–${v.salaryMax.toLocaleString()} GEL` : `${v.salaryMax.toLocaleString()} GEL`;
-      return {
-        id: v.id,
-        title: v.title,
-        company: v.company,
-        location: locationCityName(v.locationCityId),
-        workType: v.workType,
-        salary: salaryStr,
-        photo: v.photo?.trim() || getStockPhotosForJob(v.title)[0] || "https://images.unsplash.com/photo-1521737711867-e3b97395f902?w=800&q=80",
-        profile,
-        match,
-      };
-    })
-    .filter((x): x is VacancyCardFromApi => x != null && x.match >= 70)
-    .sort((a, b) => b.match - a.match);
+  const { cards } = listVacanciesForCandidate(apiVacancies, candidateProfile, candidatePreferredJob);
+  return cards;
 }
 
-/** Build candidate cards with match % from API list and vacancy profile (for employer cabinet). */
+/** True if candidate's preferred job matches the vacancy title (so employer only sees candidates looking for this role). Uses strict same-job matching. */
+export function candidateJobMatchesVacancy(candidateJobTitle: string | null | undefined, vacancyTitle: string): boolean {
+  if (!vacancyTitle) return true;
+  return candidateJobMatchesVacancyStrict(candidateJobTitle, vacancyTitle);
+}
+
+/** Build candidate cards with match % from API list and vacancy profile (for employer cabinet). Only includes candidates whose preferred job matches the vacancy when vacancyTitle is provided; candidates with no preferred job are shown for any vacancy. */
 export function buildCandidateCardsWithMatch(
   apiCandidates: Array<{
     id: string;
@@ -124,9 +227,12 @@ export function buildCandidateCardsWithMatch(
     educationLevel: string;
     willingToRelocate: boolean;
     availableToWork?: boolean;
+    photo?: string | null;
     skills: Array<{ name: string; level: string }>;
   }>,
-  vacancyProfile: VacancyProfile
+  vacancyProfile: VacancyProfile,
+  /** When set, only candidates whose job title matches this vacancy (or who have no preferred job) are shown. */
+  vacancyTitle?: string | null
 ): Array<CandidateCard & { match: number }> {
   const safeSkills = (c: (typeof apiCandidates)[0]) => Array.isArray(c.skills) ? c.skills : [];
   const toSkillLevel = (level: string | null | undefined): CandidateProfile["skills"][0]["level"] => {
@@ -136,6 +242,7 @@ export function buildCandidateCardsWithMatch(
   };
   return apiCandidates
     .filter((c) => c.availableToWork !== false)
+    .filter((c) => !vacancyTitle || !c.jobTitle?.trim() || candidateJobMatchesVacancy(c.jobTitle, vacancyTitle))
     .map((c) => {
       const skills = safeSkills(c);
       const profile: CandidateProfile = {
@@ -146,20 +253,27 @@ export function buildCandidateCardsWithMatch(
         educationLevel: normalizeEducationLevel(c.educationLevel),
         workTypes: c.workTypes?.length ? c.workTypes : ["Full-time"],
         skills: skills.map((s) => ({ name: s.name, level: toSkillLevel(s.level) })),
+        availableToWork: c.availableToWork !== false,
+        primaryPosition: c.jobTitle ?? null,
+        desiredPositions: null,
       };
-      const rawMatch = calculateMatch(profile, vacancyProfile);
-      const match = Number.isFinite(rawMatch) ? Math.min(100, Math.max(0, Math.round(rawMatch))) : 0;
+      const result: MatchResult = calculateMatchResult(profile, vacancyProfile);
+      if (!shouldShowToViewer(result, "employer")) {
+        return null;
+      }
+      const match = result.matchPercent;
       return {
         id: c.id,
         name: c.fullName,
         job: c.jobTitle ?? "Candidate",
         location: locationCityName(c.locationCityId),
         workType: (c.workTypes && c.workTypes[0]) ? c.workTypes[0] : "Full-time",
+        photo: c.photo?.trim() || undefined,
         skills: skills.map((s) => s.name).join(", "),
         profile,
         match,
       };
     })
-    .filter((c) => c.match >= 70)
-    .sort((a, b) => b.match - a.match);
+    .filter((c): c is NonNullable<typeof c> => c != null)
+    .sort((a, b) => b.match - a.match) as Array<CandidateCard & { match: number }>;
 }

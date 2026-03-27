@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { hasLocale } from "next-intl";
 import { routing } from "@/i18n/routing";
 import { Geist, Geist_Mono, Noto_Sans_Georgian, Manrope } from "next/font/google";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
+import LanguageSwitcherFixed from "@/components/LanguageSwitcherFixed";
 import "../globals.css";
 
 const geistSans = Geist({
@@ -42,7 +42,15 @@ export default async function LocaleLayout({ children, params }: Props) {
   setRequestLocale(locale);
   const displayLocale = locale === "local" ? "en" : locale;
 
-  const messages = await getMessages();
+  let messages: Record<string, unknown> | undefined;
+  try {
+    messages = await getMessages();
+  } catch (_) {
+    messages = {};
+  }
+  if (!messages || typeof messages !== "object") {
+    messages = {};
+  }
 
   return (
     <NextIntlClientProvider messages={messages}>
@@ -53,10 +61,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         lang={displayLocale}
         data-locale={locale}
       >
-        {/* Global language switcher - bottom-right, high z-index so it stays visible */}
-        <div className="fixed right-4 bottom-4 z-[100] md:right-6 md:bottom-6">
-          <LanguageSwitcher />
-        </div>
+        <LanguageSwitcherFixed />
         {children}
       </div>
     </NextIntlClientProvider>

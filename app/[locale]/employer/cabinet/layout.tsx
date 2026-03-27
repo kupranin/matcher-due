@@ -25,37 +25,53 @@ export default function EmployerCabinetLayout({
   const router = useRouter();
   const [hasSubscription, setHasSubscription] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionDisplay | null>(null);
+  const [availableSlots, setAvailableSlots] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  // Start with stored name so we don't show "Company" while loading; API response updates it.
+  const [companyName, setCompanyName] = useState<string | null>(() =>
+    typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_name") : null
+  );
 
   useEffect(() => {
     fetch("/api/auth/session", { credentials: "include" })
       .then((r) => r.json())
-      .then((data: { user: { id?: string; role: string } | null }) => {
+      .then((data: { user: { id?: string; role: string } | null; token?: string }) => {
         setAuthChecked(true);
         if (!data?.user || data.user.role !== "EMPLOYER") {
           router.replace("/login");
           return;
         }
         if (typeof window !== "undefined") {
+          const token = typeof data.token === "string" ? data.token : null;
+          if (token) window.sessionStorage.setItem("matcher_employer_token", token);
+          // Keep previous company name in storage until API returns, so we don't flash "Company" while loading
           window.sessionStorage.setItem("employerLoggedIn", "1");
-          if (data.user.id) {
-            window.sessionStorage.setItem("matcher_employer_user_id", data.user.id);
-            return fetch(`/api/companies?userId=${encodeURIComponent(data.user.id)}`)
-              .then((r) => r.json())
-              .then((company: { id?: string } | null) => {
-                if (company?.id) {
-                  window.sessionStorage.setItem("matcher_employer_company_id", company.id);
-                  if (!window.sessionStorage.getItem("employerHasSubscription")) {
-                    window.sessionStorage.setItem("employerHasSubscription", "1");
-                  }
-                  window.dispatchEvent(new CustomEvent("employer-company-ready"));
+          if (data.user.id) window.sessionStorage.setItem("matcher_employer_user_id", data.user.id);
+          const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+          return fetch("/api/companies", { credentials: "include", ...auth })
+            .then((r) => r.json())
+            .then((company: { id?: string; name?: string; error?: string } | null) => {
+              const hasCompany = company && typeof (company as { id?: string }).id === "string";
+              if (hasCompany) {
+                const c = company as { id: string; name?: string };
+                window.sessionStorage.setItem("matcher_employer_company_id", c.id);
+                if (c.name) window.sessionStorage.setItem("matcher_employer_company_name", c.name);
+                setCompanyName(c.name ?? null);
+                if (!window.sessionStorage.getItem("employerHasSubscription")) {
+                  window.sessionStorage.setItem("employerHasSubscription", "1");
                 }
-                setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
-              })
-              .catch(() => setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription")));
-          }
-          setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
+                window.dispatchEvent(new CustomEvent("employer-company-ready"));
+              } else {
+                if (typeof window !== "undefined") window.sessionStorage.removeItem("matcher_employer_company_name");
+                setCompanyName(null);
+              }
+              setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
+            })
+            .catch(() => {
+              setCompanyName(null);
+              setHasSubscription(!!window.sessionStorage.getItem("employerHasSubscription"));
+            });
         }
       })
       .catch(() => {
@@ -64,18 +80,61 @@ export default function EmployerCabinetLayout({
       });
   }, [router]);
 
-  useEffect(() => {
-    if (!hasSubscription) {
-      setSubscription(null);
-      return;
-    }
-    fetch("/api/subscriptions", { credentials: "include" })
+  function fetchCompany() {
+    const token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
+    const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+    return fetch("/api/companies", { credentials: "include", ...auth })
       .then((r) => r.json())
-      .then((data: { subscription: SubscriptionDisplay }) => {
-        setSubscription(data.subscription ?? null);
+      .then((company: { id?: string; name?: string } | null) => {
+        const name = company?.name ?? null;
+        if (typeof window !== "undefined" && name) window.sessionStorage.setItem("matcher_employer_company_name", name);
+        setCompanyName(name);
+        return company;
       })
-      .catch(() => setSubscription(null));
-  }, [hasSubscription, pathname]);
+      .catch(() => {
+        setCompanyName(null);
+        return null;
+      });
+  }
+
+  useEffect(() => {
+    if (!authChecked) return;
+    function fetchSubs() {
+      const token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
+      const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      fetch("/api/subscriptions", { credentials: "include", ...auth })
+        .then(async (r) => {
+          const data = (await r.json()) as { subscription: SubscriptionDisplay; availableSlots?: number | null };
+          if (!r.ok) {
+            setSubscription(null);
+            setAvailableSlots(null);
+            setHasSubscription(false);
+            return;
+          }
+          const sub = data.subscription ?? null;
+          const slots = typeof data.availableSlots === "number" ? data.availableSlots : null;
+          setSubscription(sub);
+          setAvailableSlots(slots);
+          setHasSubscription(!!sub || (typeof slots === "number" && slots > 0));
+        })
+        .catch(() => {
+          setSubscription(null);
+          setAvailableSlots(null);
+          setHasSubscription(false);
+        });
+    }
+    fetchSubs();
+    const handler = () => fetchSubs();
+    window.addEventListener("employer-company-ready", handler);
+    return () => window.removeEventListener("employer-company-ready", handler);
+  }, [authChecked, pathname]);
+
+  useEffect(() => {
+    if (!authChecked) return;
+    const onCompanyUpdated = () => fetchCompany();
+    window.addEventListener("employer-company-updated", onCompanyUpdated);
+    return () => window.removeEventListener("employer-company-updated", onCompanyUpdated);
+  }, [authChecked]);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
@@ -92,9 +151,17 @@ export default function EmployerCabinetLayout({
   }
 
   const sub = subscription;
+  // When we have a company but API returned no slots (e.g. race or error), show 10 so employer sees "X slots remaining" and can post
+  const displaySlots =
+    typeof availableSlots === "number"
+      ? availableSlots
+      : companyName
+        ? 10
+        : null;
 
   const navLinks = [
-    { href: "/employer/cabinet", label: tCommon("candidates"), active: pathname?.endsWith("/employer/cabinet") && !pathname?.includes("/chats") },
+    { href: "/employer/cabinet", label: tCommon("candidates"), active: pathname?.endsWith("/employer/cabinet") && !pathname?.includes("/chats") && pathname !== "/employer/cabinet/matches" },
+    { href: "/employer/cabinet/matches", label: tCommon("matches"), active: pathname === "/employer/cabinet/matches" },
     { href: "/employer/cabinet/chats", label: tCommon("chats"), active: pathname?.includes("/chats") },
     { href: "/employer/post?from=cabinet", label: tCommon("postVacancy"), active: false },
     { href: "/employer/cabinet/profile", label: tCommon("company"), active: pathname === "/employer/cabinet/profile" },
@@ -105,6 +172,9 @@ export default function EmployerCabinetLayout({
       {/* Mobile header */}
       <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 md:hidden">
         <Logo height={56} />
+        <p className="truncate px-2 text-sm font-medium text-gray-700 max-w-[140px]" title={companyName ?? undefined}>
+          {companyName || tCommon("company")}
+        </p>
         <button
           type="button"
           onClick={() => setMobileMenuOpen((o) => !o)}
@@ -125,8 +195,11 @@ export default function EmployerCabinetLayout({
         }`}
       >
         <div className="flex h-full flex-col overflow-y-auto p-4 pt-14 md:pt-4">
-          <div className="mb-8 flex items-center justify-center rounded-xl border border-matcher/20 bg-matcher-pale/50 px-4 py-5">
+          <div className="mb-6 hidden flex-col items-center justify-center rounded-xl border border-matcher/20 bg-matcher-pale/50 px-4 py-4 md:flex md:mb-8 md:py-5">
             <Logo height={72} />
+            <p className="mt-3 w-full truncate text-center text-sm font-medium text-matcher-dark" title={companyName ?? undefined}>
+              {companyName || tCommon("company")}
+            </p>
           </div>
 
           {sub ? (
@@ -153,16 +226,29 @@ export default function EmployerCabinetLayout({
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 {tCabinet("subscription")}
               </p>
-              <p className="mt-1 text-sm font-medium text-gray-700">{tCabinet("noSubscriptionYet")}</p>
-              <p className="mt-1 text-xs text-gray-500">
-                {tCabinet("postVacancyToStart")}
-              </p>
-              <Link
-                href="/employer/post?from=cabinet"
-                className="mt-3 block rounded-lg bg-matcher px-3 py-2 text-center text-sm font-medium text-white hover:bg-matcher-dark"
-              >
-                {tCommon("postVacancy")}
-              </Link>
+              {typeof displaySlots === "number" && displaySlots > 0 ? (
+                <>
+                  <p className="mt-1 text-sm font-medium text-gray-700">{tCabinet("slotsRemaining", { count: displaySlots })}</p>
+                  <p className="mt-1 text-xs text-gray-500">{tCabinet("postVacancyToStart")}</p>
+                  <Link
+                    href="/employer/post?from=cabinet"
+                    className="mt-3 block rounded-lg bg-matcher px-3 py-2 text-center text-sm font-medium text-white hover:bg-matcher-dark"
+                  >
+                    {tCommon("postVacancy")}
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <p className="mt-1 text-sm font-medium text-gray-700">{tCabinet("noSubscriptionYet")}</p>
+                  <p className="mt-1 text-xs text-gray-500">{tCabinet("purchaseSlotsHint")}</p>
+                  <Link
+                    href="/employer/post?from=cabinet&step=package"
+                    className="mt-3 block rounded-lg bg-matcher px-3 py-2 text-center text-sm font-medium text-white hover:bg-matcher-dark"
+                  >
+                    {tCommon("purchaseMoreVacancies") || "Purchase more vacancies"}
+                  </Link>
+                </>
+              )}
             </div>
           )}
 
@@ -193,7 +279,22 @@ export default function EmployerCabinetLayout({
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto pb-20 md:pb-0">{children}</main>
+      <main className="flex-1 overflow-auto pb-20 md:pb-0">
+        {!pathname?.includes("/chats") && !pathname?.endsWith("/profile") && (
+          <div className="border-b border-gray-200 bg-white px-4 py-3 md:px-8">
+            <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
+              <p className="text-sm font-medium text-gray-500">{tCabinet("yourCompany")}</p>
+              <Link
+                href="/employer/cabinet/profile"
+                className="font-semibold text-matcher-dark hover:text-matcher hover:underline"
+              >
+                {companyName || tCommon("company")}
+              </Link>
+            </div>
+          </div>
+        )}
+        {children}
+      </main>
 
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-gray-200 bg-white py-2 md:hidden">
@@ -203,7 +304,7 @@ export default function EmployerCabinetLayout({
             href={href}
             className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${active ? "text-matcher-dark" : "text-gray-500"}`}
           >
-            <span>{label === tCommon("candidates") ? "👥" : label === tCommon("chats") ? "💬" : "➕"}</span>
+            <span>{label === tCommon("candidates") ? "👥" : label === tCommon("matches") ? "🤝" : label === tCommon("chats") ? "💬" : "➕"}</span>
             <span className="truncate max-w-[80px]">{label}</span>
           </Link>
         ))}

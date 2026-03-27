@@ -6,8 +6,8 @@ import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo, animate
 import { Link } from "@/i18n/navigation";
 import Logo from "@/components/Logo";
 import Footer from "@/components/Footer";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 import MatchProgressRing from "@/components/MatchProgressRing";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 function SwipeCard({
   job,

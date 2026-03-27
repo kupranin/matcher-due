@@ -1,18 +1,18 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { Suspense, useState, useMemo, useEffect, useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { GEORGIAN_CITIES } from "@/lib/georgianLocations";
 import Logo from "@/components/Logo";
-import { fetchJobTemplates, getRecommendedSalaryForSlug, getRecommendedSalaryForTitle, getSkillNamesFromRole, type JobTemplateRole } from "@/lib/jobTemplates";
+import { fetchJobTemplates, getRecommendedSalaryForSlug, getRecommendedSalaryForTitle, getRecommendedSalaryForTitleWithAverages, getSkillNamesFromRole, type JobTemplateRole } from "@/lib/jobTemplates";
 import { getStockPhotosForJob } from "@/lib/vacancyStockPhotos";
 import { addSkillToDb, createJobRoleInDb } from "@/lib/userContentApi";
 import { ALL_SKILLS } from "@/lib/allSkills";
 
 const PACKAGES = [
-  { id: "1", vacancies: 1, price: 40, label: "1 vacancy" },
+  { id: "1", vacancies: 1, price: 65, label: "1 vacancy" },
   { id: "5", vacancies: 5, price: 170, label: "5 vacancies" },
   { id: "10", vacancies: 10, price: 400, label: "10 vacancies" },
   { id: "unlimited", vacancies: -1, price: 1000, label: "Unlimited" },
@@ -20,6 +20,50 @@ const PACKAGES = [
 
 function classNames(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
+}
+
+const MAX_PHOTO_WIDTH = 1200;
+const PHOTO_JPEG_QUALITY = 0.88;
+
+function processImageFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("Not an image"));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width;
+        let h = img.height;
+        if (w > MAX_PHOTO_WIDTH) {
+          h = Math.round((h * MAX_PHOTO_WIDTH) / w);
+          w = MAX_PHOTO_WIDTH;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        try {
+          const jpeg = canvas.toDataURL("image/jpeg", PHOTO_JPEG_QUALITY);
+          resolve(jpeg);
+        } catch {
+          resolve(dataUrl);
+        }
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
 }
 
 const FALLBACK_SKILLS = ["Communication", "Teamwork", "Time management", "Customer service", "Problem solving"];
@@ -31,7 +75,7 @@ const SKILL_LEVELS: SkillLevel[] = ["Beginner", "Intermediate", "Advanced"];
 
 type Step = "vacancy" | "vacancySaved" | "package" | "payment" | "success";
 
-export default function EmployerPostPage() {
+function EmployerPostContent() {
   const locale = useLocale();
   const apiLocale = (locale === "local" ? "en" : locale) as "en" | "ka";
   const t = useTranslations("employerPost");
@@ -41,42 +85,74 @@ export default function EmployerPostPage() {
   const router = useRouter();
   const fromRegistration = searchParams.get("registered") === "1";
   const fromCabinet = searchParams.get("from") === "cabinet";
+  const openToPurchase = searchParams.get("step") === "package" || searchParams.get("purchase") === "1";
 
   const [step, setStep] = useState<Step>("vacancy");
+  const [paywallRedirect, setPaywallRedirect] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<(typeof PACKAGES)[number] | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"invoice" | "card" | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
   const [jobRoles, setJobRoles] = useState<JobTemplateRole[]>([]);
 
   useEffect(() => {
+    if (openToPurchase) setStep("package");
+  }, [openToPurchase]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
-    if (window.sessionStorage.getItem("employerLoggedIn")) {
-      setIsLoggedIn(true);
-      const userId = window.sessionStorage.getItem("matcher_employer_user_id");
-      const companyId = window.sessionStorage.getItem("matcher_employer_company_id");
-      if (userId && companyId) return;
-      fetch("/api/auth/session", { credentials: "include" })
-        .then((r) => r.json())
-        .then((data: { user?: { id: string; role: string } | null }) => {
-          if (data?.user?.role === "EMPLOYER" && data.user.id) {
-            window.sessionStorage.setItem("matcher_employer_user_id", data.user.id);
-            if (!window.sessionStorage.getItem("matcher_employer_company_id")) {
-              return fetch(`/api/companies?userId=${encodeURIComponent(data.user.id)}`)
-                .then((r) => r.json())
-                .then((company: { id?: string } | null) => {
-                  if (company?.id) window.sessionStorage.setItem("matcher_employer_company_id", company.id);
-                })
-                .catch(() => {});
-            }
+    // Always re-validate with session API so expired sessions don't show as logged in
+    fetch("/api/auth/session", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data: { user?: { id: string; role: string } | null; token?: string }) => {
+        if (data?.user?.role === "EMPLOYER" && data.user.id) {
+          const token = typeof data.token === "string" ? data.token : null;
+          if (token) window.sessionStorage.setItem("matcher_employer_token", token);
+          window.sessionStorage.setItem("matcher_employer_user_id", data.user.id);
+          window.sessionStorage.setItem("employerLoggedIn", "1");
+          const existingCompanyId = window.sessionStorage.getItem("matcher_employer_company_id");
+          if (existingCompanyId) {
+            setIsLoggedIn(true);
+            setAuthLoading(false);
+            return;
           }
-        })
-        .catch(() => {});
-    }
+          const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+          return fetch("/api/companies", { credentials: "include", ...auth })
+            .then((res) => res.json())
+            .then((company: { id?: string; error?: string } | null) => {
+              if (company && typeof (company as { id?: string }).id === "string") {
+                window.sessionStorage.setItem("matcher_employer_company_id", (company as { id: string }).id);
+                setIsLoggedIn(true);
+              }
+            })
+            .catch(() => {})
+            .finally(() => setAuthLoading(false));
+        }
+        // Session expired or not employer: clear stale storage and show login
+        window.sessionStorage.removeItem("employerLoggedIn");
+        window.sessionStorage.removeItem("matcher_employer_user_id");
+        window.sessionStorage.removeItem("matcher_employer_company_id");
+        window.sessionStorage.removeItem("matcher_employer_token");
+        setIsLoggedIn(false);
+        setAuthLoading(false);
+      })
+      .catch(() => {
+        setAuthLoading(false);
+        setIsLoggedIn(false);
+      });
   }, []);
 
   useEffect(() => {
     fetchJobTemplates(apiLocale).then(setJobRoles).catch(() => setJobRoles([]));
   }, [locale]);
+
+  const [salaryAveragesFromCandidates, setSalaryAveragesFromCandidates] = useState<Record<string, number> | null>(null);
+  useEffect(() => {
+    fetch("/api/salaries/average")
+      .then((r) => r.json())
+      .then((data: { bySlug?: Record<string, number> }) => setSalaryAveragesFromCandidates(data?.bySlug ?? null))
+      .catch(() => setSalaryAveragesFromCandidates(null));
+  }, []);
 
   useEffect(() => {
     if (step !== "success") return;
@@ -94,15 +170,15 @@ export default function EmployerPostPage() {
     () => (jobSlug ? jobRoles.find((r) => r.slug === jobSlug) ?? null : jobRoles.find((r) => r.title === jobTitle) ?? null),
     [jobSlug, jobTitle, jobRoles]
   );
-  const recommendedSalary = useMemo(
-    () =>
-      selectedRole?.slug != null
-        ? getRecommendedSalaryForSlug(selectedRole.slug)
-        : jobSlug
-          ? getRecommendedSalaryForSlug(jobSlug)
-          : getRecommendedSalaryForTitle(jobTitle),
-    [selectedRole?.slug, jobSlug, jobTitle]
-  );
+  const recommendedSalary = useMemo(() => {
+    const fromCandidates = (slug: string) =>
+      salaryAveragesFromCandidates != null && typeof salaryAveragesFromCandidates[slug] === "number"
+        ? salaryAveragesFromCandidates[slug]
+        : getRecommendedSalaryForSlug(slug);
+    if (selectedRole?.slug != null) return fromCandidates(selectedRole.slug);
+    if (jobSlug) return fromCandidates(jobSlug);
+    return getRecommendedSalaryForTitleWithAverages(jobTitle, salaryAveragesFromCandidates);
+  }, [selectedRole?.slug, jobSlug, jobTitle, salaryAveragesFromCandidates]);
   const [locationCityId, setLocationCityId] = useState("");
   const [locationDistrictId, setLocationDistrictId] = useState("");
 
@@ -125,6 +201,9 @@ export default function EmployerPostPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [vacancyPhotoUrl, setVacancyPhotoUrl] = useState("");
   const [customPhotoUrl, setCustomPhotoUrl] = useState("");
+  const [photoDropDragging, setPhotoDropDragging] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const photoFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const stockPhotos = useMemo(
     () => getStockPhotosForJob(selectedRole?.slug ?? jobSlug ?? jobTitle ?? null),
@@ -152,10 +231,11 @@ export default function EmployerPostPage() {
   const filteredSkillsForSearch = useMemo(() => {
     const q = skillSearch.trim().toLowerCase();
     if (q.length < 2) return [];
-    const inRequired = new Set(requiredSkills.map((s) => s.name));
-    const inGood = new Set(goodToHaveSkills.map((s) => s.name));
+    const alreadyAdded = (skillName: string) =>
+      requiredSkills.some((x) => x.name.toLowerCase() === skillName.toLowerCase()) ||
+      goodToHaveSkills.some((x) => x.name.toLowerCase() === skillName.toLowerCase());
     return ALL_SKILLS.filter((s) => {
-      if (inRequired.has(s) || inGood.has(s)) return false;
+      if (alreadyAdded(s)) return false;
       const canAdd = addingAsRequired ? requiredSkills.length < 5 : goodToHaveSkills.length < 5;
       if (!canAdd) return false;
       return s.toLowerCase().includes(q);
@@ -163,20 +243,20 @@ export default function EmployerPostPage() {
   }, [skillSearch, requiredSkills, goodToHaveSkills, addingAsRequired]);
 
   function addSkill(s: string) {
-    const name = s.trim();
-    if (!name || name.length < 2) return;
-    const displayName = name.replace(/\b\w/g, (c) => c.toUpperCase());
-    const inRequired = requiredSkills.some((x) => x.name.toLowerCase() === displayName.toLowerCase());
-    const inGood = goodToHaveSkills.some((x) => x.name.toLowerCase() === displayName.toLowerCase());
+    const normalized = s.trim();
+    if (!normalized || normalized.length < 2) return;
+    const inRequired = requiredSkills.some((x) => x.name.toLowerCase() === normalized.toLowerCase());
+    const inGood = goodToHaveSkills.some((x) => x.name.toLowerCase() === normalized.toLowerCase());
     if (inRequired || inGood) return;
-    const skill: VacancySkill = { name: displayName, level: "Intermediate" };
-    const canonical = ALL_SKILLS.find((x) => x.toLowerCase() === displayName.toLowerCase());
-    const finalName = canonical ?? displayName;
+    // Keep original casing so suggested list and level selection match (e.g. "Physical stamina").
+    const canonical = ALL_SKILLS.find((x) => x.toLowerCase() === normalized.toLowerCase());
+    const finalName = canonical ?? normalized;
+    const skill: VacancySkill = { name: finalName, level: "Intermediate" };
     if (addingAsRequired && requiredSkills.length < 5) {
-      setRequiredSkills((prev) => [...prev, { ...skill, name: finalName }]);
+      setRequiredSkills((prev) => [...prev, skill]);
       addSkillToDb(finalName);
     } else if (!addingAsRequired && goodToHaveSkills.length < 5) {
-      setGoodToHaveSkills((prev) => [...prev, { ...skill, name: finalName }]);
+      setGoodToHaveSkills((prev) => [...prev, skill]);
       addSkillToDb(finalName);
     }
   }
@@ -189,42 +269,47 @@ export default function EmployerPostPage() {
   }
 
   function removeSkill(name: string, isRequired: boolean) {
-    if (isRequired) setRequiredSkills((prev) => prev.filter((x) => x.name !== name));
-    else setGoodToHaveSkills((prev) => prev.filter((x) => x.name !== name));
+    const nameLower = name.toLowerCase();
+    if (isRequired) setRequiredSkills((prev) => prev.filter((x) => x.name.toLowerCase() !== nameLower));
+    else setGoodToHaveSkills((prev) => prev.filter((x) => x.name.toLowerCase() !== nameLower));
   }
 
   function setSkillLevel(name: string, level: SkillLevel, isRequired: boolean) {
+    const nameLower = name.toLowerCase();
     if (isRequired) {
       setRequiredSkills((prev) =>
-        prev.map((sk) => (sk.name === name ? { ...sk, level } : sk))
+        prev.map((sk) => (sk.name.toLowerCase() === nameLower ? { ...sk, level } : sk))
       );
     } else {
       setGoodToHaveSkills((prev) =>
-        prev.map((sk) => (sk.name === name ? { ...sk, level } : sk))
+        prev.map((sk) => (sk.name.toLowerCase() === nameLower ? { ...sk, level } : sk))
       );
     }
   }
 
   function moveSkill(name: string, fromRequired: boolean) {
+    const nameLower = name.toLowerCase();
     const skill = fromRequired
-      ? requiredSkills.find((x) => x.name === name)
-      : goodToHaveSkills.find((x) => x.name === name);
+      ? requiredSkills.find((x) => x.name.toLowerCase() === nameLower)
+      : goodToHaveSkills.find((x) => x.name.toLowerCase() === nameLower);
     if (!skill) return;
     if (fromRequired) {
       if (goodToHaveSkills.length >= 5) return;
-      setRequiredSkills((prev) => prev.filter((x) => x.name !== name));
+      setRequiredSkills((prev) => prev.filter((x) => x.name.toLowerCase() !== nameLower));
       setGoodToHaveSkills((prev) => [...prev, skill]);
     } else {
       if (requiredSkills.length >= 5) return;
-      setGoodToHaveSkills((prev) => prev.filter((x) => x.name !== name));
+      setGoodToHaveSkills((prev) => prev.filter((x) => x.name.toLowerCase() !== nameLower));
       setRequiredSkills((prev) => [...prev, skill]);
     }
   }
 
+  const DESCRIPTION_MAX = 200;
+
   function handleJobTitleSelect(role: JobTemplateRole) {
     setJobTitle(role.title);
     setJobSlug(role.slug);
-    setDescription(role.description);
+    setDescription(role.description.slice(0, DESCRIPTION_MAX));
     setRequiredSkills([]);
     setGoodToHaveSkills([]);
     setVacancyPhotoUrl("");
@@ -235,7 +320,7 @@ export default function EmployerPostPage() {
     const match = jobRoles.find((r) => r.title === value);
     if (match) {
       setJobSlug(match.slug);
-      setDescription(match.description);
+      setDescription(match.description.slice(0, DESCRIPTION_MAX));
       setRequiredSkills([]);
       setGoodToHaveSkills([]);
       setVacancyPhotoUrl("");
@@ -245,12 +330,41 @@ export default function EmployerPostPage() {
     }
   }
 
+  async function handleVacancyPhotoFile(file: File | null) {
+    setPhotoError(null);
+    if (!file) return;
+    try {
+      const dataUrl = await processImageFile(file);
+      setCustomPhotoUrl(dataUrl);
+      setVacancyPhotoUrl("");
+    } catch {
+      setPhotoError(t("photoInvalidFile"));
+    }
+  }
+
+  function handlePhotoDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setPhotoDropDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleVacancyPhotoFile(file);
+  }
+
+  function handlePhotoDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setPhotoDropDragging(true);
+  }
+
+  function handlePhotoDragLeave() {
+    setPhotoDropDragging(false);
+  }
+
   const canSubmit =
     isLoggedIn &&
     jobTitle.trim().length >= 2 &&
     requiredSkills.length > 0 &&
     requiredSkills.every((s) => Boolean(s.level)) &&
-    locationCityId;
+    locationCityId &&
+    description.length <= DESCRIPTION_MAX;
 
   async function proceedToPackage() {
     if (isSubmitting) return;
@@ -265,7 +379,7 @@ export default function EmployerPostPage() {
         title: jobTitle.trim(),
         locale: apiLocale,
         category: "User-added",
-        description: description.trim() || undefined,
+        description: description.trim().slice(0, DESCRIPTION_MAX) || undefined,
         skills: skillsPayload.length > 0 ? skillsPayload : undefined,
       });
     }
@@ -287,37 +401,79 @@ export default function EmployerPostPage() {
     ];
     const salMin = salaryMin.trim() ? parseInt(salaryMin.replace(/\D/g, ""), 10) : null;
     const salMax = salaryMax.trim() ? parseInt(salaryMax.replace(/\D/g, ""), 10) : 1200;
-    let companyId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_id") : null;
-    let userId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_user_id") : null;
-    if (typeof window !== "undefined" && !userId) {
+    // Re-validate session before save so we don't submit with an expired session
+    let companyId: string | null = null;
+    let userId: string | null = null;
+    if (typeof window !== "undefined") {
       try {
         const sessionRes = await fetch("/api/auth/session", { credentials: "include" });
-        const sessionData = await sessionRes.json().catch(() => ({}));
-        if (sessionData?.user?.role === "EMPLOYER" && sessionData.user.id) {
-          const id = String(sessionData.user.id);
-          userId = id;
-          window.sessionStorage.setItem("matcher_employer_user_id", id);
+        const sessionData = await sessionRes.json().catch(() => ({})) as { user?: { id: string; role: string }; token?: string };
+        if (sessionData?.user?.role !== "EMPLOYER" || !sessionData.user?.id) {
+          window.sessionStorage.removeItem("employerLoggedIn");
+          window.sessionStorage.removeItem("matcher_employer_user_id");
+          window.sessionStorage.removeItem("matcher_employer_company_id");
+          window.sessionStorage.removeItem("matcher_employer_token");
+          setSaveError("Your session has expired. Please log in again to save your vacancy.");
+          setIsSubmitting(false);
+          return;
         }
+        userId = String(sessionData.user.id);
+        window.sessionStorage.setItem("matcher_employer_user_id", userId);
+        if (sessionData.token) window.sessionStorage.setItem("matcher_employer_token", sessionData.token);
+        window.sessionStorage.setItem("employerLoggedIn", "1");
+        companyId = window.sessionStorage.getItem("matcher_employer_company_id");
       } catch {
-        // ignore
+        setSaveError("Could not verify your session. Please log in again.");
+        setIsSubmitting(false);
+        return;
       }
     }
     if (!companyId && userId && typeof window !== "undefined") {
       try {
-        const companyRes = await fetch(`/api/companies?userId=${encodeURIComponent(userId)}`);
+        const token = window.sessionStorage.getItem("matcher_employer_token");
+        const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+        // First, try to load an existing company for this employer.
+        const companyRes = await fetch("/api/companies", { credentials: "include", ...auth });
         const companyData = await companyRes.json().catch(() => null);
-        if (companyData?.id) {
+        if (companyRes.ok && companyData?.id) {
           companyId = companyData.id;
           window.sessionStorage.setItem("matcher_employer_company_id", companyData.id);
+        } else {
+          // If no company exists yet, create a minimal one so the employer
+          // always has a company record before posting their first vacancy.
+          const nameFromStorage = window.sessionStorage.getItem("matcher_employer_company_name");
+          const fallbackName = nameFromStorage || jobTitle.trim() || "Company";
+          const createRes = await fetch("/api/companies", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              ...(auth.headers || {}),
+            },
+            body: JSON.stringify({
+              name: fallbackName,
+            }),
+          });
+          const created = await createRes.json().catch(() => null);
+          if (createRes.ok && created?.id) {
+            companyId = created.id;
+            window.sessionStorage.setItem("matcher_employer_company_id", created.id);
+            if (fallbackName && !nameFromStorage) {
+              window.sessionStorage.setItem("matcher_employer_company_name", fallbackName);
+            }
+          }
         }
       } catch {
         // ignore
       }
     }
     try {
+      const token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
       const res = await fetch("/api/vacancies", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({
           companyId: companyId || undefined,
@@ -332,21 +488,31 @@ export default function EmployerPostPage() {
           isRemote: false,
           requiredExperienceMonths: experienceRequired === "yes" ? requiredExperienceMonths : 0,
           requiredEducationLevel,
-          description: description.trim() || undefined,
+          description: description.trim().slice(0, DESCRIPTION_MAX) || undefined,
           skills: skillsForApi,
           photo: effectivePhotoUrl || undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const msg = typeof data?.error === "string" ? data.error : "Could not save vacancy. Please try again.";
-        setSaveError(msg);
+        if (res.status === 402 && data?.code === "STRICT_PAYWALL_ERROR") {
+          setStep("package");
+          setPaywallRedirect(true);
+          setSaveError(null);
+          setIsSubmitting(false);
+          return;
+        }
         if (res.status === 401 && typeof window !== "undefined") {
           window.sessionStorage.removeItem("employerLoggedIn");
           window.sessionStorage.removeItem("matcher_employer_user_id");
           window.sessionStorage.removeItem("matcher_employer_company_id");
-          setIsLoggedIn(false);
+          window.sessionStorage.removeItem("matcher_employer_token");
+          setSaveError("Your session has expired. Please log in again to save your vacancy.");
+          setIsSubmitting(false);
+          return;
         }
+        const msg = typeof data?.error === "string" ? data.error : "Could not save vacancy. Please try again.";
+        setSaveError(msg);
         return;
       }
       setSaveError(null);
@@ -378,6 +544,7 @@ export default function EmployerPostPage() {
   }
 
   function handlePackageSelect(pkg: (typeof PACKAGES)[number]) {
+    setPaywallRedirect(false);
     setSelectedPackage(pkg);
     setStep("payment");
   }
@@ -390,9 +557,21 @@ export default function EmployerPostPage() {
       return;
     }
     try {
+      let token = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_token") : null;
+      if (!token && typeof window !== "undefined") {
+        const sessionRes = await fetch("/api/auth/session", { credentials: "include" });
+        const sessionData = await sessionRes.json().catch(() => ({}));
+        const sessionToken = typeof sessionData?.token === "string" ? sessionData.token : null;
+        if (sessionToken) {
+          token = sessionToken;
+          window.sessionStorage.setItem("matcher_employer_token", sessionToken);
+        }
+      }
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
       const res = await fetch("/api/subscriptions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({
           packageType: selectedPackage.id,
@@ -461,6 +640,16 @@ export default function EmployerPostPage() {
         {/* Step: Package selection */}
         {step === "package" && (
           <div className="rounded-3xl border bg-white p-8 shadow-sm">
+            {paywallRedirect && (
+              <div className="mb-6 rounded-xl border border-matcher/40 bg-matcher-pale/60 px-4 py-3 text-sm font-medium text-matcher-dark">
+                {t("noSlotsLeft")}
+              </div>
+            )}
+            {saveError && !paywallRedirect && (
+              <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                {saveError}
+              </div>
+            )}
             <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
               {t("choosePackage")}
             </h1>
@@ -490,7 +679,7 @@ export default function EmployerPostPage() {
             </p>
             <button
               type="button"
-              onClick={() => setStep("vacancy")}
+              onClick={() => { setPaywallRedirect(false); setSaveError(null); setStep("vacancy"); }}
               className="mt-6 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               {t("backToVacancy")}
@@ -586,13 +775,21 @@ export default function EmployerPostPage() {
             <p className="mt-1 text-sm text-matcher-dark/90">
               {t("addFirstVacancy")}
             </p>
+            <p className="mt-1 text-xs text-matcher-dark/80">
+              {t("tenFreeSlots")}
+            </p>
           </div>
         )}
         <div className="rounded-3xl border bg-white p-8 shadow-sm">
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
             {t("postVacancy")}
           </h1>
-          {!isLoggedIn ? (
+          {authLoading ? (
+            <div className="mt-8 flex flex-col items-center justify-center gap-4 py-12">
+              <div className="h-10 w-10 animate-spin rounded-full border-2 border-matcher border-t-transparent" aria-hidden />
+              <p className="text-sm text-gray-600">{tCommon("loading") ?? "Loading…"}</p>
+            </div>
+          ) : !isLoggedIn ? (
             <div className="mt-6 rounded-2xl border border-matcher/30 bg-matcher-mint/50 p-8 text-center">
               <p className="text-gray-700">{t("registerToPost")}</p>
               <Link
@@ -663,24 +860,6 @@ export default function EmployerPostPage() {
               </select>
             </div>
 
-            <div className="rounded-2xl border-2 border-matcher/30 bg-matcher-mint/30 p-4">
-              <p className="text-sm font-semibold text-matcher-dark">
-                {selectedRole || jobTitle.trim()
-                  ? t("salaryRecommendation", { amount: recommendedSalary.toLocaleString() })
-                  : t("salaryRecommendationGeneric", { amount: recommendedSalary.toLocaleString() })}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setSalaryMin(String(recommendedSalary));
-                  setSalaryMax(String(Math.round(recommendedSalary * 1.2)));
-                }}
-                className="mt-2 text-sm font-medium text-matcher-dark underline hover:no-underline"
-              >
-                {t("useRecommendation")}
-              </button>
-            </div>
-
             {selectedCity?.districts && selectedCity.districts.length > 0 && (
               <div>
                 <label className="text-sm font-medium text-gray-900">
@@ -721,14 +900,56 @@ export default function EmployerPostPage() {
             <div>
               <label className="text-sm font-medium text-gray-900">{t("vacancyPhoto")}</label>
               <p className="mt-1 text-xs text-gray-500">{t("vacancyPhotoHint")}</p>
-              <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+              <div
+                role="button"
+                tabIndex={0}
+                onDragOver={handlePhotoDragOver}
+                onDragLeave={handlePhotoDragLeave}
+                onDrop={handlePhotoDrop}
+                onClick={() => photoFileInputRef.current?.click()}
+                onKeyDown={(e) => e.key === "Enter" && photoFileInputRef.current?.click()}
+                className={classNames(
+                  "mt-3 flex min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-8 text-center transition",
+                  photoDropDragging ? "border-matcher bg-matcher-pale/50" : "border-gray-200 bg-gray-50 hover:border-matcher/50 hover:bg-matcher-pale/30"
+                )}
+              >
+                <input
+                  ref={photoFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleVacancyPhotoFile(file);
+                    e.target.value = "";
+                  }}
+                />
+                <span className="text-3xl text-gray-400" aria-hidden>📷</span>
+                <p className="mt-2 text-sm font-medium text-gray-700">{t("photoDropHint")}</p>
+                <p className="mt-0.5 text-xs text-gray-500">{t("photoDropOrClick")}</p>
+              </div>
+              {customPhotoUrl && (
+                <div className="mt-2 flex items-center gap-2">
+                  <img src={customPhotoUrl} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setCustomPhotoUrl("")}
+                    className="text-sm text-gray-500 underline hover:text-gray-700"
+                  >
+                    {t("removePhoto")}
+                  </button>
+                </div>
+              )}
+              {photoError && <p className="mt-2 text-sm text-red-600">{photoError}</p>}
+              <p className="mt-3 text-xs font-medium text-gray-500">{t("orChooseStock")}</p>
+              <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
                 {stockPhotos.slice(0, 8).map((url) => {
                   const selected = !customPhotoUrl.trim() && (vacancyPhotoUrl === url || (vacancyPhotoUrl === "" && url === stockPhotos[0]));
                   return (
                     <button
                       key={url}
                       type="button"
-                      onClick={() => { setVacancyPhotoUrl(url); setCustomPhotoUrl(""); }}
+                      onClick={() => { setVacancyPhotoUrl(url); setCustomPhotoUrl(""); setPhotoError(null); }}
                       className={classNames(
                         "relative aspect-square overflow-hidden rounded-xl border-2 bg-gray-100 transition",
                         selected ? "border-matcher ring-2 ring-matcher/30" : "border-gray-200 hover:border-matcher/50"
@@ -742,30 +963,37 @@ export default function EmployerPostPage() {
                   );
                 })}
               </div>
-              <div className="mt-4">
-                <label className="text-xs font-medium text-gray-600">{t("useMyOwnImage")}</label>
-                <input
-                  type="url"
-                  value={customPhotoUrl}
-                  onChange={(e) => { setCustomPhotoUrl(e.target.value); if (e.target.value.trim()) setVacancyPhotoUrl(""); }}
-                  placeholder={t("useMyOwnImagePlaceholder")}
-                  className="mt-1.5 w-full rounded-2xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
-                />
-              </div>
             </div>
 
-            {/* Preview: how this vacancy looks in the candidate swipe deck */}
+            {/* Preview: how this vacancy looks in the candidate swipe deck — also a drop target */}
             <div className="rounded-2xl border-2 border-dashed border-matcher/30 bg-gray-50 p-4">
               <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-matcher-dark">
                 {t("deckPreviewTitle")}
               </p>
-              <div className="mx-auto max-w-[280px] overflow-hidden rounded-2xl bg-gray-900 shadow-lg ring-2 ring-white/20">
+              <div
+                role="button"
+                tabIndex={0}
+                onDragOver={handlePhotoDragOver}
+                onDragLeave={handlePhotoDragLeave}
+                onDrop={handlePhotoDrop}
+                onClick={() => photoFileInputRef.current?.click()}
+                onKeyDown={(e) => e.key === "Enter" && photoFileInputRef.current?.click()}
+                className={classNames(
+                  "mx-auto max-w-[280px] cursor-pointer overflow-hidden rounded-2xl bg-gray-900 shadow-lg ring-2 ring-white/20 transition",
+                  photoDropDragging && "ring-4 ring-matcher"
+                )}
+              >
                 <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden">
                   <img
                     src={effectivePhotoUrl || stockPhotos[0]}
                     alt=""
                     className="h-full w-full object-cover"
                   />
+                  {photoDropDragging && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-matcher/20 text-white">
+                      <span className="rounded-lg bg-matcher px-3 py-1.5 text-sm font-medium">{t("photoDropRelease")}</span>
+                    </div>
+                  )}
                   <div className="absolute right-2 top-2 rounded-full bg-matcher-bright px-2.5 py-1 text-xs font-bold tracking-tight text-charcoal">
                     {salaryMin.trim() && salaryMax.trim()
                       ? `${salaryMin.replace(/\D/g, "")}–${salaryMax.replace(/\D/g, "")} GEL`
@@ -885,8 +1113,8 @@ export default function EmployerPostPage() {
 
               <div className="mt-3 flex flex-wrap gap-2 items-center">
                 {suggestedSkills.map((s) => {
-                  const inRequired = requiredSkills.some((x) => x.name === s);
-                  const inGood = goodToHaveSkills.some((x) => x.name === s);
+                  const inRequired = requiredSkills.some((x) => x.name.toLowerCase() === s.toLowerCase());
+                  const inGood = goodToHaveSkills.some((x) => x.name.toLowerCase() === s.toLowerCase());
                   const added = inRequired || inGood;
                   const canAdd = addingAsRequired
                     ? requiredSkills.length < 5 && !added
@@ -1054,6 +1282,24 @@ export default function EmployerPostPage() {
               )}
             </div>
 
+            <div className="rounded-2xl border-2 border-matcher/30 bg-matcher-mint/30 p-4">
+              <p className="text-sm font-semibold text-matcher-dark">
+                {selectedRole || jobTitle.trim()
+                  ? t("salaryRecommendation", { amount: recommendedSalary.toLocaleString() })
+                  : t("salaryRecommendationGeneric", { amount: recommendedSalary.toLocaleString() })}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSalaryMin(String(recommendedSalary));
+                  setSalaryMax(String(Math.round(recommendedSalary * 1.2)));
+                }}
+                className="mt-2 text-sm font-medium text-matcher-dark underline hover:no-underline"
+              >
+                {t("useRecommendation")}
+              </button>
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="text-sm font-medium text-gray-900">{t("salaryMin")}</label>
@@ -1086,19 +1332,27 @@ export default function EmployerPostPage() {
               </p>
               <textarea
                 value={description}
-                onChange={(e) => setDescription(e.target.value.slice(0, 200))}
+                onChange={(e) => setDescription(e.target.value.slice(0, DESCRIPTION_MAX))}
                 placeholder={t("descriptionPlaceholder")}
                 rows={3}
-                maxLength={200}
+                maxLength={DESCRIPTION_MAX}
                 className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30"
               />
-              <p className="mt-1 text-xs text-gray-500">{t("charactersMax", { count: description.length })}</p>
+              <p className={`mt-1 text-xs ${description.length > DESCRIPTION_MAX ? "text-red-600 font-medium" : "text-gray-500"}`}>
+                {t("charactersMax", { count: description.length })}
+                {description.length > DESCRIPTION_MAX && " · Shorten to 200 characters to post."}
+              </p>
             </div>
 
             {saveError && (
-              <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {saveError}
-              </p>
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <p>{saveError}</p>
+                {saveError.includes("session has expired") && (
+                  <Link href="/login" className="mt-2 inline-block font-medium text-matcher-dark underline hover:no-underline">
+                    Log in again
+                  </Link>
+                )}
+              </div>
             )}
             <button
               type="submit"
@@ -1157,5 +1411,13 @@ export default function EmployerPostPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function EmployerPostPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-matcher border-t-transparent" aria-hidden /></div>}>
+      <EmployerPostContent />
+    </Suspense>
   );
 }

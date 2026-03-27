@@ -22,11 +22,24 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  candidateProfile CandidateProfile?
-  company          Company?
-  sessions         Session[]
+  candidateProfile   CandidateProfile?
+  company            Company?
+  sessions           Session[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
+}
+
+// One-time tokens for password reset. Expire after 1 hour.
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("password_reset_tokens")
 }
 
 enum UserRole {
@@ -48,24 +61,27 @@ model Session {
 
 // ——— Companies (Employers) ———
 model Company {
-  id            String   @id @default(cuid())
-  userId        String   @unique @map("user_id")
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name          String
-  companyId     String   @map("company_id") // Tax / identification number
-  contactEmail  String   @map("contact_email")
-  contactPhone  String   @map("contact_phone")
-  bio           String?  @db.Text
-  website       String?
-  industry      String?
-  employeeCount String?  @map("employee_count")
-  address       String?
-  linkedIn      String?
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(cuid())
+  userId         String   @unique @map("user_id")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  companyId      String   @map("company_id") // Tax / identification number
+  contactEmail   String   @map("contact_email")
+  contactPhone   String   @map("contact_phone")
+  bio            String?  @db.Text
+  logo           String?  // URL or data URL
+  website        String?
+  industry       String?
+  employeeCount  String?  @map("employee_count")
+  address        String?
+  linkedIn       String?
+  availableSlots Int      @default(10) @map("available_slots") // Vacancy credits; deduct on post, top up via purchase
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   vacancies     Vacancy[]
   subscriptions Subscription[]
+  purchases     Purchase[]
 }
 
 // ——— Candidate Profiles ———
@@ -167,6 +183,19 @@ model Subscription {
   @@map("subscriptions")
 }
 
+// ——— Purchases (vacancy slot top-ups) ———
+model Purchase {
+  id          String   @id @default(cuid())
+  companyId   String   @map("company_id")
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  packageType String   @map("package_type") // "1" | "5" | "10" | "unlimited"
+  amountPaid  Int      @map("amount_paid") // GEL
+  slotsAdded  Int      @map("slots_added")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("purchases")
+}
+
 // ——— Jobs ———
 model Job {
   id          String   @id @default(uuid())
@@ -228,6 +257,7 @@ model RoleSkillTemplate {
 }
 
 // ——— Matches (Swipe / Like) ———
+// Match = mutual like only for UI: employer_liked AND candidate_liked. Chat is separate (available after match).
 model Match {
   id                 String           @id @default(cuid())
   vacancyId          String           @map("vacancy_id")
@@ -236,9 +266,12 @@ model Match {
   candidateProfile   CandidateProfile @relation(fields: [candidateProfileId], references: [id], onDelete: Cascade)
   employerLiked      Boolean          @default(false) @map("employer_liked")
   candidateLiked     Boolean          @default(false) @map("candidate_liked")
+  /// Deprecated: Quick pitch was removed; no longer written. Kept for backward compatibility.
   candidatePitch     String?          @map("candidate_pitch") @db.Text
   matchScore         Int?             @map("match_score") // 0-100 from weighted scoring
   createdAt          DateTime         @default(now()) @map("created_at")
+  /// Set when both employer_liked and candidate_liked become true; used to insert system chat message once.
+  matchedAt          DateTime?        @map("matched_at")
 
   chatMessages ChatMessage[]
 
@@ -251,7 +284,7 @@ model ChatMessage {
   id        String   @id @default(cuid())
   matchId   String   @map("match_id")
   match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  sender    String   // "candidate" | "employer"
+  sender    String   // "candidate" | "employer" | "system"
   text      String   @db.Text
   createdAt DateTime @default(now()) @map("created_at")
 

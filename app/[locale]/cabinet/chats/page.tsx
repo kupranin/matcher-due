@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { getCandidateProfileId } from "@/lib/candidateProfileStorage";
 import { loadCandidateProfile } from "@/lib/candidateProfileStorage";
@@ -56,8 +57,10 @@ function MatchListItem({
   );
 }
 
-export default function CandidateChatsPage() {
+function CandidateChatsContent() {
   const t = useTranslations("chats");
+  const searchParams = useSearchParams();
+  const matchIdFromUrl = searchParams.get("matchId");
   const [matches, setMatches] = useState<MutualMatch[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<MutualMatch | null>(null);
 
@@ -68,7 +71,7 @@ export default function CandidateChatsPage() {
     fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`)
       .then((r) => r.json())
       .then((list: Array<{ id: string; vacancyId: string; candidateProfileId: string; candidateLiked: boolean; employerLiked: boolean; vacancyTitle: string; company: string; createdAt: string }>) => {
-        const mutual = list
+        const mutual = (Array.isArray(list) ? list : [])
           .filter((m) => m.candidateLiked && m.employerLiked)
           .map((m) => ({
             id: m.id,
@@ -83,6 +86,42 @@ export default function CandidateChatsPage() {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!matchIdFromUrl) return;
+    const match = matches.find((m) => m.id === matchIdFromUrl);
+    if (match) {
+      setSelectedMatch(match);
+      return;
+    }
+    if (matches.length === 0) {
+      const profileId = getCandidateProfileId();
+      if (!profileId) return;
+      fetch(`/api/matches/${encodeURIComponent(matchIdFromUrl)}?candidateProfileId=${encodeURIComponent(profileId)}`)
+        .then((r) => r.json())
+        .then((m: { id?: string; vacancyId?: string; candidateProfileId?: string; vacancyTitle?: string; company?: string; createdAt?: string }) => {
+          const id = m?.id;
+          const vacancyId = m?.vacancyId;
+          const candidateProfileId = m?.candidateProfileId;
+          if (id && vacancyId != null && candidateProfileId) {
+            const fullName = loadCandidateProfile()?.fullName ?? "";
+            const createdAt = m.createdAt ? new Date(m.createdAt).getTime() : Date.now();
+            const mutual: MutualMatch = {
+              id,
+              vacancyId,
+              candidateId: candidateProfileId,
+              candidateName: fullName,
+              vacancyTitle: m.vacancyTitle ?? "",
+              company: m.company ?? "",
+              createdAt,
+            };
+            setMatches((prev) => [...prev, mutual]);
+            setSelectedMatch(mutual);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [matchIdFromUrl, matches]);
 
   if (matches.length === 0) {
     return (
@@ -129,5 +168,13 @@ export default function CandidateChatsPage() {
         ))}
       </div>
     </div>
+  );
+}
+
+export default function CandidateChatsPage() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-md px-4 py-16 flex justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-matcher border-t-transparent" aria-hidden /></div>}>
+      <CandidateChatsContent />
+    </Suspense>
   );
 }

@@ -5,8 +5,9 @@ import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence, animate } from "framer-motion";
 import { buildCandidateCardsWithMatch } from "@/lib/vacancyApi";
+import { getAvatarSrc } from "@/lib/avatarPlaceholder";
 import { apiVacancyToProfile } from "@/lib/vacancyApi";
-import { getRecommendedSalaryForTitle } from "@/lib/jobTemplates";
+import { getRecommendedSalaryForTitleWithAverages } from "@/lib/jobTemplates";
 import type { MutualMatch } from "@/lib/matchStorage";
 import MatchCongratulationsModal from "@/components/MatchCongratulationsModal";
 import MatchProgressRing from "@/components/MatchProgressRing";
@@ -51,32 +52,43 @@ function SwipeCard({
       style={{ x, rotate }}
       className="absolute inset-0 cursor-grab active:cursor-grabbing"
     >
-      <div className="flex h-full w-full flex-col justify-between rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
-        <div className="flex items-start justify-between">
-          <MatchProgressRing percent={matchPct} size={52} className="text-matcher">
-            {matchPct}%
-          </MatchProgressRing>
-        </div>
-
-        <div className="space-y-2">
-          <div className="relative h-16 w-16 overflow-hidden rounded-2xl bg-gray-100">
-            {candidate.photo ? (
-              <img
-                src={candidate.photo}
-                alt={candidate.name}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span className="flex h-full w-full items-center justify-center text-3xl">👤</span>
-            )}
+      <div className="flex h-full w-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+        {/* Photo fills the card */}
+        <div className="relative min-h-0 flex-1 bg-gray-100">
+          <img
+            src={getAvatarSrc(candidate.photo)}
+            alt=""
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = "/images/avatar-placeholder.svg";
+            }}
+          />
+          {/* Match ring overlaid on photo */}
+          <div className="absolute left-3 top-3">
+            <MatchProgressRing percent={matchPct} size={52} className="text-matcher" innerClassName="text-matcher-dark">
+              {matchPct}%
+            </MatchProgressRing>
           </div>
-          <h2 className="text-xl font-bold text-gray-900">{candidate.name}</h2>
-          <p className="text-gray-600">{candidate.job}</p>
-          <p className="text-sm text-gray-500">{candidate.location} · {candidate.workType}</p>
-          <p className="text-sm text-gray-600">{candidate.skills}</p>
         </div>
-
-        <p className="text-xs text-gray-400">{t("swipeInstruction")}</p>
+        {/* Info strip at bottom */}
+        <div className="shrink-0 border-t border-gray-100 bg-white p-4">
+          <h2 className="text-lg font-bold text-gray-900">
+            {candidate.name}
+            {candidate.job && candidate.job !== "Candidate" ? ` · ${candidate.job}` : ""}
+          </h2>
+          <p className="mt-0.5 text-sm text-gray-500">{candidate.location} · {candidate.workType}</p>
+          {candidate.skills && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {(typeof candidate.skills === "string" ? candidate.skills.split(/,\s*/) : []).filter(Boolean).map((name) => (
+                <span key={name} className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
+                  {name.trim()}
+                </span>
+              ))}
+            </div>
+          )}
+          <p className="mt-2 text-xs text-gray-400">{t("swipeInstruction")}</p>
+        </div>
       </div>
     </motion.div>
   );
@@ -91,6 +103,11 @@ export default function EmployerCabinetPage() {
 
   const [vacancies, setVacancies] = useState<EmployerVacancy[]>([]);
   const [apiCandidates, setApiCandidates] = useState<Array<{ id: string; fullName: string; jobTitle: string | null; locationCityId: string; salaryMin: number; workTypes: string[]; experienceMonths: number; educationLevel: string; willingToRelocate: boolean; skills: Array<{ name: string; level: string }> }>>([]);
+  const [salaryAveragesFromCandidates, setSalaryAveragesFromCandidates] = useState<Record<string, number> | null>(null);
+  const [companyMatches, setCompanyMatches] = useState<
+    Array<{ id?: string; vacancyId: string; candidateProfileId: string; candidateLiked: boolean; employerLiked?: boolean; candidateName?: string; candidateJobTitle?: string | null; vacancyTitle?: string }>
+  >([]);
+  const [opportunitiesLoading, setOpportunitiesLoading] = useState(true);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -98,13 +115,41 @@ export default function EmployerCabinetPage() {
     }
   }, []);
 
-  function loadVacanciesAndCandidates() {
-    const companyId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_id") : null;
-    if (!companyId) return;
-    fetch(`/api/vacancies?companyId=${encodeURIComponent(companyId)}`)
+  useEffect(() => {
+    fetch("/api/salaries/average")
       .then((r) => r.json())
-      .then((list: Array<{ id: string; title: string; company: string; locationCityId: string; salaryMin?: number | null; salaryMax: number; workType: string; isRemote?: boolean; requiredExperienceMonths?: number; requiredEducationLevel?: string; skills?: Array<{ name: string; level?: string; weight?: number }> }>) => {
-        const mapped: EmployerVacancy[] = list.map((v) => {
+      .then((data: { bySlug?: Record<string, number> }) => setSalaryAveragesFromCandidates(data?.bySlug ?? null))
+      .catch(() => setSalaryAveragesFromCandidates(null));
+  }, []);
+
+  function getEmployerAuthHeaders(): Record<string, string> {
+    if (typeof window === "undefined") return {};
+    const token = window.sessionStorage.getItem("matcher_employer_token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  function loadVacanciesAndCandidates() {
+    setOpportunitiesLoading(true);
+    const credentials = { credentials: "include" as RequestCredentials };
+    const auth = getEmployerAuthHeaders();
+    const opts = { ...credentials, ...(Object.keys(auth).length ? { headers: auth } : {}) };
+    const vacanciesPromise = fetch("/api/vacancies", opts).then((r) => r.json());
+    const companiesPromise = fetch("/api/companies", opts).then((r) => r.json());
+
+    Promise.all([vacanciesPromise, companiesPromise])
+      .then(([list, company]: [unknown, { id?: string; name?: string } | null]) => {
+        const hasCompany = company && typeof company === "object" && "id" in company && company.id && !("error" in company);
+        if (hasCompany && typeof window !== "undefined") {
+          if (company.id) window.sessionStorage.setItem("matcher_employer_company_id", company.id);
+          if (company.name) window.sessionStorage.setItem("matcher_employer_company_name", company.name);
+        }
+        if (!hasCompany) {
+          setVacancies([]);
+          setOpportunitiesLoading(false);
+          return;
+        }
+        const rawList = Array.isArray(list) ? list : [];
+        const mapped: EmployerVacancy[] = rawList.map((v: { id: string; title: string; company: string; locationCityId?: string; salaryMin?: number | null; salaryMax: number; workType: string; isRemote?: boolean; requiredExperienceMonths?: number; requiredEducationLevel?: string; skills?: Array<{ name: string; level?: string; weight?: number }> }) => {
           const locationCityId = v.locationCityId ?? "";
           const loc = locationCityId === "tbilisi" ? "Tbilisi" : locationCityId;
           const salaryStr = v.salaryMin != null ? `${v.salaryMin}–${v.salaryMax} GEL` : `${v.salaryMax} GEL`;
@@ -115,17 +160,48 @@ export default function EmployerCabinetPage() {
             location: loc,
             workType: v.workType,
             salary: salaryStr,
-            profile: apiVacancyToProfile(v),
+            profile: apiVacancyToProfile({ ...v, locationCityId }),
           };
         });
         setVacancies(mapped);
       })
-      .catch(() => {});
+      .catch(() => setVacancies([]))
+      .finally(() => setOpportunitiesLoading(false));
+
     fetch("/api/candidates")
       .then((r) => r.json())
       .then(setApiCandidates)
       .catch(() => {});
+    fetch("/api/matches", opts)
+      .then((r) => r.json())
+      .then((list: Array<{ vacancyId: string; candidateProfileId: string; candidateLiked: boolean; candidateName?: string; candidateJobTitle?: string | null; vacancyTitle?: string }>) =>
+        setCompanyMatches(Array.isArray(list) ? list : [])
+      )
+      .catch(() => setCompanyMatches([]));
   }
+
+  const likedCountByVacancyId = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const m of companyMatches) {
+      if (!m.candidateLiked) continue;
+      map[m.vacancyId] = (map[m.vacancyId] ?? 0) + 1;
+    }
+    return map;
+  }, [companyMatches]);
+
+  const likedCandidatesByVacancyId = useMemo(() => {
+    const map: Record<string, Array<{ id: string; name: string; jobTitle?: string | null }>> = {};
+    for (const m of companyMatches) {
+      if (!m.candidateLiked) continue;
+      if (!map[m.vacancyId]) map[m.vacancyId] = [];
+      map[m.vacancyId].push({
+        id: m.candidateProfileId,
+        name: m.candidateName ?? "Candidate",
+        jobTitle: m.candidateJobTitle ?? null,
+      });
+    }
+    return map;
+  }, [companyMatches]);
 
   useEffect(() => {
     loadVacanciesAndCandidates();
@@ -138,13 +214,27 @@ export default function EmployerCabinetPage() {
   useEffect(() => {
     if (vacancies.length === 1 && !selectedVacancy) setSelectedVacancy(vacancies[0]);
   }, [vacancies, selectedVacancy]);
-  const candidates = useMemo(
-    () => (selectedVacancy && apiCandidates.length > 0 ? buildCandidateCardsWithMatch(apiCandidates, selectedVacancy.profile) : []),
-    [selectedVacancy, apiCandidates]
-  );
+  const candidates = useMemo(() => {
+    if (!selectedVacancy || apiCandidates.length === 0) return [];
+    const list = buildCandidateCardsWithMatch(apiCandidates, selectedVacancy.profile, selectedVacancy.title);
+    const candidateLikedIds = new Set(
+      companyMatches
+        .filter((m) => m.vacancyId === selectedVacancy.id && m.candidateLiked)
+        .map((m) => m.candidateProfileId)
+    );
+    return [...list].sort((a, b) => {
+      const aLiked = candidateLikedIds.has(a.id);
+      const bLiked = candidateLikedIds.has(b.id);
+      if (aLiked !== bLiked) return aLiked ? -1 : 1;
+      return b.match - a.match;
+    });
+  }, [selectedVacancy, apiCandidates, companyMatches]);
   const [candidateStack, setCandidateStack] = useState<Candidate[]>([]);
   const [liked, setLiked] = useState<Candidate[]>([]);
   const [passed, setPassed] = useState<Candidate[]>([]);
+  type LikeState = "idle" | "submitting" | "matched" | "notMatched" | "error";
+  const [likeState, setLikeState] = useState<LikeState>("idle");
+  const [likeError, setLikeError] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedVacancy && candidates.length > 0) {
@@ -173,9 +263,10 @@ export default function EmployerCabinetPage() {
     if (!window.confirm(t("deleteVacancyConfirm"))) return;
     const companyId = typeof window !== "undefined" ? window.sessionStorage.getItem("matcher_employer_company_id") : null;
     try {
-      const res = await fetch(`/api/vacancies/${v.id}?companyId=${encodeURIComponent(companyId ?? "")}`, {
+      const res = await fetch(`/api/vacancies/${v.id}`, {
         method: "DELETE",
         credentials: "include",
+        headers: getEmployerAuthHeaders(),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -194,25 +285,55 @@ export default function EmployerCabinetPage() {
     }
   }
 
+  const MIN_LOADING_MS = 600;
+
   async function handleSwipe(dir: "left" | "right") {
     if (!current || !selectedVacancy) return;
-    setCandidateStack((prev) => prev.slice(1));
-    if (dir === "right") {
-      setLiked((prev) => [...prev, current]);
-      try {
-        const res = await fetch("/api/matches", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            vacancyId: selectedVacancy.id,
-            candidateProfileId: current.id,
-            employerLiked: true,
-          }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (data.candidateLiked) {
+    if (dir === "left") {
+      setCandidateStack((prev) => prev.slice(1));
+      setPassed((prev) => [...prev, current]);
+      return;
+    }
+    setLikeError(null);
+    setLikeState("submitting");
+    const startedAt = Date.now();
+    try {
+      const res = await fetch("/api/matches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getEmployerAuthHeaders() },
+        credentials: "include",
+        body: JSON.stringify({
+          vacancyId: selectedVacancy.id,
+          candidateProfileId: current.id,
+          employerLiked: true,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const elapsed = Date.now() - startedAt;
+      const delay = Math.max(0, MIN_LOADING_MS - elapsed);
+
+      const applyResult = () => {
+        setCandidateStack((prev) => prev.slice(1));
+        setLiked((prev) => [...prev, current]);
+        if (res.ok && data.id) {
+          setCompanyMatches((prev) => [
+            ...prev,
+            {
+              id: data.id,
+              vacancyId: selectedVacancy.id,
+              candidateProfileId: current.id,
+              candidateLiked: data.candidateLiked === true,
+              employerLiked: true,
+              candidateName: current.name,
+              candidateJobTitle: current.job ?? null,
+              vacancyTitle: selectedVacancy.title,
+            },
+          ]);
+        }
+        const isMatch = data.isMatch === true;
+        if (isMatch) {
           setNewMatch({
-            id: data.id,
+            id: data.matchId ?? data.id,
             vacancyId: selectedVacancy.id,
             candidateId: current.id,
             candidateName: current.name,
@@ -220,16 +341,40 @@ export default function EmployerCabinetPage() {
             company: selectedVacancy.company,
             createdAt: data.createdAt ? new Date(data.createdAt).getTime() : Date.now(),
           });
+          setLikeState("matched");
+        } else {
+          setLikeState("idle");
         }
-      } catch {
-        // ignore
+      };
+
+      if (delay > 0) {
+        setTimeout(applyResult, delay);
+      } else {
+        applyResult();
       }
-    } else setPassed((prev) => [...prev, current]);
+    } catch {
+      setLikeState("error");
+      setLikeError("Request failed. Please try again.");
+      setTimeout(() => {
+        setLikeState("idle");
+        setLikeError(null);
+      }, 2000);
+    }
   }
 
-  function handleOpenChat() {
+  function handleOpenChat(m?: MutualMatch | null) {
+    const id = (m ?? newMatch)?.id;
     setNewMatch(null);
-    router.push("/employer/cabinet/chats");
+    router.push(id ? `/employer/cabinet/chats?matchId=${encodeURIComponent(id)}` : "/employer/cabinet/chats");
+  }
+
+  if (opportunitiesLoading) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center px-4">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-matcher border-t-transparent" aria-hidden />
+        <p className="mt-4 text-gray-600">{t("loadingOpportunities")}</p>
+      </div>
+    );
   }
 
   // No vacancies — clean slate, prompt to add vacancy and buy subscription
@@ -265,39 +410,96 @@ export default function EmployerCabinetPage() {
           {t("chooseVacancyHint")}
         </p>
 
+        {(() => {
+          const totalLiked = Object.values(likedCountByVacancyId).reduce((a, b) => a + b, 0);
+          return totalLiked > 0 ? (
+            <div className="mt-6 rounded-2xl border-2 border-matcher/30 bg-matcher-pale/50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-matcher-dark">{t("candidatesLikedYourVacancies")}</p>
+              <ul className="mt-3 space-y-2">
+                {vacancies
+                  .filter((v) => (likedCountByVacancyId[v.id] ?? 0) > 0)
+                  .map((v) => {
+                    const count = likedCountByVacancyId[v.id] ?? 0;
+                    const names = (likedCandidatesByVacancyId[v.id] ?? []).map((c) => (c.jobTitle ? `${c.name} · ${c.jobTitle}` : c.name)).slice(0, 3);
+                    return (
+                      <li key={v.id}>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectVacancy(v)}
+                          className="flex w-full items-center justify-between rounded-xl border border-matcher/20 bg-white px-4 py-3 text-left transition hover:border-matcher hover:bg-white"
+                        >
+                          <span className="font-medium text-gray-900">{v.title}</span>
+                          <span className="text-sm text-matcher-dark">
+                            {count === 1 ? t("likedYouCount_one") : t("likedYouCount", { count })}
+                          </span>
+                        </button>
+                        {names.length > 0 && (
+                          <p className="mt-1 pl-4 text-xs text-gray-500">
+                            {names.join(", ")}
+                            {(likedCandidatesByVacancyId[v.id]?.length ?? 0) > 3 && " …"}
+                          </p>
+                        )}
+                      </li>
+                    );
+                  })}
+              </ul>
+              <p className="mt-2 text-xs text-gray-600">{t("viewCandidates")} → swipe deck</p>
+            </div>
+          ) : null;
+        })()}
+
         <div className="mt-8 space-y-3">
-          {vacancies.map((v) => (
-            <div
-              key={v.id}
-              className="relative flex w-full flex-col items-start rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:border-matcher hover:bg-matcher-mint/50"
-            >
-              <button
-                type="button"
-                onClick={() => handleSelectVacancy(v)}
-                className="flex w-full flex-col items-start text-left"
+          {vacancies.map((v) => {
+            const likedCount = likedCountByVacancyId[v.id] ?? 0;
+            return (
+              <div
+                key={v.id}
+                className="relative flex w-full flex-col items-start rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:border-matcher hover:bg-matcher-mint/50"
               >
-                <span className="font-bold text-gray-900">{v.title}</span>
-                <span className="mt-1 text-sm text-gray-600">
-                  {v.location} · {v.workType}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => handleSelectVacancy(v)}
+                  className="flex w-full flex-col items-start text-left"
+                >
+                  <div className="flex w-full items-center justify-between gap-2">
+                    <span className="font-bold text-gray-900">{v.title}</span>
+                    {likedCount > 0 && (
+                      <span className="shrink-0 rounded-full bg-matcher px-2.5 py-0.5 text-xs font-semibold text-white">
+                        {likedCount} {likedCount === 1 ? t("likedYouCount_one") : t("likedYouCount", { count: likedCount })}
+                      </span>
+                    )}
+                  </div>
+                  <span className="mt-1 text-sm text-gray-600">
+                    {v.location} · {v.workType}
+                  </span>
                 <span className="mt-1 text-sm font-medium text-matcher-dark">{v.salary}</span>
                 <span className="mt-1 text-xs text-gray-500">
-                  {t("recommendedSalary", { amount: getRecommendedSalaryForTitle(v.title).toLocaleString() })}
+                  {t("recommendedSalary", { amount: getRecommendedSalaryForTitleWithAverages(v.title, salaryAveragesFromCandidates).toLocaleString() })}
                 </span>
-              </button>
-              <button
-                type="button"
-                onClick={(e) => handleDeleteVacancy(e, v)}
-                className="absolute right-3 top-3 rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                aria-label={t("deleteVacancy")}
-                title={t("deleteVacancy")}
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            </div>
-          ))}
+                {v.profile.skills?.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {v.profile.skills.map((s) => (
+                      <span key={s.name} className="rounded-full bg-matcher-pale/80 px-2.5 py-0.5 text-xs font-medium text-matcher-dark">
+                        {s.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => handleDeleteVacancy(e, v)}
+                  className="absolute right-3 top-3 rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                  aria-label={t("deleteVacancy")}
+                  title={t("deleteVacancy")}
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            );
+          })}
         </div>
 
         <p className="mt-8 text-center text-sm text-gray-500">
@@ -314,15 +516,47 @@ export default function EmployerCabinetPage() {
 
   return (
     <div className="mx-auto max-w-md px-4 py-8">
+      {/* My vacancies — switch between vacancies without leaving the deck */}
+      <div className="mb-4">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{t("myVacancies")}</p>
+        <div className="flex flex-wrap gap-2">
+          {vacancies.map((v) => {
+            const likedCount = likedCountByVacancyId[v.id] ?? 0;
+            return (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => setSelectedVacancy(v)}
+                className={`rounded-xl border px-4 py-2.5 text-left text-sm font-medium transition ${
+                  selectedVacancy?.id === v.id
+                    ? "border-matcher bg-matcher text-white"
+                    : "border-gray-200 bg-white text-gray-700 hover:border-matcher hover:bg-matcher-pale/50"
+                }`}
+              >
+                {v.title}
+                {likedCount > 0 && ` (${likedCount})`}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-xs text-gray-500">
+          {t("recommendedSalary", { amount: getRecommendedSalaryForTitleWithAverages(selectedVacancy.title, salaryAveragesFromCandidates).toLocaleString() })}
+        </p>
+      </div>
+
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">{t("candidates")}</h1>
           <p className="mt-1 text-sm text-gray-600">
             {t("candidatesFor")} <span className="font-bold text-matcher-dark">{selectedVacancy.title}</span>
           </p>
-          <p className="mt-0.5 text-xs text-gray-500">
-            {t("recommendedSalary", { amount: getRecommendedSalaryForTitle(selectedVacancy.title).toLocaleString() })}
-          </p>
+          {(likedCountByVacancyId[selectedVacancy.id] ?? 0) > 0 && (
+            <p className="mt-0.5 text-xs text-matcher-dark">
+              {likedCountByVacancyId[selectedVacancy.id] === 1
+                ? t("likedThisJobFirst_one")
+                : t("likedThisJobFirst", { count: likedCountByVacancyId[selectedVacancy.id] })}
+            </p>
+          )}
         </div>
         <button
           type="button"
@@ -333,6 +567,11 @@ export default function EmployerCabinetPage() {
         </button>
       </div>
 
+      {likeError && (
+        <div className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
+          {likeError}
+        </div>
+      )}
       <div className="relative mx-auto mt-8 aspect-[3/4] max-h-[500px]">
         {currentCandidate ? (
           <AnimatePresence mode="wait">
@@ -343,7 +582,22 @@ export default function EmployerCabinetPage() {
               transition={{ duration: 0.2 }}
               className="absolute inset-0"
             >
-              <SwipeCard candidate={currentCandidate} onSwipe={handleSwipe} />
+              <div className="relative h-full w-full">
+                <SwipeCard
+                  candidate={currentCandidate}
+                  onSwipe={likeState === "submitting" ? () => {} : handleSwipe}
+                />
+                {likeState === "submitting" && (
+                  <div
+                    className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl bg-white/90 backdrop-blur-sm"
+                    aria-busy="true"
+                    aria-live="polite"
+                  >
+                    <div className="h-10 w-10 animate-spin rounded-full border-2 border-matcher border-t-transparent" />
+                    <p className="mt-3 text-sm font-medium text-gray-700">{t("checkingMatch")}</p>
+                  </div>
+                )}
+              </div>
             </motion.div>
           </AnimatePresence>
         ) : (
@@ -368,15 +622,17 @@ export default function EmployerCabinetPage() {
         <div className="mt-6 flex justify-center gap-4">
           <button
             type="button"
+            disabled={likeState === "submitting"}
             onClick={() => handleSwipe("left")}
-            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-gray-300 bg-white text-gray-500 shadow-sm hover:bg-gray-50"
+            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-gray-300 bg-white text-gray-500 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
           >
             <span className="text-xl">✕</span>
           </button>
           <button
             type="button"
+            disabled={likeState === "submitting"}
             onClick={() => handleSwipe("right")}
-            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-matcher bg-matcher text-white shadow-sm hover:bg-matcher-dark"
+            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-matcher bg-matcher text-white shadow-sm hover:bg-matcher-dark disabled:opacity-50 disabled:pointer-events-none"
           >
             <span className="text-xl">♥</span>
           </button>
@@ -385,8 +641,12 @@ export default function EmployerCabinetPage() {
 
       <MatchCongratulationsModal
         match={newMatch}
-        onClose={() => setNewMatch(null)}
-        onOpenChat={handleOpenChat}
+        onClose={() => {
+          setNewMatch(null);
+          setLikeState("idle");
+        }}
+        onOpenChat={(match) => handleOpenChat(match)}
+        userRole="employer"
       />
     </div>
   );

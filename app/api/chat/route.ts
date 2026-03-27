@@ -1,23 +1,47 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getEmployerCompanyFromSession, matchBelongsToEmployerCompany } from "@/lib/employerAuth";
 
-/** GET /api/chat?matchId= — list messages for a match. */
+/** GET /api/chat?matchId= — list messages. Employer: session required, match must belong to company. Candidate: candidateProfileId= required. */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const matchId = searchParams.get("matchId");
     if (!matchId) return NextResponse.json({ error: "matchId required" }, { status: 400 });
+
+    const ctx = await getEmployerCompanyFromSession(request);
+    if (ctx) {
+      const allowed = await matchBelongsToEmployerCompany(matchId, ctx.companyId);
+      if (!allowed) {
+        return NextResponse.json({ error: "You can only view chats for your company's matches" }, { status: 403 });
+      }
+    } else {
+      const candidateProfileId = searchParams.get("candidateProfileId");
+      if (!candidateProfileId?.trim()) {
+        return NextResponse.json({ error: "candidateProfileId required for candidate chat access" }, { status: 400 });
+      }
+      const match = await prisma.match.findUnique({
+        where: { id: matchId },
+        select: { candidateProfileId: true },
+      });
+      if (!match || match.candidateProfileId !== candidateProfileId.trim()) {
+        return NextResponse.json({ error: "Match not found or access denied" }, { status: 403 });
+      }
+    }
+
     const list = await prisma.chatMessage.findMany({
       where: { matchId },
       orderBy: { createdAt: "asc" },
+      select: { id: true, sender: true, text: true, createdAt: true },
     });
     return NextResponse.json(
       list.map((m) => ({
         id: m.id,
-        matchId: m.matchId,
+        matchId,
         sender: m.sender,
         text: m.text,
         createdAt: m.createdAt.getTime(),
+        created_at: m.createdAt.getTime(),
       }))
     );
   } catch (e) {
@@ -26,15 +50,39 @@ export async function GET(request: Request) {
   }
 }
 
-/** POST /api/chat — add a message. Body: { matchId, sender, text }. */
+/** POST /api/chat — add a message. Body: { matchId, sender, text }. Optionally candidateProfileId when sender is candidate. */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const matchId = typeof body?.matchId === "string" ? body.matchId.trim() : "";
     const sender = body?.sender === "employer" ? "employer" : "candidate";
     const text = typeof body?.text === "string" ? body.text.trim() : "";
     if (!matchId) return NextResponse.json({ error: "matchId required" }, { status: 400 });
     if (!text) return NextResponse.json({ error: "text required" }, { status: 400 });
+
+    if (sender === "employer") {
+      const ctx = await getEmployerCompanyFromSession(request);
+      if (!ctx) {
+        return NextResponse.json({ error: "Sign in as employer to send messages" }, { status: 401 });
+      }
+      const allowed = await matchBelongsToEmployerCompany(matchId, ctx.companyId);
+      if (!allowed) {
+        return NextResponse.json({ error: "You can only message for your company's matches" }, { status: 403 });
+      }
+    } else {
+      const candidateProfileId = typeof body?.candidateProfileId === "string" ? body.candidateProfileId.trim() : "";
+      if (!candidateProfileId) {
+        return NextResponse.json({ error: "candidateProfileId required for candidate messages" }, { status: 400 });
+      }
+      const match = await prisma.match.findUnique({
+        where: { id: matchId },
+        select: { candidateProfileId: true },
+      });
+      if (!match || match.candidateProfileId !== candidateProfileId) {
+        return NextResponse.json({ error: "Match not found or access denied" }, { status: 403 });
+      }
+    }
+
     const msg = await prisma.chatMessage.create({
       data: { matchId, sender, text },
     });

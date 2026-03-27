@@ -5,7 +5,7 @@
 export type ChatMessage = {
   id: string;
   matchId: string;
-  sender: "candidate" | "employer";
+  sender: "candidate" | "employer" | "system";
   text: string;
   createdAt: number;
 };

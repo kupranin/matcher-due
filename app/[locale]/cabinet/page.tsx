@@ -6,11 +6,10 @@ import { useRouter } from "@/i18n/navigation";
 import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence, animate } from "framer-motion";
 import { buildVacancyCardsWithMatch } from "@/lib/vacancyApi";
 import { GEORGIAN_CITIES } from "@/lib/georgianLocations";
-import { getCandidateProfileForMatch, loadCandidateProfile, getCandidateProfileId, getCandidateUserId, saveCandidateProfile } from "@/lib/candidateProfileStorage";
-import { addCandidateLike, setCandidatePitch, type MutualMatch } from "@/lib/matchStorage";
+import { getCandidateProfileForMatch, loadCandidateProfile, getCandidateProfileId, getCandidateUserId, saveCandidateProfile, CANDIDATE_PROFILE_ID_KEY } from "@/lib/candidateProfileStorage";
+import { addCandidateLike, getCandidateLikes, type MutualMatch } from "@/lib/matchStorage";
 import MatchCongratulationsModal from "@/components/MatchCongratulationsModal";
 import MatchProgressRing from "@/components/MatchProgressRing";
-import PitchModal from "@/components/PitchModal";
 
 type Vacancy = import("@/lib/vacancyApi").VacancyCardFromApi;
 
@@ -108,6 +107,7 @@ function SwipeCard({
         {/* Dark info block – title, company, vibe row, location */}
         <div className="flex flex-1 flex-col justify-between p-5 text-white">
           <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-white/70">{t("jobLabel")}</p>
             <h2 className="font-heading text-2xl font-bold">{vacancy.title}</h2>
             <p className="mt-0.5 text-lg font-medium text-white/90">{vacancy.company}</p>
             {/* Vibe row: icons for No CV, Flexible Hours, Weekly Pay */}
@@ -129,6 +129,15 @@ function SwipeCard({
                 {vacancy.workType}
               </span>
             </div>
+            {vacancy.profile.skills?.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {vacancy.profile.skills.map((s) => (
+                  <span key={s.name} className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-medium text-white/95">
+                    {s.name}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <p className="mt-4 text-sm font-medium text-white/80">{t("swipeInstruction")}</p>
         </div>
@@ -141,110 +150,218 @@ export default function CabinetPage() {
   const t = useTranslations("cabinet");
   const router = useRouter();
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
+  const [allPublishedVacancies, setAllPublishedVacancies] = useState<Vacancy[]>([]);
+  const [opportunitiesLoading, setOpportunitiesLoading] = useState(true);
 
   const [availableToWork, setAvailableToWork] = useState(true);
   const [availableToWorkLoading, setAvailableToWorkLoading] = useState(false);
+  const [candidateMeta, setCandidateMeta] = useState<{ photoUrl: string | null; firstName: string | null } | null>(null);
+  const [chipPhotoFailed, setChipPhotoFailed] = useState(false);
 
   useEffect(() => {
     const profileUserId = getCandidateUserId();
-    const loadProfile = () => getCandidateProfileForMatch();
+    type ProfilePayload = {
+      profileId?: string;
+      fullName?: string;
+      email?: string;
+      phone?: string;
+      locationCityId?: string;
+      salaryMin?: number;
+      workTypes?: string[];
+      willingToRelocate?: boolean;
+      skills?: Array<{ name: string; level: string }>;
+      educationLevel?: string;
+      experienceMonths?: number;
+      jobTitle?: string;
+      availableToWork?: boolean;
+    } | null;
+    const buildProfileFromApi = (data: ProfilePayload): import("@/lib/matchCalculation").CandidateProfile => ({
+      locationCityId: data?.locationCityId ?? "tbilisi",
+      salaryMin: data?.salaryMin ?? 800,
+      willingToRelocate: data?.willingToRelocate ?? false,
+      experienceMonths: data?.experienceMonths ?? 0,
+      educationLevel: (data?.educationLevel as "High School") ?? "High School",
+      workTypes: data?.workTypes?.length ? data.workTypes : ["Full-time"],
+      skills: (data?.skills ?? []).map((s) => ({ name: s.name, level: (s.level as "Intermediate") ?? "Intermediate" })),
+      availableToWork: data?.availableToWork !== false,
+      primaryPosition: data?.jobTitle ?? null,
+      desiredPositions: null,
+    });
+    const loadVacanciesAndBuild = (
+      profile: import("@/lib/matchCalculation").CandidateProfile,
+      preferredJob: string | undefined,
+      profileId: string | null,
+      candidateUserId: string | null
+    ) => {
+      setOpportunitiesLoading(true);
+      // When logged in, use dedicated candidate API (no match table, correct gates, server-side diagnostic logging).
+      const useForCandidateApi = Boolean(candidateUserId);
+      const vacancyListPromise = useForCandidateApi
+        ? fetch(`/api/vacancies/for-candidate?userId=${encodeURIComponent(candidateUserId!)}`, { credentials: "include" })
+            .then((r) => r.json())
+            .then((data: { vacancies?: Vacancy[]; candidateMeta?: { photoUrl?: string | null; firstName?: string | null } }) => {
+              if (data?.candidateMeta) {
+                setCandidateMeta({ photoUrl: data.candidateMeta.photoUrl ?? null, firstName: data.candidateMeta.firstName ?? null });
+                setChipPhotoFailed(false);
+              }
+              return Array.isArray(data?.vacancies) ? data.vacancies : [];
+            })
+        : fetch("/api/vacancies", { credentials: "omit" }).then((r) => r.json());
+      const matchesPromise = profileId
+        ? fetch(`/api/matches?candidateProfileId=${encodeURIComponent(profileId)}`).then((r) => r.json())
+        : Promise.resolve([]);
+      Promise.all([vacancyListPromise, matchesPromise])
+        .then(([list, matches]: [unknown, Array<{ vacancyId: string; employerLiked?: boolean }>]) => {
+          setOpportunitiesLoading(false);
+          const cards = useForCandidateApi
+            ? (list as Vacancy[])
+            : Array.isArray(list) && list.length > 0
+              ? buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob)
+              : [];
+          if (cards.length === 0 && !useForCandidateApi) return;
+          const likedIds = getCandidateLikes();
+          const notYetLiked = cards.filter((c) => !likedIds.includes(c.id));
+          const employerLikedVacancyIds = new Set(
+            (matches || []).filter((m) => m.employerLiked).map((m) => m.vacancyId)
+          );
+          notYetLiked.sort((a, b) => {
+            const aLiked = employerLikedVacancyIds.has(a.id);
+            const bLiked = employerLikedVacancyIds.has(b.id);
+            if (aLiked !== bLiked) return aLiked ? -1 : 1;
+            return b.match - a.match;
+          });
+          setAllPublishedVacancies(cards);
+          setVacancies(notYetLiked);
+        })
+        .catch(() => setOpportunitiesLoading(false));
+    };
     if (profileUserId) {
       fetch(`/api/candidates/profile?userId=${encodeURIComponent(profileUserId)}`)
         .then((r) => r.json())
-        .then((data: { fullName?: string; email?: string; phone?: string; locationCityId?: string; salaryMin?: number; workTypes?: string[]; willingToRelocate?: boolean; skills?: Array<{ name: string; level: string }>; educationLevel?: string; experienceMonths?: number; jobTitle?: string; availableToWork?: boolean } | null) => {
-          if (data && data.fullName) {
+        .then((data: ProfilePayload & { photo?: string | null }) => {
+          if (data?.fullName) {
             setAvailableToWork(data.availableToWork !== false);
+            setCandidateMeta({
+              photoUrl: data.photo?.trim() || null,
+              firstName: data.fullName?.trim().split(/\s+/)[0] ?? null,
+            });
+            setChipPhotoFailed(false);
+            if (typeof data.profileId === "string" && data.profileId.trim() && typeof window !== "undefined") {
+              window.localStorage.setItem(CANDIDATE_PROFILE_ID_KEY, data.profileId.trim());
+            }
+            const profile = buildProfileFromApi(data);
             saveCandidateProfile({
-              profile: {
-                locationCityId: data.locationCityId ?? "tbilisi",
-                salaryMin: data.salaryMin ?? 800,
-                willingToRelocate: data.willingToRelocate ?? false,
-                experienceMonths: data.experienceMonths ?? 0,
-                educationLevel: (data.educationLevel as "High School") ?? "High School",
-                workTypes: data.workTypes ?? ["Full-time"],
-                skills: (data.skills ?? []).map((s) => ({ name: s.name, level: (s.level as "Intermediate") ?? "Intermediate" })),
-              },
+              profile,
               fullName: data.fullName,
               email: data.email ?? "",
               phone: data.phone ?? "",
               job: data.jobTitle ?? undefined,
             });
+            loadVacanciesAndBuild(profile, data.jobTitle ?? undefined, getCandidateProfileId(), profileUserId);
+          } else {
+            const stored = loadCandidateProfile();
+            const fallback = getCandidateProfileForMatch();
+            loadVacanciesAndBuild(stored?.profile ?? fallback, stored?.job ?? undefined, getCandidateProfileId(), profileUserId);
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          const stored = loadCandidateProfile();
+          const fallback = getCandidateProfileForMatch();
+          loadVacanciesAndBuild(stored?.profile ?? fallback, stored?.job ?? undefined, getCandidateProfileId(), profileUserId);
+        });
+    } else {
+      const stored = loadCandidateProfile();
+      const profile = stored?.profile ?? getCandidateProfileForMatch();
+      loadVacanciesAndBuild(profile, stored?.job ?? undefined, getCandidateProfileId(), null);
     }
-    const stored = loadCandidateProfile();
-    const profile = stored?.profile ?? loadProfile();
-    const preferredJob = stored?.job ?? undefined;
-    fetch("/api/vacancies")
-      .then((r) => r.json())
-      .then((list: unknown) => {
-        if (Array.isArray(list) && list.length > 0) {
-          setVacancies(buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob));
-        }
-      })
-      .catch(() => {});
   }, []);
   const [liked, setLiked] = useState<Vacancy[]>([]);
   const [passed, setPassed] = useState<Vacancy[]>([]);
   const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
   const [newMatch, setNewMatch] = useState<MutualMatch | null>(null);
-  const [pendingLikeVacancy, setPendingLikeVacancy] = useState<Vacancy | null>(null);
+  type LikeState = "idle" | "submitting" | "matched" | "notMatched" | "error";
+  const [likeState, setLikeState] = useState<LikeState>("idle");
+  const [likeError, setLikeError] = useState<string | null>(null);
   const current = vacancies[0];
 
-  async function finishLike(vacancy: Vacancy, pitch: string) {
-    setLiked((prev) => [...prev, vacancy]);
-    addCandidateLike(vacancy.id);
-    if (pitch) setCandidatePitch(vacancy.id, pitch);
+  const MIN_LOADING_MS = 600;
+
+  async function handleSwipe(dir: "left" | "right") {
+    if (!current) return;
+    const card = current;
+    if (dir === "left") {
+      setExitDir("left");
+      setVacancies((prev) => prev.slice(1));
+      setPassed((prev) => [...prev, card]);
+      setTimeout(() => setExitDir(null), 50);
+      return;
+    }
     const profileId = getCandidateProfileId();
+    if (!profileId) {
+      setLiked((prev) => [...prev, card]);
+      addCandidateLike(card.id);
+      setExitDir("right");
+      setVacancies((prev) => prev.slice(1));
+      setTimeout(() => setExitDir(null), 50);
+      return;
+    }
+    setLikeError(null);
+    setLikeState("submitting");
+    const startedAt = Date.now();
     const stored = loadCandidateProfile();
     const candidateName = stored?.fullName ?? "Candidate";
-    if (profileId) {
-      try {
-        const res = await fetch("/api/matches", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            vacancyId: vacancy.id,
-            candidateProfileId: profileId,
-            candidateLiked: true,
-            candidatePitch: pitch || undefined,
-          }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (data.employerLiked) {
+    try {
+      const res = await fetch("/api/matches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vacancyId: card.id,
+          candidateProfileId: profileId,
+          candidateLiked: true,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const elapsed = Date.now() - startedAt;
+      const delay = Math.max(0, MIN_LOADING_MS - elapsed);
+      const applyResult = () => {
+        setVacancies((prev) => prev.slice(1));
+        setLiked((prev) => [...prev, card]);
+        addCandidateLike(card.id);
+        const isMatch = data.isMatch === true;
+        if (isMatch) {
           setNewMatch({
-            id: data.id,
-            vacancyId: vacancy.id,
+            id: data.matchId ?? data.id,
+            vacancyId: card.id,
             candidateId: profileId,
             candidateName,
-            vacancyTitle: vacancy.title,
-            company: vacancy.company,
+            vacancyTitle: card.title,
+            company: card.company,
             createdAt: data.createdAt ? new Date(data.createdAt).getTime() : Date.now(),
           });
+          setLikeState("matched");
+        } else {
+          setLikeState("idle");
         }
-      } catch {
-        // ignore
-      }
+        setExitDir("right");
+        setTimeout(() => setExitDir(null), 50);
+      };
+      if (delay > 0) setTimeout(applyResult, delay);
+      else applyResult();
+    } catch (err) {
+      console.warn("Like request failed", err);
+      setLikeState("error");
+      setLikeError("Request failed. Please try again.");
+      setTimeout(() => {
+        setLikeState("idle");
+        setLikeError(null);
+      }, 2000);
     }
-    setPendingLikeVacancy(null);
   }
 
-  function handleSwipe(dir: "left" | "right") {
-    if (!current) return;
-    setExitDir(dir);
-    setVacancies((prev) => prev.slice(1));
-    if (dir === "right") {
-      setPendingLikeVacancy(current);
-    } else {
-      setPassed((prev) => [...prev, current]);
-    }
-    setTimeout(() => setExitDir(null), 50);
-  }
-
-  function handleOpenChat() {
+  function handleOpenChat(m?: MutualMatch | null) {
+    const id = (m ?? newMatch)?.id;
     setNewMatch(null);
-    router.push("/cabinet/chats");
+    router.push(id ? `/cabinet/chats?matchId=${encodeURIComponent(id)}` : "/cabinet/chats");
   }
 
   async function toggleAvailableToWork() {
@@ -271,6 +388,35 @@ export default function CabinetPage() {
       {/* Fun gradient background */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-matcher-pale via-matcher-mint/50 to-matcher-amber/30" />
 
+      {opportunitiesLoading ? (
+        <div className="flex min-h-[50vh] flex-col items-center justify-center py-16">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-matcher border-t-transparent" aria-hidden />
+          <p className="mt-5 text-gray-600">{t("loadingOpportunities")}</p>
+        </div>
+      ) : (
+        <>
+      {/* Candidate "You" chip with photo or initials */}
+      {(candidateMeta?.firstName || candidateMeta?.photoUrl) && (
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-matcher/20 bg-white/80 px-4 py-2.5 shadow-sm backdrop-blur sm:px-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-matcher-mint">
+            {candidateMeta.photoUrl && !chipPhotoFailed ? (
+              <img
+                src={candidateMeta.photoUrl}
+                alt=""
+                className="h-full w-full object-cover"
+                onError={() => setChipPhotoFailed(true)}
+              />
+            ) : (
+              <span className="text-sm font-semibold text-matcher-dark" aria-hidden>
+                {candidateMeta.firstName ? candidateMeta.firstName.slice(0, 1).toUpperCase() : "?"}
+              </span>
+            )}
+          </div>
+          <span className="text-sm font-medium text-gray-800">
+            {candidateMeta.firstName ? `${t("youLabel")} ${candidateMeta.firstName}` : t("youLabel")}
+          </span>
+        </div>
+      )}
       {/* Available to work toggle */}
       {getCandidateUserId() && (
         <div className="mb-4 flex items-center justify-between rounded-2xl border border-matcher/20 bg-white/80 px-4 py-3 shadow-sm backdrop-blur sm:px-5">
@@ -290,9 +436,42 @@ export default function CabinetPage() {
         </div>
       )}
 
-      <h1 className="font-heading text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{t("yourMatches")}</h1>
+      {/* Published vacancies at the top */}
+      {allPublishedVacancies.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-matcher/20 bg-white/90 px-4 py-4 shadow-sm backdrop-blur sm:px-5">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-matcher-dark">
+            {t("publishedOpportunities")}
+          </h2>
+          <p className="mt-0.5 text-xs text-gray-500">
+            {t("publishedOpportunitiesCount", { count: allPublishedVacancies.length })}
+          </p>
+          <ul className="mt-3 space-y-2 max-h-48 overflow-y-auto">
+            {allPublishedVacancies.slice(0, 20).map((v) => (
+              <li key={v.id} className="flex items-center justify-between gap-2 rounded-xl border border-gray-100 bg-gray-50/80 px-3 py-2 text-left">
+                <div className="min-w-0 flex-1">
+                  <span className="font-medium text-gray-900">{v.title}</span>
+                  <span className="ml-2 text-sm text-gray-500">· {v.company}</span>
+                </div>
+                <span className="shrink-0 rounded-full bg-matcher/15 px-2 py-0.5 text-xs font-semibold text-matcher-dark">
+                  {v.match}%
+                </span>
+              </li>
+            ))}
+          </ul>
+          {allPublishedVacancies.length > 20 && (
+            <p className="mt-2 text-xs text-gray-500">{t("andMore", { count: allPublishedVacancies.length - 20 })}</p>
+          )}
+        </div>
+      )}
+
+      <h1 className="font-heading text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{t("yourOpportunities")}</h1>
       <p className="mt-2 text-gray-600">{t("swipeHint")}</p>
 
+      {likeError && (
+        <div className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert">
+          {likeError}
+        </div>
+      )}
       <div className="relative mx-auto mt-6 aspect-[3/4] max-h-[380px] sm:mt-8 sm:max-h-[440px] md:max-h-[520px]">
         {current ? (
           <AnimatePresence mode="wait">
@@ -307,7 +486,22 @@ export default function CabinetPage() {
               }}
               className="absolute inset-0"
             >
-              <SwipeCard vacancy={current} onSwipe={handleSwipe} />
+              <div className="relative h-full w-full">
+                <SwipeCard
+                  vacancy={current}
+                  onSwipe={likeState === "submitting" ? () => {} : handleSwipe}
+                />
+                {likeState === "submitting" && (
+                  <div
+                    className="absolute inset-0 flex flex-col items-center justify-center rounded-3xl bg-gray-900/80 backdrop-blur-sm"
+                    aria-busy="true"
+                    aria-live="polite"
+                  >
+                    <div className="h-10 w-10 animate-spin rounded-full border-2 border-matcher-bright border-t-transparent" />
+                    <p className="mt-3 text-sm font-medium text-white">{t("checkingMatch")}</p>
+                  </div>
+                )}
+              </div>
             </motion.div>
           </AnimatePresence>
         ) : (
@@ -335,39 +529,37 @@ export default function CabinetPage() {
         >
           <motion.button
             type="button"
+            disabled={likeState === "submitting"}
             onClick={() => handleSwipe("left")}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-lg shadow-rose-300/50 transition-shadow hover:shadow-xl hover:shadow-rose-400/50"
+            whileHover={likeState !== "submitting" ? { scale: 1.1 } : {}}
+            whileTap={likeState !== "submitting" ? { scale: 0.9 } : {}}
+            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-lg shadow-rose-300/50 transition-shadow hover:shadow-xl hover:shadow-rose-400/50 disabled:opacity-50 disabled:pointer-events-none"
           >
             <span className="text-2xl font-bold">✕</span>
           </motion.button>
           <motion.button
             type="button"
+            disabled={likeState === "submitting"}
             onClick={() => handleSwipe("right")}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-matcher to-matcher-teal text-white shadow-lg shadow-matcher/40 transition-shadow hover:shadow-xl hover:shadow-matcher/50"
+            whileHover={likeState !== "submitting" ? { scale: 1.1 } : {}}
+            whileTap={likeState !== "submitting" ? { scale: 0.9 } : {}}
+            className="flex h-14 w-14 items-center justify-center rounded-full sm:h-16 sm:w-16 bg-gradient-to-br from-matcher to-matcher-teal text-white shadow-lg shadow-matcher/40 transition-shadow hover:shadow-xl hover:shadow-matcher/50 disabled:opacity-50 disabled:pointer-events-none"
           >
             <span className="text-2xl">♥</span>
           </motion.button>
         </motion.div>
       )}
 
-      {pendingLikeVacancy && (
-        <PitchModal
-          company={pendingLikeVacancy.company}
-          vacancyTitle={pendingLikeVacancy.title}
-          onSubmit={(pitch) => finishLike(pendingLikeVacancy, pitch)}
-          onSkip={() => finishLike(pendingLikeVacancy, "")}
-        />
-      )}
-
       <MatchCongratulationsModal
         match={newMatch}
-        onClose={() => setNewMatch(null)}
-        onOpenChat={handleOpenChat}
+        onClose={() => {
+          setNewMatch(null);
+          setLikeState("idle");
+        }}
+        onOpenChat={(match) => handleOpenChat(match)}
       />
+        </>
+      )}
     </div>
   );
 }

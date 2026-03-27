@@ -12,6 +12,9 @@ import {
 import { GEORGIAN_CITIES } from "@/lib/georgianLocations";
 import { addSkillToDb } from "@/lib/userContentApi";
 import { ALL_SKILLS } from "@/lib/allSkills";
+import { processImageToMaxKb } from "@/lib/imageUtils";
+
+const PROFILE_PHOTO_MAX_KB = 200;
 
 const WORK_TYPES = ["Full-time", "Part-time", "Temporary", "Remote"];
 const JOB_SUGGESTIONS = [
@@ -31,6 +34,8 @@ export default function CabinetProfilePage() {
   const tSkillNames = useTranslations("skillNames");
   const skillLabel = (s: string) => (ALL_SKILLS.includes(s) ? (tSkillNames(s) as string) : s);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
   const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
   const [job, setJob] = useState("");
@@ -50,30 +55,77 @@ export default function CabinetProfilePage() {
 
   useEffect(() => {
     const stored = loadCandidateProfile();
-    if (!stored) return;
-    setFullName(stored.fullName ?? "");
-    setEmail(stored.email ?? "");
-    setPhone(stored.phone ?? "");
-    setBio(stored.bio ?? "");
-    setJob(stored.job ?? "");
-    setLinkedIn(stored.linkedIn ?? "");
-    setLanguages(stored.languages ?? "");
-    const p = stored.profile;
-    if (p) {
-      setLocation("locationCityId" in p && p.locationCityId ? (GEORGIAN_CITIES.find((c) => c.id === p.locationCityId)?.nameEn ?? p.locationCityId) : "");
-      setWillingToRelocate("willingToRelocate" in p ? Boolean(p.willingToRelocate) : false);
-      setSalary(String(p.salaryMin || ""));
-      setExperience(p.experienceMonths ? String(p.experienceMonths) + " months" : "");
-      setWorkTypes(p.workTypes ?? []);
-      setSkills(
-        (p.skills ?? []).map((s) => ({ name: s.name, level: s.level ?? "Intermediate" }))
-      );
+    if (stored) {
+      setFullName(stored.fullName ?? "");
+      setEmail(stored.email ?? "");
+      setPhone(stored.phone ?? "");
+      setBio(stored.bio ?? "");
+      setJob(stored.job ?? "");
+      setLinkedIn(stored.linkedIn ?? "");
+      setLanguages(stored.languages ?? "");
+      const p = stored.profile;
+      if (p) {
+        setLocation("locationCityId" in p && p.locationCityId ? (GEORGIAN_CITIES.find((c) => c.id === p.locationCityId)?.nameEn ?? p.locationCityId) : "");
+        setWillingToRelocate("willingToRelocate" in p ? Boolean(p.willingToRelocate) : false);
+        setSalary(String(p.salaryMin || ""));
+        setExperience(p.experienceMonths ? String(p.experienceMonths) + " months" : "");
+        setWorkTypes(p.workTypes ?? []);
+        setSkills(
+          (p.skills ?? []).map((s) => ({ name: s.name, level: s.level ?? "Intermediate" }))
+        );
+      }
+    }
+    const userId = getCandidateUserId();
+    if (userId) {
+      fetch(`/api/candidates/profile?userId=${encodeURIComponent(userId)}`, { credentials: "include" })
+        .then((r) => r.json())
+        .then((data: { photo?: string | null } | null) => {
+          setPhotoUrl(data?.photo ?? null);
+          setPhotoLoadFailed(false);
+        })
+        .catch(() => {});
     }
   }, []);
 
-  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) setPhotoUrl(URL.createObjectURL(file));
+    e.target.value = "";
+    if (!file) return;
+    setPhotoError(null);
+    if (!file.type.startsWith("image/")) {
+      setPhotoError(t("photoInvalidFile"));
+      return;
+    }
+    const userId = getCandidateUserId();
+    if (userId) {
+      try {
+        const form = new FormData();
+        form.set("file", file);
+        form.set("userId", userId);
+        const res = await fetch("/api/candidates/profile/photo", {
+          method: "POST",
+          body: form,
+          credentials: "include",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && typeof data?.photoUrl === "string") {
+          setPhotoUrl(data.photoUrl);
+          setPhotoLoadFailed(false);
+          return;
+        }
+        setPhotoError(data?.error ?? t("photoTooLarge"));
+      } catch {
+        setPhotoError(t("photoTooLarge"));
+      }
+      return;
+    }
+    try {
+      const dataUrl = await processImageToMaxKb(file, PROFILE_PHOTO_MAX_KB);
+      setPhotoUrl(dataUrl);
+      setPhotoLoadFailed(false);
+    } catch (err) {
+      setPhotoError(err instanceof Error ? err.message : t("photoTooLarge"));
+    }
   }
 
   function addSkill() {
@@ -108,10 +160,17 @@ export default function CabinetProfilePage() {
           <p className="mt-1 text-sm text-gray-500">{t("photoHint")}</p>
           <div className="mt-4 flex items-center gap-6">
             <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-gray-100">
-              {photoUrl ? (
-                <img src={photoUrl} alt="Profile" className="h-full w-full object-cover" />
+              {photoUrl && !photoUrl.startsWith("blob:") && !photoLoadFailed ? (
+                <img
+                  src={photoUrl}
+                  alt="Profile"
+                  className="h-full w-full object-cover"
+                  onError={() => setPhotoLoadFailed(true)}
+                />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-3xl text-gray-400">👤</div>
+                <div className="flex h-full w-full items-center justify-center text-3xl text-gray-400" aria-hidden>
+                  👤
+                </div>
               )}
             </div>
             <div>
@@ -119,9 +178,11 @@ export default function CabinetProfilePage() {
               <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 {photoUrl ? t("changePhoto") : t("addPhoto")}
               </button>
-              {photoUrl && <button type="button" onClick={() => setPhotoUrl(null)} className="ml-2 text-sm text-gray-500 hover:text-red-600">{t("remove")}</button>}
+              {photoUrl && <button type="button" onClick={() => { setPhotoUrl(null); setPhotoError(null); }} className="ml-2 text-sm text-gray-500 hover:text-red-600">{t("remove")}</button>}
             </div>
           </div>
+          {photoError && <p className="mt-2 text-sm text-red-600">{photoError}</p>}
+          <p className="mt-1 text-xs text-gray-500">{t("photoMaxSize", { kb: PROFILE_PHOTO_MAX_KB })}</p>
         </section>
 
         <section className="rounded-3xl border bg-white p-6 shadow-sm">
@@ -284,6 +345,7 @@ export default function CabinetProfilePage() {
                     workTypes: workTypes.length ? workTypes : undefined,
                     skills: profile.skills.map((s) => ({ name: s.name, level: s.level })),
                     jobTitle: job.trim() || undefined,
+                    photo: photoUrl === null ? null : (photoUrl && !photoUrl.startsWith("blob:") ? photoUrl : undefined),
                   }),
                 });
               } catch {

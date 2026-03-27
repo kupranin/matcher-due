@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [userType, setUserType] = useState<UserType>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -45,11 +46,14 @@ export default function LoginPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || "Login failed");
+        const msg = data.error || "Login failed";
+        const hint = data.hint;
+        setError(hint ? `${msg} — ${hint}` : msg);
         setLoading(false);
         return;
       }
       const userId = data.userId;
+      const employerToken = typeof data.token === "string" ? data.token : null;
       if (userType === "candidate" && userId && typeof window !== "undefined") {
         window.localStorage.setItem("matcher_candidate_user_id", userId);
         const profileRes = await fetch(`/api/candidates/profile?userId=${encodeURIComponent(userId)}`);
@@ -57,9 +61,20 @@ export default function LoginPage() {
         if (profileData?.profileId) window.localStorage.setItem("matcher_candidate_profile_id", profileData.profileId);
       }
       if (userType === "business" && userId && typeof window !== "undefined") {
+        // Clear previous employer session so a different user doesn't see the old company name
+        window.sessionStorage.removeItem("matcher_employer_company_name");
+        window.sessionStorage.removeItem("matcher_employer_company_id");
+        window.sessionStorage.removeItem("matcher_employer_user_id");
+        window.sessionStorage.removeItem("matcher_employer_token");
+        window.sessionStorage.removeItem("employerLoggedIn");
+        window.sessionStorage.removeItem("employerHasSubscription");
         window.sessionStorage.setItem("matcher_employer_user_id", userId);
         window.sessionStorage.setItem("employerLoggedIn", "1");
-        const companyRes = await fetch(`/api/companies?userId=${encodeURIComponent(userId)}`);
+        if (employerToken) window.sessionStorage.setItem("matcher_employer_token", employerToken);
+        const companyRes = await fetch("/api/companies", {
+          credentials: "include",
+          ...(employerToken ? { headers: { Authorization: `Bearer ${employerToken}` } } : {}),
+        });
         const companyData = await companyRes.json().catch(() => null);
         if (companyData?.id) {
           window.sessionStorage.setItem("matcher_employer_company_id", companyData.id);
@@ -145,25 +160,55 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-900">{t("password")}</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Your password"
-                className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-matcher/30 ${
-                  password.length > 0 && password.length < 8 ? "border-red-300" : "border-gray-200"
-                }`}
-              />
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-900">{t("password")}</label>
+                <Link href="/login/forgot-password" className="text-sm text-matcher-dark hover:text-matcher">
+                  {t("forgotPassword")}
+                </Link>
+              </div>
+              <div className="relative mt-2">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Your password"
+                  className={`w-full rounded-2xl border px-4 py-3 pr-12 text-sm outline-none focus:ring-2 focus:ring-matcher/30 ${
+                    password.length > 0 && password.length < 8 ? "border-red-300" : "border-gray-200"
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
               {password.length > 0 && password.length < 8 && (
                 <p className="mt-2 text-xs text-red-600">Password must be at least 8 characters.</p>
               )}
             </div>
 
             {error && (
-              <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
-                {error}
-              </p>
+              <div className="space-y-2">
+                <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {error}
+                </p>
+                {/database|unavailable|DATABASE_URL|\.env/i.test(error) && (
+                  <p className="text-sm text-gray-600">
+                    <a
+                      href="/api/debug-db"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-matcher-dark underline hover:text-matcher"
+                    >
+                      Open database debug page
+                    </a>
+                    {" "}to see the exact error and fix it.
+                  </p>
+                )}
+              </div>
             )}
             <button
               type="submit"

@@ -9,19 +9,24 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(
-      list.map((c) => ({
-        id: c.id,
-        fullName: c.fullName,
-        jobTitle: c.jobTitle,
-        locationCityId: c.locationCityId,
-        salaryMin: c.salaryMin,
-        workTypes: c.workTypes,
-        experienceMonths: c.experienceMonths,
-        educationLevel: c.educationLevel,
-        willingToRelocate: c.willingToRelocate,
-        availableToWork: c.availableToWork,
-        skills: c.skills.map((s) => ({ name: s.name, level: s.level })),
-      }))
+      list.map((c) => {
+        const photoUrl = c.photo?.trim() || null;
+        return {
+          id: c.id,
+          fullName: c.fullName,
+          jobTitle: c.jobTitle,
+          locationCityId: c.locationCityId,
+          salaryMin: c.salaryMin,
+          workTypes: c.workTypes,
+          experienceMonths: c.experienceMonths,
+          educationLevel: c.educationLevel,
+          willingToRelocate: c.willingToRelocate,
+          availableToWork: c.availableToWork,
+          photo: photoUrl,
+          photoUrl,
+          skills: c.skills.map((s) => ({ name: s.name, level: s.level })),
+        };
+      })
     );
   } catch (e) {
     console.error("Candidates list error:", e);

@@ -36,9 +36,11 @@ After saving the env vars, trigger a new deployment (e.g. **Deployments** → **
 
 ## See the real error (if it still fails)
 
-Deploy the app, then open in your browser: **`https://your-app.vercel.app/api/debug-db`**
+Deploy the app, then open: **`https://your-app.vercel.app/api/debug-db`**
 
-That page shows the actual error (e.g. "Can't reach database server", "password authentication failed"). Use it to fix the connection. You can delete `app/api/debug-db/route.ts` after.
+The response includes `hasDatabaseUrl`, `hasDirectUrl`, `prismaConnectOk`, `errorCode`, `errorMessage`, and masked URLs (no secrets). Use it to fix the connection.
+
+For a simple health check: **`/api/health/db`** returns `{ "ok": true, "db": "up" }` when the DB is reachable. See **docs/DB_CONNECTIVITY.md** for full diagnostics and env rules.
 
 ## Quick checklist
 

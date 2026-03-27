@@ -1,12 +1,25 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
-import { SESSION_COOKIE_NAME } from "@/lib/session";
+import { SESSION_COOKIE_NAME, getSessionTokenFromRequest } from "@/lib/session";
 
-export async function GET() {
+/** Clear session cookie so browser stops sending it (e.g. after DB wipe or expiry). */
+function responseWithClearedSessionCookie(body: { userId: null; user: null }) {
+  const res = NextResponse.json(body, { status: 200 });
+  res.cookies.set(SESSION_COOKIE_NAME, "", {
+    path: "/",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 0,
+    expires: new Date(0),
+  });
+  return res;
+}
+
+export async function GET(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    const token = getSessionTokenFromRequest(request) ?? (await cookies()).get(SESSION_COOKIE_NAME)?.value;
     if (!token) {
       return NextResponse.json({ userId: null, user: null }, { status: 200 });
     }
@@ -19,19 +32,21 @@ export async function GET() {
       if (session) {
         await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
       }
-      return NextResponse.json({ userId: null, user: null }, { status: 200 });
+      return responseWithClearedSessionCookie({ userId: null, user: null });
     }
 
-    return NextResponse.json({
+    const payload: { userId: string; user: { id: string; email: string; role: string }; token?: string } = {
       userId: session.user.id,
       user: {
         id: session.user.id,
         email: session.user.email,
         role: session.user.role,
       },
-    });
+    };
+    if (session.user.role === "EMPLOYER") payload.token = token;
+    return NextResponse.json(payload);
   } catch (e) {
     console.error("Session get error:", e);
-    return NextResponse.json({ userId: null, user: null }, { status: 200 });
+    return responseWithClearedSessionCookie({ userId: null, user: null });
   }
 }

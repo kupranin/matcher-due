@@ -1,0 +1,13 @@
+# Reduce deploy size / avoid internal errors during "Deploying outputs"
+docs/
+scripts/
+.cursor/
+*.tsbuildinfo
+app 2/
+prisma/backfill-employer-companies.ts
+prisma/seed-users-only.ts
+prisma/import-*.ts
+prisma/delete-*.ts
+prisma/remove-*.ts
+prisma/rename-*.ts
+prisma/ensure-*.ts

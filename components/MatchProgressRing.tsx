@@ -8,11 +8,14 @@ export default function MatchProgressRing({
   percent,
   size = 56,
   className = "",
+  innerClassName = "text-white",
   children,
 }: {
   percent: number;
   size?: number;
   className?: string;
+  /** Text color for the center content (e.g. "72%"). Use "text-gray-900" or "text-matcher-dark" on light backgrounds. */
+  innerClassName?: string;
   children: React.ReactNode;
 }) {
   const stroke = Math.max(2, Math.floor(size / 14));
@@ -47,7 +50,7 @@ export default function MatchProgressRing({
           className="text-matcher-bright transition-[stroke-dashoffset] duration-500"
         />
       </svg>
-      <div className="relative z-10 flex items-center justify-center text-sm font-bold text-white">
+      <div className={`relative z-10 flex items-center justify-center text-sm font-bold ${innerClassName}`}>
         {children}
       </div>
     </div>

@@ -176,8 +176,8 @@ export function getRecommendedSalaryForSlug(slug: string | null | undefined): nu
   return DEFAULT_RECOMMENDED_SALARY;
 }
 
-/** Turn job title into slug for salary lookup (e.g. "Retail Cashier" → "retail-cashier"). */
-function titleToSlug(title: string): string {
+/** Turn job title into slug for salary lookup (e.g. "Retail Cashier" → "retail-cashier"). Exported for use with candidate average salaries. */
+export function titleToSlug(title: string): string {
   return title
     .toLowerCase()
     .replace(/\s*\/\s*.*$/, "")
@@ -188,6 +188,22 @@ function titleToSlug(title: string): string {
 /** Get recommended salary (GEL/month) for a job title (e.g. from vacancy list). */
 export function getRecommendedSalaryForTitle(title: string | null | undefined): number {
   return getRecommendedSalaryForSlug(title ? titleToSlug(title) : null);
+}
+
+/** Get recommended salary (GEL/month) for a job title, using candidate averages when available. Never returns negative. */
+export function getRecommendedSalaryForTitleWithAverages(
+  title: string | null | undefined,
+  averagesBySlug: Record<string, number> | null | undefined
+): number {
+  if (!title) return getRecommendedSalaryForSlug(null);
+  const slug = titleToSlug(title);
+  if (slug && averagesBySlug && typeof averagesBySlug[slug] === "number") {
+    const n = Math.round(averagesBySlug[slug]);
+    const fallback = getRecommendedSalaryForTitle(title);
+    return n >= 0 ? n : fallback;
+  }
+  const value = getRecommendedSalaryForTitle(title);
+  return value >= 0 ? value : DEFAULT_RECOMMENDED_SALARY;
 }
 
 /**
@@ -205,14 +221,19 @@ export function getSkillsForRoleSlug(slug: string): string[] {
 }
 
 export async function fetchJobTemplates(locale: "en" | "ka" = "en"): Promise<JobTemplateRole[]> {
+  const fallback = FALLBACK_TEMPLATES[locale];
   try {
     const res = await fetch(`/api/job-templates?locale=${locale}`);
     if (!res.ok) throw new Error("API error");
     const data = await res.json();
-    // Use API/DB data whenever we have any roles (seeded job_role_templates)
-    if (Array.isArray(data) && data.length > 0) return data;
+    if (!Array.isArray(data) || data.length === 0) return fallback;
+    const apiSlugs = new Set(data.map((r: JobTemplateRole) => r.slug?.toLowerCase()).filter(Boolean));
+    const missingFromApi = fallback.filter((r) => !apiSlugs.has(r.slug?.toLowerCase()));
+    if (missingFromApi.length === 0) return data;
+    const merged = [...data, ...missingFromApi];
+    merged.sort((a, b) => (a.title ?? "").localeCompare(b.title ?? "", "en"));
+    return merged;
   } catch {
-    // Fallback when DB/API unavailable
+    return fallback;
   }
-  return FALLBACK_TEMPLATES[locale];
 }

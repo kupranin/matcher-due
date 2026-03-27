@@ -25,12 +25,15 @@ export async function GET(request: Request) {
       include: { skills: true, user: { select: { email: true } } },
     });
     if (!profile) return NextResponse.json(null);
+    const photoUrl = profile.photo?.trim() || null;
     return NextResponse.json({
       profileId: profile.id,
       userId: profile.userId,
       fullName: profile.fullName,
       phone: profile.phone,
       email: profile.user.email,
+      photo: photoUrl,
+      photoUrl,
       locationCityId: profile.locationCityId,
       locationDistrictId: profile.locationDistrictId,
       salaryMin: profile.salaryMin,
@@ -48,6 +51,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Failed to load profile" }, { status: 500 });
   }
 }
+
+/** Max profile photo size: 200 KB. Base64 ~4/3 of bytes → ~274k chars. */
+const PROFILE_PHOTO_MAX_BYTES = 200 * 1024;
+const PROFILE_PHOTO_MAX_BASE64_LENGTH = Math.ceil(PROFILE_PHOTO_MAX_BYTES * (4 / 3)) + 500;
 
 /** PATCH /api/candidates/profile — update profile (body: userId + profile fields). */
 export async function PATCH(request: Request) {
@@ -69,6 +76,10 @@ export async function PATCH(request: Request) {
     const willingToRelocate = body?.willingToRelocate === true || body?.willingToRelocate === false ? body.willingToRelocate : undefined;
     const jobTitle = typeof body?.jobTitle === "string" ? body.jobTitle.trim() || null : undefined;
     const availableToWork = body?.availableToWork === true || body?.availableToWork === false ? body.availableToWork : undefined;
+    let photo: string | null | undefined = body?.photo === null ? null : (typeof body?.photo === "string" ? body.photo.trim() || null : undefined);
+    if (photo != null && photo.length > PROFILE_PHOTO_MAX_BASE64_LENGTH) {
+      return NextResponse.json({ error: "Photo too large. Maximum 200 KB." }, { status: 400 });
+    }
     const skills = Array.isArray(body?.skills)
       ? (body.skills as Array<{ name?: string; level?: string }>)
           .filter((s) => s && typeof s?.name === "string" && (s.name as string).trim().length > 0)
@@ -91,6 +102,7 @@ export async function PATCH(request: Request) {
     if (willingToRelocate !== undefined) update.willingToRelocate = willingToRelocate;
     if (jobTitle !== undefined) update.jobTitle = jobTitle;
     if (availableToWork !== undefined) update.availableToWork = availableToWork;
+    if (photo !== undefined) update.photo = photo;
     await prisma.candidateProfile.update({ where: { userId }, data: update as never });
     if (skills !== undefined) {
       await prisma.candidateSkill.deleteMany({ where: { candidateProfileId: existing.id } });
