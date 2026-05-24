@@ -87,6 +87,8 @@ function SwipeCard({
   const matchedSkills = Array.isArray(candidate.matchedSkills)
     ? candidate.matchedSkills.filter((s) => typeof s === "string" && s.trim().length > 0).slice(0, 5)
     : [];
+  const matchPct = Math.max(0, Math.min(100, Math.round(Number(candidate.match) || 0)));
+  const showAge = typeof candidate.age === "number" && candidate.age > 0;
 
   return (
     <motion.div
@@ -122,6 +124,14 @@ function SwipeCard({
               <p className="mt-2 text-xs font-medium text-gray-500">No photo</p>
             </div>
           )}
+          <div className="absolute left-3 top-3 rounded-full border border-matcher/40 bg-matcher-bright px-3 py-1.5 text-sm font-extrabold text-charcoal shadow-lg">
+            {tPage("matchPercent", { percent: matchPct })}
+          </div>
+          {showAge && (
+            <div className="absolute right-3 top-3 rounded-full bg-white/95 px-3 py-1.5 text-sm font-bold text-gray-900 shadow-lg backdrop-blur-sm">
+              {tPage("yearsOld", { age: candidate.age! })}
+            </div>
+          )}
         </div>
 
         {/* Content section */}
@@ -130,12 +140,6 @@ function SwipeCard({
             <h2 className="text-xl font-bold text-gray-900">
               {firstName || candidate.name || "Candidate"} {lastInitial}
             </h2>
-            {typeof candidate.age === "number" && candidate.age > 0 && (
-              <div className="font-bold text-gray-900">
-                {candidate.age}{" "}
-                <span className="font-normal text-gray-800">years old</span>
-              </div>
-            )}
             <p className="text-matcher-dark font-medium">
               {candidate.job || "Not specified"}
             </p>

@@ -184,15 +184,6 @@
         "text": "Founder and product-driven entrepreneur with 20+ years of experience in business, marketing, and building trusted platforms in Georgia. Nino leads Matcher's vision, user experience, and growth — keeping the product radically simple and built for real people.",
         "tags": ["#Product", "#UX", "#Growth", "#Georgia", "#Clarity"],
         "why": "I built Matcher to make finding work feel easy and respectful — real outcomes, not endless forms."
-      },
-      "david": {
-        "name": "David Tskhvariashvili",
-        "role": "Engineering Lead",
-        "expertise": "Full-stack, scalability, infrastructure",
-        "reasonToBelieve": "Senior-of-seniors. Turns vision into reliable, production-grade product.",
-        "text": "Senior-of-seniors full-stack developer with deep expertise in building scalable, production-grade platforms. David leads Matcher's engineering execution, architecture, and infrastructure — turning a fast-moving vision into a reliable product ready to scale.",
-        "tags": ["#NextJS", "#Prisma", "#Performance", "#DX", "#Reliability"],
-        "why": "I built Matcher so the experience feels instant on mobile — fast matching, clear signals, trustworthy UX."
       }
     },
     "closingHeading": "Building for the next generation of work",
@@ -869,7 +860,9 @@
     "deleteVacancy": "Delete vacancy",
     "deleteVacancyConfirm": "Delete this vacancy? This cannot be undone.",
     "deleteVacancyError": "Could not delete vacancy. Try again.",
-    "checkingMatch": "Checking match..."
+    "checkingMatch": "Checking match...",
+    "matchPercent": "{percent}% match",
+    "yearsOld": "{age} years old"
   },
   "userFlowExtras": {
     "loadingJobs": "Loading jobs…",

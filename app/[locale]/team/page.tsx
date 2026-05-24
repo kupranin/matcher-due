@@ -11,13 +11,12 @@ import ThemeToggle from "@/components/theme/ThemeToggle";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import { SwipeTeamCarousel, type TeamMember } from "@/components/FlippingTeamCard";
 
-const memberKeys = ["ketevan", "nino", "david"] as const;
+const memberKeys = ["ketevan", "nino"] as const;
 type MemberKey = (typeof memberKeys)[number];
 
 const MEMBER_PHOTOS: Record<MemberKey, string> = {
   nino: "/team/nino.png",
   ketevan: "/team/ketevan.png",
-  david: "/team/david.png",
 };
 
 export default function TeamPage() {
