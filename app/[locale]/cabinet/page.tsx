@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence, animate } from "framer-motion";
 import { buildVacancyCardsWithMatch } from "@/lib/vacancyApi";
@@ -220,6 +220,8 @@ function OpportunitiesSkeleton({ isDark }: { isDark: boolean }) {
 
 export default function CabinetPage() {
   const t = useTranslations("cabinet");
+  const locale = useLocale();
+  const apiLocale = (locale === "local" ? "en" : locale) as "en" | "ka";
   const router = useRouter();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -301,18 +303,28 @@ export default function CabinetPage() {
       const stored = loadCandidateProfile();
       const profile = stored?.profile ?? loadProfile();
       const preferredJob = stored?.job ?? undefined;
+      const preferredJobSlug = stored?.jobRoleSlug ?? undefined;
       // Re-read profileId from storage in case it was just written.
       if (!profileId && typeof window !== "undefined") {
         profileId = window.localStorage.getItem("matcher_candidate_profile_id");
       }
+      const localeParam = `locale=${encodeURIComponent(apiLocale)}`;
       const url = profileId
-        ? `/api/vacancies?candidateProfileId=${encodeURIComponent(profileId)}`
-        : "/api/vacancies";
+        ? `/api/vacancies?candidateProfileId=${encodeURIComponent(profileId)}&${localeParam}`
+        : `/api/vacancies?${localeParam}`;
       fetch(url)
         .then((r) => r.json())
         .then((list: unknown) => {
           if (Array.isArray(list) && list.length > 0) {
-            setVacancies(buildVacancyCardsWithMatch(list as Parameters<typeof buildVacancyCardsWithMatch>[0], profile, preferredJob));
+            setVacancies(
+              buildVacancyCardsWithMatch(
+                list as Parameters<typeof buildVacancyCardsWithMatch>[0],
+                profile,
+                preferredJob,
+                preferredJobSlug,
+                apiLocale
+              )
+            );
           } else {
             setVacancies([]);
           }
@@ -322,7 +334,7 @@ export default function CabinetPage() {
     }
 
     void load();
-  }, []);
+  }, [apiLocale]);
   const [liked, setLiked] = useState<Vacancy[]>([]);
   const [passed, setPassed] = useState<Vacancy[]>([]);
   const [swipeHistory, setSwipeHistory] = useState<Array<{ vacancy: Vacancy; dir: "left" | "right" }>>([]);

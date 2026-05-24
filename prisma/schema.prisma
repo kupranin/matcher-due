@@ -113,6 +113,8 @@ model Vacancy {
   companyId               String         @map("company_id")
   company                 Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   title                   String
+  jobRoleSlug             String?        @map("job_role_slug") // canonical role id (shared across locales)
+  sourceLocale            String?        @map("source_locale") // "en" | "ka" — language the vacancy was posted in
   locationCityId          String         @map("location_city_id")
   locationDistrictId      String?        @map("location_district_id")
   salaryMin               Int?           @map("salary_min") // GEL

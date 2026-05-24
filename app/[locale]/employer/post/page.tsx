@@ -324,6 +324,8 @@ export default function EmployerPostPage() {
           userId: userId || undefined,
           companyName: jobTitle.trim() || undefined,
           title: jobTitle.trim(),
+          jobRoleSlug: selectedRole?.slug ?? jobSlug ?? undefined,
+          sourceLocale: apiLocale,
           locationCityId,
           locationDistrictId: locationDistrictId || undefined,
           salaryMin: salMin ?? undefined,

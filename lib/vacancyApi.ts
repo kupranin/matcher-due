@@ -7,6 +7,7 @@ import { passesPreCalcFilter, calculateMatch, normalizeEducationLevel } from "./
 import type { CandidateCard } from "./matchMockData";
 import { GEORGIAN_CITIES } from "./georgianLocations";
 import { getStockPhotosForJob } from "./vacancyStockPhotos";
+import { getEnglishTitleForSlug, resolveJobRoleSlug } from "./jobRoleSlug";
 
 /**
  * Shape of a vacancy card as used on the candidate side.
@@ -31,9 +32,10 @@ export type VacancyCardFromApi = {
   topMatch: boolean;
 };
 
-function locationCityName(cityId: string): string {
+function locationCityName(cityId: string, locale: "en" | "ka" = "en"): string {
   const c = GEORGIAN_CITIES.find((x) => x.id === cityId);
-  return c?.nameEn ?? cityId;
+  if (!c) return cityId;
+  return locale === "ka" && c.nameKa ? c.nameKa : c.nameEn;
 }
 
 function apiSkillToVacancySkill(s: { name: string; level?: string; weight?: number }): { name: string; level: "Beginner" | "Intermediate" | "Advanced"; weight: number } {
@@ -133,7 +135,12 @@ export function getRoleFamily(title: string | null | undefined): RoleFamily | nu
     t.includes("barista") ||
     t.includes("kitchen") ||
     t.includes("dishwasher") ||
-    t.includes("assistant cook")
+    t.includes("assistant cook") ||
+    t.includes("ბარისტ") ||
+    t.includes("მიმტან") ||
+    t.includes("ღვიძ") ||
+    t.includes("სამზარეულ") ||
+    t.includes("თეფშ")
   )
     return "hospitality_service";
 
@@ -144,15 +151,50 @@ export function getRoleFamily(title: string | null | undefined): RoleFamily | nu
     t.includes("support operator") ||
     t.includes("customer support") ||
     t.includes("finance assistant") ||
-    t.includes("admin ")
+    t.includes("admin ") ||
+    t.includes("ადმინ") ||
+    t.includes("ოფის")
   )
     return "admin_support";
+
+  // Georgian role families
+  if (t.includes("დამლაგ") || t.includes("დასუფთ") || t.includes("სუფთ")) return "cleaning";
+  if (t.includes("რეცეპ") || t.includes("მიღებ")) return "reception";
+  if (t.includes("მოლარ") || t.includes("კას")) return "cashier";
+  if (
+    t.includes("გაყიდ") ||
+    t.includes("გამყიდ") ||
+    t.includes("კონსულტ") ||
+    t.includes("მაღაზ") ||
+    t.includes("მერჩ")
+  )
+    return "retail_sales";
+  if (t.includes("საწყობ") || t.includes("ინვენტარ") || t.includes("ლოგისტ")) return "warehouse";
 
   return null;
 }
 
-/** Role relevance for employer browsing. */
+/** Role relevance for employer browsing. Uses slug when available for cross-language matching. */
 export function roleMatchCategoryFromTitles(
+  vacancyTitle: string,
+  candidatePreferredRole: string | null | undefined,
+  vacancySlug?: string | null,
+  candidateSlug?: string | null
+): RoleMatchCategory {
+  const vSlug = vacancySlug || resolveJobRoleSlug(vacancyTitle);
+  const cSlug = candidateSlug || resolveJobRoleSlug(candidatePreferredRole);
+
+  if (vSlug && cSlug) {
+    if (vSlug === cSlug) return "strong";
+    const vEn = getEnglishTitleForSlug(vSlug) ?? vacancyTitle;
+    const cEn = getEnglishTitleForSlug(cSlug) ?? (candidatePreferredRole ?? "");
+    return roleMatchCategoryFromEnglishTitles(vEn, cEn);
+  }
+
+  return roleMatchCategoryFromEnglishTitles(vacancyTitle, candidatePreferredRole);
+}
+
+function roleMatchCategoryFromEnglishTitles(
   vacancyTitle: string,
   candidatePreferredRole: string | null | undefined
 ): RoleMatchCategory {
@@ -197,6 +239,7 @@ export function buildVacancyCardsWithMatch(
   apiVacancies: Array<{
     id: string;
     title: string;
+    jobRoleSlug?: string | null;
     company: string;
     locationCityId: string;
     salaryMin?: number | null;
@@ -212,7 +255,9 @@ export function buildVacancyCardsWithMatch(
   }>,
   candidateProfile: CandidateProfile,
   /** Candidate's preferred job title (e.g. "Barista"). Vacancies not matching this are excluded. */
-  candidatePreferredJob?: string | null
+  candidatePreferredJob?: string | null,
+  candidateJobRoleSlug?: string | null,
+  displayLocale: "en" | "ka" = "en"
 ): VacancyCardFromApi[] {
   const candidateSkillSet = new Set(
     (candidateProfile.skills ?? [])
@@ -222,7 +267,12 @@ export function buildVacancyCardsWithMatch(
 
   return apiVacancies
     .filter((v) => {
-      const cat = roleMatchCategoryFromTitles(v.title, candidatePreferredJob ?? null);
+      const cat = roleMatchCategoryFromTitles(
+        v.title,
+        candidatePreferredJob ?? null,
+        v.jobRoleSlug,
+        candidateJobRoleSlug
+      );
       return cat !== "unrelated";
     })
     .map((v) => {
@@ -244,7 +294,7 @@ export function buildVacancyCardsWithMatch(
         id: v.id,
         title: v.title,
         company: v.company,
-        location: locationCityName(v.locationCityId),
+        location: locationCityName(v.locationCityId, displayLocale),
         workType: v.workType,
         salary: salaryStr,
         photo:

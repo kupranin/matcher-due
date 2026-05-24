@@ -216,3 +216,14 @@ export async function fetchJobTemplates(locale: "en" | "ka" = "en"): Promise<Job
   }
   return FALLBACK_TEMPLATES[locale];
 }
+
+/** Fallback templates for a locale (used by slug resolution and server-side translation). */
+export function getFallbackJobTemplates(locale: "en" | "ka"): JobTemplateRole[] {
+  return FALLBACK_TEMPLATES[locale];
+}
+
+/** Look up a fallback template by slug and locale. */
+export function getFallbackJobTemplate(slug: string, locale: "en" | "ka"): JobTemplateRole | null {
+  const normalized = slug.trim().toLowerCase();
+  return FALLBACK_TEMPLATES[locale].find((r) => r.slug === normalized) ?? null;
+}

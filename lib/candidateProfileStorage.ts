@@ -31,7 +31,10 @@ export interface StoredCandidateProfile {
   phone: string;
   /** Optional display-only fields */
   bio?: string;
+  /** Preferred job title in user's locale (display) */
   job?: string;
+  /** Canonical job role slug for cross-language matching */
+  jobRoleSlug?: string;
   linkedIn?: string;
   languages?: string;
   /** Optional date of birth (YYYY-MM-DD) */

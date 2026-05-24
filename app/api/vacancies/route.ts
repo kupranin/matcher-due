@@ -4,15 +4,18 @@ import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
 import { SESSION_COOKIE_NAME } from "@/lib/session";
 import { getStockPhotosForJob } from "@/lib/vacancyStockPhotos";
+import { normalizeContentLocale, resolveJobRoleSlug } from "@/lib/jobRoleSlug";
+import { translateVacancyForLocale } from "@/lib/vacancyTranslation";
 
 const SKILL_LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
 
-/** GET /api/vacancies — list published vacancies. ?companyId= for employer's. ?candidateProfileId= to exclude already liked/matched for candidate opportunities. */
+/** GET /api/vacancies — list published vacancies. ?companyId= for employer's. ?candidateProfileId= to exclude already liked/matched for candidate opportunities. ?locale=en|ka translates display fields. */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get("companyId");
     const candidateProfileId = searchParams.get("candidateProfileId")?.trim() || null;
+    const displayLocale = normalizeContentLocale(searchParams.get("locale"));
 
     let excludeVacancyIds: string[] = [];
     if (candidateProfileId) {
@@ -44,28 +47,53 @@ export async function GET(request: Request) {
         skills: true,
       },
     });
-    return NextResponse.json(
-      list.map((v) => ({
-        id: v.id,
-        title: v.title,
-        company: v.company.name,
-        locationCityId: v.locationCityId,
-        locationDistrictId: v.locationDistrictId,
-        salaryMin: v.salaryMin,
-        salaryMax: v.salaryMax,
-        workType: v.workType,
-        isRemote: v.isRemote,
-        requiredExperienceMonths: v.requiredExperienceMonths,
-        requiredEducationLevel: v.requiredEducationLevel,
-        description: v.description,
-        photo: v.photo?.trim() || getStockPhotosForJob(v.title)[0] || null,
-        contactName: v.contactName,
-        contactEmail: v.contactEmail,
-        contactPhone: v.contactPhone,
-        skills: v.skills,
-        createdAt: v.createdAt.toISOString(),
-      }))
+    const payload = await Promise.all(
+      list.map(async (v) => {
+        const skills = v.skills.map((s) => ({
+          name: s.name,
+          level: s.level,
+          weight: s.weight,
+          isRequired: s.isRequired,
+        }));
+        const jobRoleSlug = v.jobRoleSlug ?? resolveJobRoleSlug(v.title);
+        const translated = await translateVacancyForLocale(
+          {
+            title: v.title,
+            description: v.description,
+            jobRoleSlug,
+            sourceLocale: v.sourceLocale,
+            skills,
+          },
+          displayLocale
+        );
+
+        return {
+          id: v.id,
+          title: translated.title,
+          originalTitle: v.title,
+          jobRoleSlug: translated.jobRoleSlug ?? jobRoleSlug,
+          sourceLocale: translated.sourceLocale ?? v.sourceLocale,
+          translated: translated.translated,
+          company: v.company.name,
+          locationCityId: v.locationCityId,
+          locationDistrictId: v.locationDistrictId,
+          salaryMin: v.salaryMin,
+          salaryMax: v.salaryMax,
+          workType: v.workType,
+          isRemote: v.isRemote,
+          requiredExperienceMonths: v.requiredExperienceMonths,
+          requiredEducationLevel: v.requiredEducationLevel,
+          description: translated.description,
+          photo: v.photo?.trim() || getStockPhotosForJob(v.title)[0] || null,
+          contactName: v.contactName,
+          contactEmail: v.contactEmail,
+          contactPhone: v.contactPhone,
+          skills: translated.skills,
+          createdAt: v.createdAt.toISOString(),
+        };
+      })
     );
+    return NextResponse.json(payload);
   } catch (e) {
     console.error("Vacancies list error:", e);
     return NextResponse.json({ error: "Failed to list vacancies" }, { status: 500 });
@@ -99,6 +127,12 @@ export async function POST(request: Request) {
       : "High School";
     const description = typeof body?.description === "string" ? body.description.trim() || null : null;
     const photo = typeof body?.photo === "string" ? body.photo.trim() || null : null;
+    const jobRoleSlugRaw =
+      typeof body?.jobRoleSlug === "string" ? body.jobRoleSlug.trim() || null : null;
+    const sourceLocaleRaw =
+      typeof body?.sourceLocale === "string" ? body.sourceLocale.trim() : null;
+    const sourceLocale = sourceLocaleRaw === "ka" ? "ka" : sourceLocaleRaw === "en" ? "en" : null;
+    const jobRoleSlug = jobRoleSlugRaw ?? resolveJobRoleSlug(title);
 
     const skills = Array.isArray(body?.skills)
       ? (body.skills as Array<{ name?: string; level?: string; weight?: number; isRequired?: boolean }>)
@@ -225,6 +259,8 @@ export async function POST(request: Request) {
       data: {
         companyId: company.id,
         title,
+        jobRoleSlug: jobRoleSlug ?? undefined,
+        sourceLocale: sourceLocale ?? undefined,
         locationCityId,
         locationDistrictId,
         salaryMin: salaryMin ?? undefined,

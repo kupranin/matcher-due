@@ -19,6 +19,7 @@ import {
   type StoredCandidateProfile,
 } from "@/lib/candidateProfileStorage";
 import { fetchJobTemplates, AVG_SALARY_BY_SLUG, getSkillNamesFromRole, type JobTemplateRole } from "@/lib/jobTemplates";
+import { resolveJobRoleSlug } from "@/lib/jobRoleSlug";
 import { addSkillToDb, createJobRoleInDb } from "@/lib/userContentApi";
 import { ALL_SKILLS } from "@/lib/allSkills";
 import type { EducationLevel } from "@/lib/matchCalculation";
@@ -381,6 +382,10 @@ export default function UserFlow1Page() {
       email: email.trim(),
       phone: phone.trim(),
       job: displayJobTitle || undefined,
+      jobRoleSlug:
+        job && job !== "other"
+          ? job
+          : resolveJobRoleSlug(displayJobTitle) ?? undefined,
       dateOfBirth: dob || null,
     };
     saveCandidateProfile(stored);
