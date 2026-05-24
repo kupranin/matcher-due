@@ -433,6 +433,31 @@ export default function InteractiveHero({
     return () => window.clearInterval(id);
   }, [swapIntervalMs, swapWords.length, titleHasSwap]);
 
+  const swapPillMargin = isGeorgianCopy && titleHasSwap ? "mr-1.5" : "mx-1";
+  const swapPill = (
+    <span
+      className="relative inline-flex align-baseline"
+      style={{ minWidth: swapMinWidthCh ? `${swapMinWidthCh}ch` : undefined }}
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={activeSwapWord}
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -10, opacity: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          className={
+            isDark
+              ? `${swapPillMargin} inline-flex rounded-xl bg-matcher-bright px-2.5 py-0.5 font-extrabold leading-none text-charcoal shadow-sm`
+              : `${swapPillMargin} inline-flex rounded-xl bg-matcher px-2.5 py-0.5 font-extrabold leading-none text-white shadow-sm`
+          }
+        >
+          {activeSwapWord}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  );
+
   return (
     <section className="relative mx-auto grid max-w-6xl grid-cols-1 items-start gap-8 px-4 py-7 sm:px-6 sm:py-10 md:grid-cols-2 md:gap-12 md:items-center">
       <div className="md:pr-4">
@@ -460,33 +485,26 @@ export default function InteractiveHero({
           <h1
             className={
               isDark
-                ? `font-heading mt-4 text-balance text-5xl font-extrabold tracking-tight text-white sm:text-6xl ${isGeorgianCopy ? "leading-[0.98] sm:leading-[1.02]" : "leading-[1.05]"}`
-                : `font-heading mt-4 text-balance text-5xl font-extrabold tracking-tight text-gray-900 sm:text-6xl ${isGeorgianCopy ? "leading-[0.98] sm:leading-[1.02]" : "leading-[1.05]"}`
+                ? `font-heading mt-4 text-balance text-5xl font-extrabold tracking-tight text-white sm:text-6xl ${isGeorgianCopy ? "leading-[1.08] sm:leading-[1.12]" : "leading-[1.05]"}`
+                : `font-heading mt-4 text-balance text-5xl font-extrabold tracking-tight text-gray-900 sm:text-6xl ${isGeorgianCopy ? "leading-[1.08] sm:leading-[1.12]" : "leading-[1.05]"}`
             }
           >
             {titleHasSwap ? (
-              <>
-                {titleBefore}
-                <span className="relative inline-block align-baseline" style={{ minWidth: swapMinWidthCh ? `${swapMinWidthCh}ch` : undefined }}>
-                  <AnimatePresence mode="wait" initial={false}>
-                    <motion.span
-                      key={activeSwapWord}
-                      initial={{ y: 10, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      exit={{ y: -10, opacity: 0 }}
-                      transition={{ duration: 0.18, ease: "easeOut" }}
-                      className={
-                        isDark
-                          ? "mx-1 inline-flex rounded-xl bg-matcher-bright px-2.5 py-1 font-extrabold text-charcoal shadow-sm"
-                          : "mx-1 inline-flex rounded-xl bg-matcher px-2.5 py-1 font-extrabold text-white shadow-sm"
-                      }
-                    >
-                      {activeSwapWord}
-                    </motion.span>
-                  </AnimatePresence>
+              isGeorgianCopy ? (
+                <span className="flex flex-col gap-y-2">
+                  <span className="block">{titleBefore.trim()}</span>
+                  <span className="block">
+                    {swapPill}
+                    {titleAfter.trim()}
+                  </span>
                 </span>
-                {titleAfter}
-              </>
+              ) : (
+                <>
+                  {titleBefore}
+                  {swapPill}
+                  {titleAfter}
+                </>
+              )
             ) : (
               copy.title
             )}
