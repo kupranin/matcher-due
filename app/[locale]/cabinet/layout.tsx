@@ -23,6 +23,7 @@ export default function CabinetLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
+  const [userPhoto, setUserPhoto] = useState<string | null>(null);
 
   const rawHello = tCommon("hello");
   const helloLabel = rawHello === "common.hello" || rawHello === "hello" ? "Hello" : rawHello;
@@ -41,8 +42,9 @@ export default function CabinetLayout({
         // Try to hydrate candidate name for greeting
         try {
           const res = await fetch(`/api/candidates/profile?userId=${encodeURIComponent(userId)}`);
-          const profile = (await res.json().catch(() => null)) as { fullName?: string | null } | null;
+          const profile = (await res.json().catch(() => null)) as { fullName?: string | null; photo?: string | null } | null;
           if (profile?.fullName) setUserName(profile.fullName);
+          if (profile?.photo) setUserPhoto(profile.photo);
         } catch {
           // ignore – greeting is optional
         }
@@ -151,7 +153,16 @@ export default function CabinetLayout({
               className={`flex w-full items-center rounded-xl p-3 transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-50"}`}
             >
               <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${isDark ? "bg-white/15 text-white" : "bg-gray-200 text-gray-700"}`}>
-                {userName?.charAt(0)?.toUpperCase() || "L"}
+                {userPhoto ? (
+                  <img
+                    src={userPhoto}
+                    alt={userName ? `${userName} profile photo` : "Profile photo"}
+                    className="h-full w-full rounded-full object-cover"
+                    onError={() => setUserPhoto(null)}
+                  />
+                ) : (
+                  userName?.charAt(0)?.toUpperCase() || "L"
+                )}
               </div>
               <div className="ml-3 flex flex-col items-start">
                 <span className={`text-sm font-bold ${isDark ? "text-white" : "text-gray-900"}`}>{userName || "Lali Chokheli"}</span>
@@ -176,12 +187,6 @@ export default function CabinetLayout({
 
       {/* Main content - padding for mobile bottom nav */}
       <main className="flex-1 overflow-auto pb-20 md:pb-0">
-        <div className={`sticky top-0 z-20 hidden justify-end border-b px-4 py-2 backdrop-blur md:flex ${isDark ? "border-white/10 bg-[#070B12]/90" : "border-gray-100 bg-gray-50/95"}`}>
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher />
-            <ThemeToggle />
-          </div>
-        </div>
         {userName && (
           <div className={`sticky top-0 z-10 border-b px-4 py-3 backdrop-blur md:static md:border-none md:bg-transparent ${isDark ? "border-white/10 bg-[#070B12]/85" : "border-gray-100 bg-gray-50/95"}`}>
             <p className={`mx-auto max-w-3xl text-sm font-medium ${isDark ? "text-white/90" : "text-gray-800"}`}>
