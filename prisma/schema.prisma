@@ -1,6 +1,3 @@
-// Matcher.ge Database Schema
-// Run: npx prisma generate && npx prisma db push
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,193 +8,184 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ——— Users & Auth ———
-// User: candidates and employers. Optional authUserId links to Supabase Auth (auth.users.id).
 model User {
-  id           String   @id @default(cuid())
-  authUserId   String?  @unique @map("auth_user_id") // Supabase Auth UUID when using Supabase Auth
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  role         UserRole @default(CANDIDATE)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  candidateProfile CandidateProfile?
-  company          Company?
-  sessions         Session[]
+  id                    String                  @id @default(cuid())
+  authUserId            String?                 @unique @map("auth_user_id")
+  email                 String                  @unique
+  passwordHash          String                  @map("password_hash")
+  role                  UserRole                @default(CANDIDATE)
+  createdAt             DateTime                @default(now()) @map("created_at")
+  updatedAt             DateTime                @updatedAt @map("updated_at")
+  candidateProfile      CandidateProfile?
+  company               Company?
+  password_reset_tokens password_reset_tokens[]
+  sessions              Session[]
 
   @@map("users")
 }
 
-enum UserRole {
-  CANDIDATE
-  EMPLOYER
-}
-
-// Server-side sessions (token in HTTP-only cookie).
 model Session {
   id        String   @id @default(cuid())
   token     String   @unique
   userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }
 
-// ——— Companies (Employers) ———
 model Company {
-  id            String   @id @default(cuid())
-  userId        String   @unique @map("user_id")
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name          String
-  companyId     String   @map("company_id") // Tax / identification number
-  contactEmail  String   @map("contact_email")
-  contactPhone  String   @map("contact_phone")
-  bio           String?  @db.Text
-  website       String?
-  industry      String?
-  employeeCount String?  @map("employee_count")
-  address       String?
-  linkedIn      String?
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  vacancies     Vacancy[]
-  subscriptions Subscription[]
+  id              String         @id @default(cuid())
+  userId          String         @unique @map("user_id")
+  name            String
+  companyId       String         @map("company_id")
+  contactEmail    String         @map("contact_email")
+  contactPhone    String         @map("contact_phone")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  address         String?
+  bio             String?
+  employeeCount   String?        @map("employee_count")
+  industry        String?
+  linkedIn        String?
+  website         String?
+  available_slots Int            @default(10)
+  logo            String?
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vacancies       Vacancy[]
+  purchases       purchases[]
+  subscriptions   Subscription[]
 }
 
-// ——— Candidate Profiles ———
 model CandidateProfile {
-  id                 String         @id @default(cuid())
-  userId             String         @unique @map("user_id")
-  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fullName           String         @map("full_name")
+  id                 String           @id @default(cuid())
+  userId             String           @unique @map("user_id")
+  fullName           String           @map("full_name")
   phone              String?
-  dateOfBirth        DateTime?      @map("date_of_birth")
-  locationCityId     String         @map("location_city_id")
-  locationDistrictId String?        @map("location_district_id")
-  salaryMin          Int            @map("salary_min") // GEL/month
-  willingToRelocate  Boolean        @default(false) @map("willing_to_relocate")
-  experienceMonths   Int            @default(0) @map("experience_months")
-  experienceText     String?        @map("experience_text")
-  educationLevel     String         @default("High School") @map("education_level")
-  workTypes          String[]       @map("work_types") // ["Full-time", "Part-time", "Remote"]
-  photo              String?        // URL
-  jobTitle           String?        @map("job_title") // Preferred job
-  availableToWork    Boolean        @default(true) @map("available_to_work")
-  createdAt          DateTime       @default(now()) @map("created_at")
-  updatedAt          DateTime       @updatedAt @map("updated_at")
-
-  skills   CandidateSkill[]
-  matches  Match[]
-  discards Discard[]
+  locationCityId     String           @map("location_city_id")
+  locationDistrictId String?          @map("location_district_id")
+  salaryMin          Int              @map("salary_min")
+  willingToRelocate  Boolean          @default(false) @map("willing_to_relocate")
+  experienceMonths   Int              @default(0) @map("experience_months")
+  experienceText     String?          @map("experience_text")
+  educationLevel     String           @default("High School") @map("education_level")
+  workTypes          String[]         @map("work_types")
+  photo              String?
+  jobTitle           String?          @map("job_title")
+  jobTitleEn         String?          @map("job_title_en")
+  jobTitleKa         String?          @map("job_title_ka")
+  jobRoleSlug        String?          @map("job_role_slug")
+  sourceLocale       String?          @map("source_locale")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+  availableToWork    Boolean          @default(true) @map("available_to_work")
+  dateOfBirth        DateTime?        @map("date_of_birth") @db.Timestamp(6)
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills             CandidateSkill[]
+  discards           Discard[]
+  matches            Match[]
 }
 
 model CandidateSkill {
   id                 String           @id @default(cuid())
   candidateProfileId String           @map("candidate_profile_id")
-  candidateProfile   CandidateProfile @relation(fields: [candidateProfileId], references: [id], onDelete: Cascade)
   name               String
-  level              String           // Beginner | Intermediate | Advanced
+  nameEn             String?          @map("name_en")
+  nameKa             String?          @map("name_ka")
+  level              String
   createdAt          DateTime         @default(now()) @map("created_at")
+  candidateProfile   CandidateProfile @relation(fields: [candidateProfileId], references: [id], onDelete: Cascade)
 
   @@unique([candidateProfileId, name])
   @@map("candidate_skills")
 }
 
-// ——— Vacancies ———
 model Vacancy {
-  id                      String         @id @default(cuid())
-  companyId               String         @map("company_id")
-  company                 Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  title                   String
-  jobRoleSlug             String?        @map("job_role_slug") // canonical role id (shared across locales)
-  sourceLocale            String?        @map("source_locale") // "en" | "ka" — language the vacancy was posted in
-  locationCityId          String         @map("location_city_id")
-  locationDistrictId      String?        @map("location_district_id")
-  salaryMin               Int?           @map("salary_min") // GEL
-  salaryMax               Int            @map("salary_max") // GEL
-  workType                String         @map("work_type") // Full-time, Part-time, Remote
-  isRemote                Boolean        @default(false) @map("is_remote")
-  requiredExperienceMonths Int           @default(0) @map("required_experience_months")
-  requiredEducationLevel  String         @default("High School") @map("required_education_level")
-  description             String?        @db.Text
-  photo                   String?
-  status                  VacancyStatus  @default(PUBLISHED)
-  contactName             String?        @map("contact_name")
-  contactEmail            String?        @map("contact_email")
-  contactPhone            String?        @map("contact_phone")
-  createdAt               DateTime       @default(now()) @map("created_at")
-  updatedAt               DateTime       @updatedAt @map("updated_at")
-
-  skills  VacancySkill[]
-  matches Match[]
-  discards Discard[]
-}
-
-enum VacancyStatus {
-  DRAFT
-  PUBLISHED
-  CLOSED
+  id                       String         @id @default(cuid())
+  companyId                String         @map("company_id")
+  title                    String
+  titleEn                  String?        @map("title_en")
+  titleKa                  String?        @map("title_ka")
+  jobRoleSlug              String?        @map("job_role_slug")
+  sourceLocale             String?        @map("source_locale")
+  descriptionEn            String?        @map("description_en")
+  descriptionKa            String?        @map("description_ka")
+  locationCityId           String         @map("location_city_id")
+  locationDistrictId       String?        @map("location_district_id")
+  salaryMin                Int?           @map("salary_min")
+  salaryMax                Int            @map("salary_max")
+  workType                 String         @map("work_type")
+  isRemote                 Boolean        @default(false) @map("is_remote")
+  requiredExperienceMonths Int            @default(0) @map("required_experience_months")
+  requiredEducationLevel   String         @default("High School") @map("required_education_level")
+  description              String?
+  photo                    String?
+  status                   VacancyStatus  @default(PUBLISHED)
+  contactName              String?        @map("contact_name")
+  contactEmail             String?        @map("contact_email")
+  contactPhone             String?        @map("contact_phone")
+  createdAt                DateTime       @default(now()) @map("created_at")
+  updatedAt                DateTime       @updatedAt @map("updated_at")
+  company                  Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  discards                 Discard[]
+  matches                  Match[]
+  skills                   VacancySkill[]
 }
 
 model VacancySkill {
   id         String   @id @default(cuid())
   vacancyId  String   @map("vacancy_id")
-  vacancy    Vacancy  @relation(fields: [vacancyId], references: [id], onDelete: Cascade)
   name       String
-  level      String   // Beginner | Intermediate | Advanced
-  weight     Int      @default(3) // 1-5, employer priority
+  nameEn     String?  @map("name_en")
+  nameKa     String?  @map("name_ka")
+  level      String
+  weight     Int      @default(3)
   isRequired Boolean  @default(true) @map("is_required")
   createdAt  DateTime @default(now()) @map("created_at")
+  vacancy    Vacancy  @relation(fields: [vacancyId], references: [id], onDelete: Cascade)
 
   @@unique([vacancyId, name])
   @@map("vacancy_skills")
 }
 
-// ——— Subscriptions ———
 model Subscription {
-  id             String        @id @default(cuid())
-  companyId      String        @map("company_id")
-  company        Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  packageType    String        @map("package_type") // "1" | "5" | "10" | "unlimited"
-  pricePaid      Int           @map("price_paid") // GEL
-  validUntil     DateTime      @map("valid_until")
-  vacanciesUsed  Int           @default(0) @map("vacancies_used")
-  vacanciesTotal Int           @map("vacancies_total") // -1 for unlimited
-  createdAt      DateTime      @default(now()) @map("created_at")
+  id             String   @id @default(cuid())
+  companyId      String   @map("company_id")
+  packageType    String   @map("package_type")
+  pricePaid      Int      @map("price_paid")
+  validUntil     DateTime @map("valid_until")
+  vacanciesUsed  Int      @default(0) @map("vacancies_used")
+  vacanciesTotal Int      @map("vacancies_total")
+  createdAt      DateTime @default(now()) @map("created_at")
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
 }
 
-// ——— Jobs ———
 model Job {
-  id          String   @id @default(uuid())
-  slug        String   @unique
+  id          String     @id @default(uuid())
+  slug        String     @unique
   title       String
   category    String
   description String
   city        String
   type        String
-  createdAt   DateTime @default(now())
-
-  skills JobSkill[]
+  createdAt   DateTime   @default(now())
+  skills      JobSkill[]
 }
 
 model JobSkill {
-  id     String @id @default(cuid())
-  jobId  String @map("job_id")
-  job    Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  id     String  @id @default(cuid())
+  jobId  String  @map("job_id")
   name   String
-  level  String? // Beginner | Intermediate | Advanced
-  weight Int     @default(3) // 1-5
+  level  String?
+  weight Int     @default(3)
+  job    Job     @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@map("job_skills")
 }
 
-// ——— Global skills (user-added; merged with template skills for autocomplete) ———
 model GlobalSkill {
   id        String   @id @default(cuid())
   name      String   @unique
@@ -206,73 +194,99 @@ model GlobalSkill {
   @@map("global_skills")
 }
 
-// ——— Job Role Templates (EN + KA) ———
 model JobRoleTemplate {
-  id          String   @id @default(uuid())
-  slug        String   // canonical id shared by en/ka (e.g. "barista")
-  locale      String   // "en" | "ka"
+  id          String              @id @default(uuid())
+  slug        String
+  locale      String
   title       String
   category    String
   description String
-
-  skills RoleSkillTemplate[]
+  skills      RoleSkillTemplate[]
 
   @@unique([slug, locale])
   @@map("job_role_templates")
 }
 
 model RoleSkillTemplate {
-  id        String @id @default(uuid())
-  roleId    String   @map("role_id")
-  skillName String   @map("skill_name")
-  weight    Int // importance 1–5
-
-  role JobRoleTemplate @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  id        String          @id @default(uuid())
+  roleId    String          @map("role_id")
+  skillName String          @map("skill_name")
+  weight    Int
+  role      JobRoleTemplate @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@map("role_skill_templates")
 }
 
-// ——— Matches (Swipe / Like) ———
 model Match {
   id                 String           @id @default(cuid())
   vacancyId          String           @map("vacancy_id")
-  vacancy            Vacancy          @relation(fields: [vacancyId], references: [id], onDelete: Cascade)
   candidateProfileId String           @map("candidate_profile_id")
-  candidateProfile   CandidateProfile @relation(fields: [candidateProfileId], references: [id], onDelete: Cascade)
   employerLiked      Boolean          @default(false) @map("employer_liked")
   candidateLiked     Boolean          @default(false) @map("candidate_liked")
-  candidatePitch     String?          @map("candidate_pitch") @db.Text
-  matchScore         Int?             @map("match_score") // 0-100 from weighted scoring
   createdAt          DateTime         @default(now()) @map("created_at")
+  candidatePitch     String?          @map("candidate_pitch")
+  matchScore         Int?             @map("match_score")
   matchedAt          DateTime?        @map("matched_at")
-
-  chatMessages ChatMessage[]
+  chatMessages       ChatMessage[]
+  candidateProfile   CandidateProfile @relation(fields: [candidateProfileId], references: [id], onDelete: Cascade)
+  vacancy            Vacancy          @relation(fields: [vacancyId], references: [id], onDelete: Cascade)
 
   @@unique([vacancyId, candidateProfileId])
+  @@unique([vacancyId, candidateProfileId], map: "matches_unique_pair")
   @@map("matches")
 }
 
-// ——— Discards (Swipe / Pass) ———
 model Discard {
-  id                 String           @id @default(cuid())
+  id                 String           @id @default(dbgenerated("replace((gen_random_uuid())::text, '-'::text, ''::text)"))
   vacancyId          String           @map("vacancy_id")
-  vacancy            Vacancy          @relation(fields: [vacancyId], references: [id], onDelete: Cascade)
   candidateProfileId String           @map("candidate_profile_id")
-  candidateProfile   CandidateProfile @relation(fields: [candidateProfileId], references: [id], onDelete: Cascade)
-  createdAt          DateTime         @default(now()) @map("created_at")
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  candidateProfile   CandidateProfile @relation(fields: [candidateProfileId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "discards_candidate_profile_fk")
+  vacancy            Vacancy          @relation(fields: [vacancyId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "discards_vacancy_fk")
 
-  @@unique([vacancyId, candidateProfileId])
+  @@unique([vacancyId, candidateProfileId], map: "discards_unique_candidate_vacancy")
+  @@index([candidateProfileId])
+  @@index([vacancyId])
   @@map("discards")
 }
 
-// ——— Chat (per mutual match) ———
 model ChatMessage {
   id        String   @id @default(cuid())
   matchId   String   @map("match_id")
-  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  sender    String   // "candidate" | "employer"
-  text      String   @db.Text
+  sender    String
+  text      String
   createdAt DateTime @default(now()) @map("created_at")
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
   @@map("chat_messages")
+}
+
+model password_reset_tokens {
+  id         String   @id
+  token      String   @unique
+  user_id    String
+  expires_at DateTime
+  created_at DateTime @default(now())
+  users      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model purchases {
+  id           String   @id
+  company_id   String
+  package_type String
+  amount_paid  Int
+  slots_added  Int
+  created_at   DateTime @default(now())
+  Company      Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
+}
+
+enum UserRole {
+  CANDIDATE
+  EMPLOYER
+}
+
+enum VacancyStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
 }

@@ -4,8 +4,9 @@ import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
 import { SESSION_COOKIE_NAME } from "@/lib/session";
 import { getStockPhotosForJob } from "@/lib/vacancyStockPhotos";
+import { buildBilingualJobFields, buildBilingualSkills } from "@/lib/bilingualContent";
 import { normalizeContentLocale, resolveJobRoleSlug } from "@/lib/jobRoleSlug";
-import { translateVacancyForLocale } from "@/lib/vacancyTranslation";
+import { resolveVacancyForLocale } from "@/lib/vacancyTranslation";
 
 const SKILL_LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
 
@@ -51,15 +52,21 @@ export async function GET(request: Request) {
       list.map(async (v) => {
         const skills = v.skills.map((s) => ({
           name: s.name,
+          nameEn: s.nameEn,
+          nameKa: s.nameKa,
           level: s.level,
           weight: s.weight,
           isRequired: s.isRequired,
         }));
         const jobRoleSlug = v.jobRoleSlug ?? resolveJobRoleSlug(v.title);
-        const translated = await translateVacancyForLocale(
+        const localized = await resolveVacancyForLocale(
           {
             title: v.title,
+            titleEn: v.titleEn,
+            titleKa: v.titleKa,
             description: v.description,
+            descriptionEn: v.descriptionEn,
+            descriptionKa: v.descriptionKa,
             jobRoleSlug,
             sourceLocale: v.sourceLocale,
             skills,
@@ -69,11 +76,11 @@ export async function GET(request: Request) {
 
         return {
           id: v.id,
-          title: translated.title,
+          title: localized.title,
           originalTitle: v.title,
-          jobRoleSlug: translated.jobRoleSlug ?? jobRoleSlug,
-          sourceLocale: translated.sourceLocale ?? v.sourceLocale,
-          translated: translated.translated,
+          jobRoleSlug,
+          sourceLocale: v.sourceLocale,
+          translated: localized.translated,
           company: v.company.name,
           locationCityId: v.locationCityId,
           locationDistrictId: v.locationDistrictId,
@@ -83,12 +90,12 @@ export async function GET(request: Request) {
           isRemote: v.isRemote,
           requiredExperienceMonths: v.requiredExperienceMonths,
           requiredEducationLevel: v.requiredEducationLevel,
-          description: translated.description,
+          description: localized.description,
           photo: v.photo?.trim() || getStockPhotosForJob(v.title)[0] || null,
           contactName: v.contactName,
           contactEmail: v.contactEmail,
           contactPhone: v.contactPhone,
-          skills: translated.skills,
+          skills: localized.skills,
           createdAt: v.createdAt.toISOString(),
         };
       })
@@ -131,9 +138,6 @@ export async function POST(request: Request) {
       typeof body?.jobRoleSlug === "string" ? body.jobRoleSlug.trim() || null : null;
     const sourceLocaleRaw =
       typeof body?.sourceLocale === "string" ? body.sourceLocale.trim() : null;
-    const sourceLocale = sourceLocaleRaw === "ka" ? "ka" : sourceLocaleRaw === "en" ? "en" : null;
-    const jobRoleSlug = jobRoleSlugRaw ?? resolveJobRoleSlug(title);
-
     const skills = Array.isArray(body?.skills)
       ? (body.skills as Array<{ name?: string; level?: string; weight?: number; isRequired?: boolean }>)
           .filter((s) => s && typeof s?.name === "string" && (s.name = (s.name as string).trim()).length > 0)
@@ -147,6 +151,16 @@ export async function POST(request: Request) {
             isRequired: Boolean(s.isRequired),
           }))
       : [];
+
+    const sourceLocale = normalizeContentLocale(sourceLocaleRaw ?? "en");
+    const jobRoleSlug = jobRoleSlugRaw ?? resolveJobRoleSlug(title);
+    const bilingual = await buildBilingualJobFields({
+      title,
+      description,
+      jobRoleSlug,
+      sourceLocale,
+    });
+    const bilingualSkills = buildBilingualSkills(skills, sourceLocale, bilingual.jobRoleSlug);
 
     if (!title || title.length < 2) {
       return NextResponse.json({ error: "Job title required" }, { status: 400 });
@@ -258,9 +272,13 @@ export async function POST(request: Request) {
     const vacancy = await prisma.vacancy.create({
       data: {
         companyId: company.id,
-        title,
-        jobRoleSlug: jobRoleSlug ?? undefined,
-        sourceLocale: sourceLocale ?? undefined,
+        title: bilingual.title,
+        titleEn: bilingual.titleEn,
+        titleKa: bilingual.titleKa,
+        jobRoleSlug: bilingual.jobRoleSlug ?? undefined,
+        sourceLocale: bilingual.sourceLocale,
+        descriptionEn: bilingual.descriptionEn,
+        descriptionKa: bilingual.descriptionKa,
         locationCityId,
         locationDistrictId,
         salaryMin: salaryMin ?? undefined,
@@ -269,7 +287,7 @@ export async function POST(request: Request) {
         isRemote,
         requiredExperienceMonths,
         requiredEducationLevel,
-        description,
+        description: sourceLocale === "ka" ? bilingual.descriptionKa : bilingual.descriptionEn,
         status: "PUBLISHED",
         contactName: contactName || null,
         contactEmail: contactEmailForVacancy,
@@ -278,14 +296,16 @@ export async function POST(request: Request) {
       },
     });
 
-    if (skills.length > 0) {
+    if (bilingualSkills.length > 0) {
       await prisma.vacancySkill.createMany({
-        data: skills.map((s) => ({
+        data: bilingualSkills.map((s) => ({
           vacancyId: vacancy.id,
           name: s.name,
+          nameEn: s.nameEn,
+          nameKa: s.nameKa,
           level: s.level,
-          weight: s.weight,
-          isRequired: s.isRequired,
+          weight: s.weight ?? 3,
+          isRequired: s.isRequired ?? true,
         })),
         skipDuplicates: true,
       });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Link, useRouter, usePathname } from "@/i18n/navigation";
 import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence, animate } from "framer-motion";
@@ -188,6 +188,8 @@ function SwipeCard({
 
 export default function EmployerCabinetPage() {
   const t = useTranslations("employerCabinetPage");
+  const locale = useLocale();
+  const apiLocale = (locale === "local" ? "en" : locale) as "en" | "ka";
   const tCommon = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
@@ -322,7 +324,9 @@ export default function EmployerCabinetPage() {
       try {
         // Prefer the employer-scoped endpoint; fall back to the global candidates
         // list if it fails so the deck is never empty.
-        const primaryRes = await fetch(`/api/employer/candidates?vacancyId=${encodeURIComponent(vacancyId)}`);
+        const primaryRes = await fetch(
+          `/api/employer/candidates?vacancyId=${encodeURIComponent(vacancyId)}&locale=${encodeURIComponent(apiLocale)}`
+        );
         if (primaryRes.ok) {
           const primaryList = (await primaryRes.json().catch(() => [])) as unknown;
           if (Array.isArray(primaryList) && primaryList.length > 0) {
@@ -346,7 +350,7 @@ export default function EmployerCabinetPage() {
     }
 
     void loadCandidates();
-  }, [selectedVacancy?.id]);
+  }, [selectedVacancy?.id, apiLocale]);
 
   useEffect(() => {
     if (selectedVacancy && candidates.length > 0) {

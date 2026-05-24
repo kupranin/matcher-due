@@ -13,6 +13,7 @@
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:jobs": "tsx prisma/seed-job-templates.ts",
+    "db:seed:roles": "tsx prisma/seedRoles.ts",
     "db:import:csv": "tsx prisma/import-vacancies-from-csv.ts",
     "db:import:vacancies500": "tsx prisma/import-vacancies-500.ts",
     "db:import:companies": "tsx prisma/import-companies-simple.ts",

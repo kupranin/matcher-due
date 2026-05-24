@@ -410,6 +410,11 @@ export default function UserFlow1Page() {
           workTypes: profile.workTypes,
           skills: profile.skills.map((s) => ({ name: s.name, level: s.level })),
           jobTitle: displayJobTitle || undefined,
+          jobRoleSlug:
+            job && job !== "other"
+              ? job
+              : resolveJobRoleSlug(displayJobTitle) ?? undefined,
+          sourceLocale: apiLocale,
           dateOfBirth: dob || undefined,
           availableFrom: availableFrom || undefined,
         }),

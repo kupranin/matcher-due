@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { calculateAge } from "@/lib/age";
 import { hashPassword } from "@/lib/auth";
+import {
+  buildBilingualCandidateJobTitle,
+  buildBilingualSkills,
+  pickLocalizedJobTitle,
+  pickLocalizedSkillName,
+} from "@/lib/bilingualContent";
+import { normalizeContentLocale } from "@/lib/jobRoleSlug";
 
 const SKILL_LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
 
@@ -20,6 +27,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
+    const displayLocale = normalizeContentLocale(searchParams.get("locale"));
     if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
     const profile = await prisma.candidateProfile.findUnique({
       where: { userId },
@@ -43,10 +51,15 @@ export async function GET(request: Request) {
       experienceText: profile.experienceText,
       educationLevel: profile.educationLevel,
       workTypes: profile.workTypes,
-      jobTitle: profile.jobTitle,
+      jobTitle: pickLocalizedJobTitle(profile, displayLocale),
+      jobRoleSlug: profile.jobRoleSlug,
+      sourceLocale: profile.sourceLocale,
       availableToWork: profile.availableToWork,
       photo: profile.photo?.trim() || null,
-      skills: profile.skills.map((s) => ({ name: s.name, level: s.level })),
+      skills: profile.skills.map((s) => ({
+        name: pickLocalizedSkillName(s, displayLocale),
+        level: s.level,
+      })),
     });
   } catch (e) {
     console.error("Candidate profile get error:", e);
@@ -73,6 +86,10 @@ export async function PATCH(request: Request) {
     const workTypes = Array.isArray(body?.workTypes) ? (body.workTypes as string[]).filter((w: unknown) => typeof w === "string").slice(0, 10) : undefined;
     const willingToRelocate = body?.willingToRelocate === true || body?.willingToRelocate === false ? body.willingToRelocate : undefined;
     const jobTitle = typeof body?.jobTitle === "string" ? body.jobTitle.trim() || null : undefined;
+    const jobRoleSlugRaw =
+      typeof body?.jobRoleSlug === "string" ? body.jobRoleSlug.trim() || null : undefined;
+    const sourceLocaleRaw =
+      typeof body?.sourceLocale === "string" ? body.sourceLocale.trim() : undefined;
     const availableToWork = body?.availableToWork === true || body?.availableToWork === false ? body.availableToWork : undefined;
     const photo = typeof body?.photo === "string" ? body.photo.trim() || null : body?.photo === null ? null : undefined;
     const skills = Array.isArray(body?.skills)
@@ -116,7 +133,26 @@ export async function PATCH(request: Request) {
     if (educationLevel !== undefined) update.educationLevel = educationLevel;
     if (workTypes !== undefined) update.workTypes = workTypes.length ? workTypes : ["Full-time"];
     if (willingToRelocate !== undefined) update.willingToRelocate = willingToRelocate;
-    if (jobTitle !== undefined) update.jobTitle = jobTitle;
+    if (jobTitle !== undefined) {
+      const sourceLocale = normalizeContentLocale(
+        sourceLocaleRaw ?? existing?.sourceLocale ?? "en"
+      );
+      const bilingualJob = await buildBilingualCandidateJobTitle({
+        jobTitle,
+        jobRoleSlug: jobRoleSlugRaw ?? existing?.jobRoleSlug,
+        sourceLocale,
+      });
+      update.jobTitle = bilingualJob.jobTitle;
+      update.jobTitleEn = bilingualJob.jobTitleEn;
+      update.jobTitleKa = bilingualJob.jobTitleKa;
+      update.jobRoleSlug = bilingualJob.jobRoleSlug;
+      update.sourceLocale = bilingualJob.sourceLocale;
+    } else if (jobRoleSlugRaw !== undefined || sourceLocaleRaw !== undefined) {
+      if (jobRoleSlugRaw !== undefined) update.jobRoleSlug = jobRoleSlugRaw;
+      if (sourceLocaleRaw !== undefined) {
+        update.sourceLocale = normalizeContentLocale(sourceLocaleRaw);
+      }
+    }
     if (availableToWork !== undefined) update.availableToWork = availableToWork;
     if (dateOfBirth !== undefined) update.dateOfBirth = dateOfBirth;
     if (photo !== undefined) update.photo = photo;
@@ -145,10 +181,22 @@ export async function PATCH(request: Request) {
         });
 
     if (skills !== undefined) {
+      const skillLocale = normalizeContentLocale(
+        sourceLocaleRaw ?? (update.sourceLocale as string | undefined) ?? existing?.sourceLocale ?? "en"
+      );
+      const skillSlug =
+        (update.jobRoleSlug as string | null | undefined) ?? existing?.jobRoleSlug ?? null;
+      const bilingualSkills = buildBilingualSkills(skills, skillLocale, skillSlug);
       await prisma.candidateSkill.deleteMany({ where: { candidateProfileId: profile.id } });
-      if (skills.length > 0) {
+      if (bilingualSkills.length > 0) {
         await prisma.candidateSkill.createMany({
-          data: skills.map((s) => ({ candidateProfileId: profile.id, name: s.name, level: s.level })),
+          data: bilingualSkills.map((s) => ({
+            candidateProfileId: profile.id,
+            name: s.name,
+            nameEn: s.nameEn,
+            nameKa: s.nameKa,
+            level: s.level,
+          })),
           skipDuplicates: true,
         });
       }
@@ -179,10 +227,15 @@ export async function PATCH(request: Request) {
       experienceText: refreshed.experienceText,
       educationLevel: refreshed.educationLevel,
       workTypes: refreshed.workTypes,
-      jobTitle: refreshed.jobTitle,
+      jobTitle: pickLocalizedJobTitle(refreshed, normalizeContentLocale(sourceLocaleRaw ?? refreshed.sourceLocale)),
+      jobRoleSlug: refreshed.jobRoleSlug,
+      sourceLocale: refreshed.sourceLocale,
       availableToWork: refreshed.availableToWork,
       photo: refreshed.photo?.trim() || null,
-      skills: refreshed.skills.map((s) => ({ name: s.name, level: s.level })),
+      skills: refreshed.skills.map((s) => ({
+        name: pickLocalizedSkillName(s, normalizeContentLocale(sourceLocaleRaw ?? refreshed.sourceLocale)),
+        level: s.level,
+      })),
     });
   } catch (e) {
     console.error("Candidate profile patch error:", e);
@@ -232,6 +285,11 @@ export async function POST(request: Request) {
       dateOfBirth = parsed;
     }
     const jobTitle = typeof body?.jobTitle === "string" ? body.jobTitle.trim() || null : null;
+    const jobRoleSlugRaw =
+      typeof body?.jobRoleSlug === "string" ? body.jobRoleSlug.trim() || null : undefined;
+    const sourceLocaleRaw =
+      typeof body?.sourceLocale === "string" ? body.sourceLocale.trim() : undefined;
+    const sourceLocale = normalizeContentLocale(sourceLocaleRaw ?? "en");
     const skills = Array.isArray(body?.skills)
       ? (body.skills as Array<{ name?: string; level?: string }>)
           .filter((s) => s && typeof s?.name === "string" && (s.name = s.name.trim()).length > 0)
@@ -269,6 +327,13 @@ export async function POST(request: Request) {
       });
     }
 
+    const bilingualJob = await buildBilingualCandidateJobTitle({
+      jobTitle,
+      jobRoleSlug: jobRoleSlugRaw,
+      sourceLocale,
+    });
+    const bilingualSkills = buildBilingualSkills(skills, sourceLocale, bilingualJob.jobRoleSlug);
+
     const profileData = {
       fullName,
       phone,
@@ -280,7 +345,11 @@ export async function POST(request: Request) {
       experienceText,
       educationLevel,
       workTypes: workTypes.length ? workTypes : ["Full-time"],
-      jobTitle,
+      jobTitle: bilingualJob.jobTitle,
+      jobTitleEn: bilingualJob.jobTitleEn,
+      jobTitleKa: bilingualJob.jobTitleKa,
+      jobRoleSlug: bilingualJob.jobRoleSlug,
+      sourceLocale: bilingualJob.sourceLocale,
       ...(dateOfBirth ? { dateOfBirth } : {}),
     };
 
@@ -294,11 +363,13 @@ export async function POST(request: Request) {
     });
 
     await prisma.candidateSkill.deleteMany({ where: { candidateProfileId: profile.id } });
-    if (skills.length > 0) {
+    if (bilingualSkills.length > 0) {
       await prisma.candidateSkill.createMany({
-        data: skills.map((s) => ({
+        data: bilingualSkills.map((s) => ({
           candidateProfileId: profile.id,
           name: s.name,
+          nameEn: s.nameEn,
+          nameKa: s.nameKa,
           level: s.level,
         })),
         skipDuplicates: true,

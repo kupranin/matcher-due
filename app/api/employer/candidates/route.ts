@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { calculateAge } from "@/lib/age";
+import { pickLocalizedJobTitle, pickLocalizedSkillName } from "@/lib/bilingualContent";
+import { normalizeContentLocale } from "@/lib/jobRoleSlug";
 
 /**
  * GET /api/employer/candidates?vacancyId=...
@@ -13,6 +15,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const vacancyId = searchParams.get("vacancyId")?.trim() || null;
+    const displayLocale = normalizeContentLocale(searchParams.get("locale"));
     // For employer browsing we only need vacancyId for logging / debugging.
     // Even if the vacancy is missing or the id is omitted, we still return
     // a rich list of candidates to avoid an empty deck in the UI.
@@ -51,6 +54,8 @@ export async function GET(request: Request) {
         id: string;
         full_name: string;
         job_title: string | null;
+        job_title_en: string | null;
+        job_title_ka: string | null;
         location_city_id: string;
         salary_min: number;
         work_types: string[] | null;
@@ -64,6 +69,8 @@ export async function GET(request: Request) {
     >`SELECT "id",
         "full_name",
         "job_title",
+        "job_title_en",
+        "job_title_ka",
         "location_city_id",
         "salary_min",
         "work_types",
@@ -93,7 +100,10 @@ export async function GET(request: Request) {
       const list =
         skillsByCandidate.get(s.candidateProfileId) ??
         ([] as Array<{ name: string; level: string }>);
-      list.push({ name: s.name, level: s.level });
+      list.push({
+        name: pickLocalizedSkillName(s, displayLocale),
+        level: s.level,
+      });
       skillsByCandidate.set(s.candidateProfileId, list);
     }
 
@@ -102,7 +112,14 @@ export async function GET(request: Request) {
       .map((c) => ({
         id: c.id,
         fullName: c.full_name,
-        jobTitle: c.job_title,
+        jobTitle: pickLocalizedJobTitle(
+          {
+            jobTitle: c.job_title,
+            jobTitleEn: c.job_title_en,
+            jobTitleKa: c.job_title_ka,
+          },
+          displayLocale
+        ),
         locationCityId: c.location_city_id,
         salaryMin: c.salary_min,
         workTypes: c.work_types ?? [],
