@@ -1,9 +1,31 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
 const currentYear = new Date().getFullYear();
+
+const SOCIAL_LINKS = [
+  {
+    id: "facebook",
+    href: "https://facebook.com/matcher.ge",
+    label: "Facebook",
+    icon: FacebookIcon,
+  },
+  {
+    id: "linkedin",
+    href: "https://www.linkedin.com/company/matcher-ge",
+    label: "LinkedIn",
+    icon: LinkedInIcon,
+  },
+  {
+    id: "instagram",
+    href: "https://instagram.com/matcher.ge",
+    label: "Instagram",
+    icon: InstagramIcon,
+  },
+] as const;
 
 function FacebookIcon({ className }: { className?: string }) {
   return (
@@ -30,6 +52,134 @@ function InstagramIcon({ className }: { className?: string }) {
   );
 }
 
+function ExternalArrow({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M4.5 11.5L11.5 4.5M11.5 4.5H5.5M11.5 4.5V10.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function SocialIconButton({
+  href,
+  label,
+  icon: Icon,
+  isDark,
+}: {
+  href: string;
+  label: string;
+  icon: typeof FacebookIcon;
+  isDark: boolean;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={label}
+      className={`group relative flex h-11 w-11 items-center justify-center rounded-2xl border transition-all duration-300 ease-out hover:-translate-y-0.5 hover:scale-105 active:scale-95 ${
+        isDark
+          ? "border-white/10 bg-white/5 text-white/70 hover:border-white/25 hover:bg-white/10 hover:text-white hover:shadow-lg hover:shadow-black/20"
+          : "border-gray-200/80 bg-gray-50/80 text-gray-500 hover:border-matcher/30 hover:bg-matcher-pale hover:text-matcher-dark hover:shadow-md hover:shadow-matcher/10"
+      }`}
+    >
+      <Icon className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
+    </a>
+  );
+}
+
+function SocialTextLink({
+  href,
+  label,
+  icon: Icon,
+  isDark,
+}: {
+  href: string;
+  label: string;
+  icon: typeof FacebookIcon;
+  isDark: boolean;
+}) {
+  return (
+    <li>
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={label}
+        className={`group flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-sm font-medium transition-all duration-300 ease-out hover:-translate-y-0.5 active:translate-y-0 ${
+          isDark
+            ? "border-transparent text-white/70 hover:border-white/10 hover:bg-white/5 hover:text-white"
+            : "border-transparent text-gray-600 hover:border-gray-100 hover:bg-gray-50 hover:text-gray-900"
+        }`}
+      >
+        <span
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-colors duration-300 ${
+            isDark
+              ? "bg-white/10 text-white/80 group-hover:bg-white/15 group-hover:text-white"
+              : "bg-matcher-pale/60 text-matcher-dark group-hover:bg-matcher-pale"
+          }`}
+        >
+          <Icon className="h-4 w-4" />
+        </span>
+        <span className="flex-1">{label}</span>
+        <ExternalArrow
+          className={`h-3.5 w-3.5 shrink-0 opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100 ${
+            isDark ? "text-white/50" : "text-gray-400"
+          }`}
+        />
+      </a>
+    </li>
+  );
+}
+
+function FooterLink({
+  href,
+  children,
+  isDark,
+}: {
+  href: string;
+  children: ReactNode;
+  isDark: boolean;
+}) {
+  const className = `group relative inline-flex text-sm transition-colors duration-200 ${
+    isDark ? "text-white/65 hover:text-white" : "text-gray-500 hover:text-gray-900"
+  }`;
+
+  if (href.startsWith("/")) {
+    return (
+      <Link href={href} className={className}>
+        <span className="relative">
+          {children}
+          <span
+            className={`absolute -bottom-0.5 left-0 h-px w-0 transition-all duration-300 group-hover:w-full ${
+              isDark ? "bg-white/60" : "bg-matcher"
+            }`}
+          />
+        </span>
+      </Link>
+    );
+  }
+
+  return (
+    <a href={href} className={className}>
+      <span className="relative">
+        {children}
+        <span
+          className={`absolute -bottom-0.5 left-0 h-px w-0 transition-all duration-300 group-hover:w-full ${
+            isDark ? "bg-white/60" : "bg-matcher"
+          }`}
+        />
+      </span>
+    </a>
+  );
+}
+
 export default function Footer({
   variant = "light",
 }: {
@@ -37,170 +187,127 @@ export default function Footer({
 }) {
   const t = useTranslations("footer");
   const isDark = variant === "dark";
+
+  const headingClass = isDark
+    ? "text-xs font-semibold uppercase tracking-[0.18em] text-white"
+    : "text-xs font-semibold uppercase tracking-[0.18em] text-gray-900";
+
   return (
     <footer
       className={
         isDark
           ? "border-t border-white/10 bg-transparent"
-          : "border-t border-gray-200 bg-white"
+          : "border-t border-gray-200/80 bg-white"
       }
     >
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5 lg:items-start">
-          {/* Left: Brand + social icons */}
           <div className="lg:col-span-2 flex flex-col">
-            <p className={isDark ? "max-w-xs text-sm font-bold text-white" : "max-w-xs text-sm font-bold text-gray-900"}>
+            <p
+              className={
+                isDark
+                  ? "max-w-xs text-sm font-bold leading-relaxed text-white"
+                  : "max-w-xs text-sm font-bold leading-relaxed text-gray-900"
+              }
+            >
               {t("tagline")}
             </p>
-            <div className="mt-4 flex items-center gap-4">
-              <a
-                href="https://facebook.com/matcher.ge"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={isDark ? "text-white/65 transition hover:text-white" : "text-gray-500 transition hover:text-matcher-dark"}
-                aria-label="Facebook"
-              >
-                <FacebookIcon className="h-5 w-5" />
-              </a>
-              <a
-                href="https://www.linkedin.com/company/matcher-ge"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={isDark ? "text-white/65 transition hover:text-white" : "text-gray-500 transition hover:text-matcher-dark"}
-                aria-label="LinkedIn"
-              >
-                <LinkedInIcon className="h-5 w-5" />
-              </a>
-              <a
-                href="https://instagram.com/matcher.ge"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={isDark ? "text-white/65 transition hover:text-white" : "text-gray-500 transition hover:text-matcher-dark"}
-                aria-label="Instagram"
-              >
-                <InstagramIcon className="h-5 w-5" />
-              </a>
+
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              {SOCIAL_LINKS.map((social) => (
+                <SocialIconButton
+                  key={social.id}
+                  href={social.href}
+                  label={social.label}
+                  icon={social.icon}
+                  isDark={isDark}
+                />
+              ))}
             </div>
-            <div className={isDark ? "mt-4 space-y-1 text-sm text-white/65" : "mt-4 space-y-1 text-sm text-gray-500"}>
+
+            <div className={`mt-5 space-y-2 text-sm ${isDark ? "text-white/65" : "text-gray-500"}`}>
               <a
                 href="mailto:keti@matcher.ge"
-                className={isDark ? "block text-white/65 transition hover:text-white" : "block text-gray-500 transition hover:text-matcher-dark"}
+                className={`group flex w-fit items-center gap-2 rounded-xl px-2 py-1.5 transition-all duration-300 ${
+                  isDark ? "hover:bg-white/5 hover:text-white" : "hover:bg-matcher-pale/50 hover:text-matcher-dark"
+                }`}
               >
-                keti@matcher.ge
+                <span className="font-medium">keti@matcher.ge</span>
               </a>
               <a
                 href="tel:+995599620426"
-                className={isDark ? "block text-white/65 transition hover:text-white" : "block text-gray-500 transition hover:text-matcher-dark"}
+                className={`group flex w-fit items-center gap-2 rounded-xl px-2 py-1.5 transition-all duration-300 ${
+                  isDark ? "hover:bg-white/5 hover:text-white" : "hover:bg-matcher-pale/50 hover:text-matcher-dark"
+                }`}
               >
-                +995 599 62 04 26
+                <span className="font-medium">+995 599 62 04 26</span>
               </a>
             </div>
           </div>
 
-          {/* Middle: Company links */}
           <div className="flex flex-col">
-            <h3 className={isDark ? "text-xs font-semibold uppercase tracking-wider text-white" : "text-xs font-semibold uppercase tracking-wider text-gray-900"}>
-              {t("company")}
-            </h3>
-            <ul className="mt-3 space-y-2">
-              <li>
-                <Link
-                  href="/about"
-                  className={isDark ? "text-sm text-white/65 transition hover:text-white" : "text-sm text-gray-500 transition hover:text-gray-900"}
-                >
-                  {t("about")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/team"
-                  className={isDark ? "text-sm text-white/65 transition hover:text-white" : "text-sm text-gray-500 transition hover:text-gray-900"}
-                >
-                  {t("team")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/contact"
-                  className={isDark ? "text-sm text-white/65 transition hover:text-white" : "text-sm text-gray-500 transition hover:text-gray-900"}
-                >
-                  {t("contact")}
-                </Link>
-              </li>
+            <h3 className={headingClass}>{t("company")}</h3>
+            <ul className="mt-4 space-y-2.5">
+              {[
+                { href: "/about", label: t("about") },
+                { href: "/team", label: t("team") },
+                { href: "/contact", label: t("contact") },
+              ].map((item) => (
+                <li key={item.href}>
+                  <FooterLink href={item.href} isDark={isDark}>
+                    {item.label}
+                  </FooterLink>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* Middle: Legal links */}
           <div className="flex flex-col">
-            <h3 className={isDark ? "text-xs font-semibold uppercase tracking-wider text-white" : "text-xs font-semibold uppercase tracking-wider text-gray-900"}>
-              {t("legal")}
-            </h3>
-            <ul className="mt-3 space-y-2">
-              <li>
-                <Link
-                  href="/legal/terms"
-                  className={isDark ? "text-sm text-white/65 transition hover:text-white" : "text-sm text-gray-500 transition hover:text-gray-900"}
-                >
-                  {t("userAgreement")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/legal/privacy"
-                  className={isDark ? "text-sm text-white/65 transition hover:text-white" : "text-sm text-gray-500 transition hover:text-gray-900"}
-                >
-                  {t("privacyPolicy")}
-                </Link>
-              </li>
+            <h3 className={headingClass}>{t("legal")}</h3>
+            <ul className="mt-4 space-y-2.5">
+              {[
+                { href: "/legal/terms", label: t("userAgreement") },
+                { href: "/legal/privacy", label: t("privacyPolicy") },
+              ].map((item) => (
+                <li key={item.href}>
+                  <FooterLink href={item.href} isDark={isDark}>
+                    {item.label}
+                  </FooterLink>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* Right: Social links */}
           <div className="flex flex-col">
-            <h3 className={isDark ? "text-xs font-semibold uppercase tracking-wider text-white" : "text-xs font-semibold uppercase tracking-wider text-gray-900"}>
-              {t("followUs")}
-            </h3>
-            <ul className="mt-3 space-y-2">
-              <li>
-                <a
-                  href="https://www.linkedin.com/company/matcher-ge"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={isDark ? "text-sm text-white/65 transition hover:text-white" : "text-sm text-gray-500 transition hover:text-gray-900"}
-                  aria-label="LinkedIn"
-                >
-                  LinkedIn
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://facebook.com/matcher.ge"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={isDark ? "text-sm text-white/65 transition hover:text-white" : "text-sm text-gray-500 transition hover:text-gray-900"}
-                  aria-label="Facebook"
-                >
-                  Facebook
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://x.com/matcher_ge"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={isDark ? "text-sm text-white/65 transition hover:text-white" : "text-sm text-gray-500 transition hover:text-gray-900"}
-                  aria-label="Twitter/X"
-                >
-                  Twitter/X
-                </a>
-              </li>
+            <h3 className={headingClass}>{t("followUs")}</h3>
+            <ul className="mt-3 space-y-1">
+              {SOCIAL_LINKS.map((social) => (
+                <SocialTextLink
+                  key={social.id}
+                  href={social.href}
+                  label={social.label}
+                  icon={social.icon}
+                  isDark={isDark}
+                />
+              ))}
             </ul>
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className={isDark ? "mt-12 border-t border-white/10 pt-8" : "mt-12 border-t border-gray-100 pt-8"}>
-          <p className={isDark ? "text-center text-xs text-white/50" : "text-center text-xs text-gray-500"}>
+        <div
+          className={
+            isDark
+              ? "mt-12 border-t border-white/10 pt-8"
+              : "mt-12 border-t border-gray-100 pt-8"
+          }
+        >
+          <p
+            className={
+              isDark
+                ? "text-center text-xs text-white/50"
+                : "text-center text-xs text-gray-500"
+            }
+          >
             {t("allRightsReserved", { year: String(currentYear) })}
           </p>
         </div>
