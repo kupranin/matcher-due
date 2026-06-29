@@ -1,11 +1,12 @@
 /**
  * Apply Georgian translations from an Excel file into messages/ka.json.
  *
- * Excel format: first column has rows like "| key.path | Georgian text |"
- * (markdown table style). Parses key and value, then sets each in ka.json by path.
+ * Supported Excel formats:
+ * 1) Columns: key | English | Georgian (header row)
+ * 2) First column markdown table: "| key.path | Georgian text |"
  *
- * Run: node scripts/apply-georgian-from-xlsx.js "<path-to-Georgian.xlsx>"
- * Example: node scripts/apply-georgian-from-xlsx.js "/Users/m3/Downloads/Georgian bad (1).xlsx"
+ * Run: node scripts/apply-georgian-from-xlsx.js "<path-to-xlsx>"
+ * Example: node scripts/apply-georgian-from-xlsx.js "/Users/m3/Downloads/translations_en_ka.xlsx"
  */
 const fs = require("fs");
 const path = require("path");
@@ -50,11 +51,24 @@ const ws = wb.Sheets[wb.SheetNames[0]];
 const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
 
 const rows = [];
-for (const row of data) {
-  const cell = row && row[0] ? String(row[0]).trim() : "";
-  if (!cell.startsWith("|") || cell.includes("-----")) continue;
-  const parts = cell.split("|").map((s) => s.trim()).filter(Boolean);
-  if (parts.length >= 2) rows.push({ key: parts[0], value: parts[1] });
+const header = (data[0] || []).map((c) => String(c).trim().toLowerCase());
+const keyCol = header.indexOf("key");
+const kaCol = header.findIndex((h) => h === "georgian" || h === "ka" || h === "georgian text");
+
+if (keyCol >= 0 && kaCol >= 0) {
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i] || [];
+    const key = row[keyCol] != null ? String(row[keyCol]).trim() : "";
+    const value = row[kaCol] != null ? String(row[kaCol]).trim() : "";
+    if (key) rows.push({ key, value });
+  }
+} else {
+  for (const row of data) {
+    const cell = row && row[0] ? String(row[0]).trim() : "";
+    if (!cell.startsWith("|") || cell.includes("-----")) continue;
+    const parts = cell.split("|").map((s) => s.trim()).filter(Boolean);
+    if (parts.length >= 2) rows.push({ key: parts[0], value: parts[1] });
+  }
 }
 
 const ka = JSON.parse(fs.readFileSync(kaPath, "utf-8"));
